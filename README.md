@@ -1,10 +1,12 @@
 [English](/README.md) | [فارسی](/README_FA.md) | [العربية](/README_AR.md) | [中文](/README_ZH.md) | [Español](/README_ES.md) | [Русский](/README_RU.md) | [Türkçe](/README_TR.md)
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Sir-MmD/vpn-ui/refs/heads/main/media/logo.png" alt="VPN-UI Logo" width="260">
+  <img src="web/assets/img/vpn-aio.svg" alt="VPN-AIO" width="260">
 </p>
 
-This project is an enhanced version of the **[3X-UI](https://github.com/MHSanaei/3x-ui)** panel (version 2.9.3). The goal of this project is to add various protocols and set it up as an all-in-one panel with support for **Xray-core** features.
+**VPN-AIO 2.0.0** is based on [Sir-MmD/vpn-ui](https://github.com/Sir-MmD/vpn-ui) and **[3X-UI](https://github.com/MHSanaei/3x-ui)**. Original licenses and credits are preserved.
+
+This version targets fresh **Ubuntu 24.04 amd64** installations. It integrates Xray **26.11.9** with the native AnyTLS/TUIC/NaiveProxy additions and AmneziaWG kernel module **3.1.20261113-02**. The current AWG panel fields export the compatibility profile; newer 3.x-specific obfuscation options are not yet exposed in the UI. See [integration status](VPN-AIO-2.0.0.md) before installing this development branch.
 
 ![Overview](https://raw.githubusercontent.com/Sir-MmD/vpn-ui/refs/heads/main/media/overview.png)
 
@@ -38,7 +40,7 @@ the core rather than by a daemon, and they work as **inbounds and outbounds**:
 - Added **AES-256-GCM** and **AES-128-GCM** **Encryption** to the **Shadowsocks** protocol
 - Support for **XHTTP Object** in **Inbound** and **Outbound**
 - Automatic installation script for **[WARP-CLI](https://github.com/Sir-MmD/warp-cli)** (Cloudflare's official version)
-- A [patched **Xray-core**](https://github.com/Sir-MmD/Xray-core) that fixes the "Unsupported Cipher" error in the **Shadowsocks** protocol, and adds **AnyTLS**, **TUIC** and **NaiveProxy** as native protocols, so they inherit per-account traffic accounting, speed limits, device limits and online detection instead of needing a second core
+- A [patched **Xray-core**](https://github.com/robin808far/Xray-core) that fixes the "Unsupported Cipher" error in the **Shadowsocks** protocol, and adds **AnyTLS**, **TUIC** and **NaiveProxy** as native protocols, so they inherit per-account traffic accounting, speed limits, device limits and online detection instead of needing a second core
 - Bundling all files (**Geofile**, **Xray-core**, and **Backend** cores) into a single binary
 - **Real SSL for a bare server IP**, for a host with no domain at all (Let's Encrypt issues these; the certificate names the address itself)
 - Certificate renewals are picked up **without restarting the panel**, so nobody is disconnected when a certificate rolls over
@@ -53,7 +55,9 @@ the core rather than by a daemon, and they work as **inbounds and outbounds**:
     * Bulk delete of Inbounds
     * Bulk **Freeze/Un-Freeze** of accounts
 
-## Tested Operating Systems
+## Upstream Operating System Matrix
+
+The table below records the original project's support matrix. VPN-AIO 2.0.0 validation targets Ubuntu 24.04; it does not claim a fresh test of every upstream platform.
 
 
 | | Distribution |Version |Version |
@@ -78,17 +82,17 @@ the core rather than by a daemon, and they work as **inbounds and outbounds**:
 ## Installing the Panel
 
 ```bash
-curl -Ls https://raw.githubusercontent.com/Sir-MmD/vpn-ui/refs/heads/main/deploy.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/robin808far/VPN-AIO/main/deploy.sh | sudo bash
 ```
 
 ## Uninstalling the Panel
 
 ```bash
-sudo /opt/vpn-ui/vpn-ui-amd64 --uninstall
+sudo /opt/VPN-AIO/VPN-AIO-amd64 --uninstall
 ```
 
 > [!NOTE]
-> The database path, the **systemd** service, and all default ports have been changed, so you can install this panel alongside your other panels without any issues.
+> Installation: `/opt/VPN-AIO`; database: `/opt/VPN-AIO/VPN-AIO.db`; service and management command: `VPN-AIO`. VPN daemon resources and default ports are shared with upstream, so simultaneous installations on the same host are not supported by this release.
 
 ## How the New Protocols Interact with Xray-core
 

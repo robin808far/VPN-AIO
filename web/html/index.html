@@ -1082,7 +1082,7 @@
     </template>
     <div style="padding:4px 2px">
       <p style="margin-bottom:10px">
-        <b>[[ distroModal.pretty ]]</b> is not on vpn-ui's officially tested distro list.
+        <b>[[ distroModal.pretty ]]</b> is not on VPN-AIO's officially tested distro list.
         The panel may still run, but <b style="color:#cf1322">expect errors</b>.
       </p>
       <p style="margin-bottom:0;opacity:0.7;font-size:12px;line-height:1.5">
@@ -2335,7 +2335,7 @@
         const panel = await HttpUtil.post('/panel/api/server/logs/' + logModal.rows,
           { level: logModal.level, syslog: logModal.syslog });
         if (panel && panel.success) {
-          sections.push({ name: 'VPN-UI', text: (panel.obj || []).join('\n') });
+          sections.push({ name: 'VPN-AIO', text: (panel.obj || []).join('\n') });
         }
 
         // Core logs sit behind PermCoreSettings, which someone looking at

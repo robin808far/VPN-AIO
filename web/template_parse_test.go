@@ -111,7 +111,7 @@ func TestSidebarLogoSrcResolves(t *testing.T) {
 	// JS-escapes the dynamic base_path (/ -> \/); the browser un-escapes it at
 	// parse time. Normalise before matching.
 	out := strings.ReplaceAll(buf.String(), `\/`, "/")
-	if !strings.Contains(out, "/test/assets/img/logo.png") {
+	if !strings.Contains(out, "/test/assets/img/vpn-aio.svg") {
 		t.Errorf("logo src not resolved with base_path (nil-data bug?); output:\n%s", out)
 	}
 	if strings.Contains(out, "<no value>") {

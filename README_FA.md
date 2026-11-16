@@ -1,10 +1,12 @@
 [English](/README.md) | [فارسی](/README_FA.md) | [العربية](/README_AR.md) | [中文](/README_ZH.md) | [Español](/README_ES.md) | [Русский](/README_RU.md) | [Türkçe](/README_TR.md)
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Sir-MmD/vpn-ui/refs/heads/main/media/logo.png" alt="VPN-UI Logo" width="260">
+  <img src="web/assets/img/vpn-aio.svg" alt="VPN-AIO" width="260">
 </p>
 
-این پروژه، یک نسخه‌ی ارتقایافته از پنل **[3X-UI](https://github.com/MHSanaei/3x-ui)** (نسخه‌ی 2.9.3) هستش.  هدف این پروژه اضافه کردن پروتکل های مختلف و راه اندازی بصورت یک پنل جامعه با پشتیبانی از قابلیت های **Xray-core**  هستش
+**VPN-AIO نسخهٔ 2.0.0** بر پایهٔ [Sir-MmD/vpn-ui](https://github.com/Sir-MmD/vpn-ui) و [3X-UI](https://github.com/MHSanaei/3x-ui) ساخته شده است. مجوزها و حقوق سازندگان اصلی حفظ شده‌اند.
+
+هدف این نسخه نصب تازه روی **Ubuntu 24.04 amd64** است. هستهٔ Xray به **26.11.9** با حفظ AnyTLS، TUIC و NaiveProxy و ماژول کرنل AmneziaWG به **3.1.20261113-02** ارتقا یافته است. تنظیمات فعلی AWG پروفایل سازگار قبلی را تولید می‌کنند؛ گزینه‌های اختصاصی جدید 3.x هنوز در رابط کاربری ارائه نشده‌اند. پیش از نصب این شاخهٔ توسعه، [وضعیت یکپارچه‌سازی](VPN-AIO-2.0.0.md) را ببینید.
 
 ![نمای کلی](https://raw.githubusercontent.com/Sir-MmD/vpn-ui/refs/heads/main/media/overview.png)
 
@@ -31,7 +33,7 @@
 - اضافه‌شدن **Encryption** های **AES-256-GCM** و **AES-128-GCM** به پروتکل **Shadowsocks**
 - پشتیبانی از **XHTTP Object** در **Inbound** و **Outbound**
 - اسکریپت نصب خودکار **[WARP-CLI](https://github.com/Sir-MmD/warp-cli)** (نسخه‌ی رسمی Cloudflare)
-- هسته‌ی [**Xray-core** پچ‌شده](https://github.com/Sir-MmD/Xray-core) برای رفع خطای «Unsupported Cipher» در پروتکل **Shadowsocks**
+- هسته‌ی [**Xray-core** پچ‌شده](https://github.com/robin808far/Xray-core) برای رفع خطای «Unsupported Cipher» در پروتکل **Shadowsocks**
 - باندل‌شدن همه‌ی فایل‌ها (Geofile، Xray-core و هسته‌های Backend) داخل یک فایل باینریِ واحد
 - خروجی گرفتن لینک اکانت ها بصورت **TXT** و **PDF**
 - قابلیت **Freez** کردن اکانت هات
@@ -45,7 +47,9 @@
     * حذف گروهی Inbound ها
     * قابلیت Freez/Un-Freez کردن گروهی اکانت ها
 
-## سیستم‌عامل‌های تست شده
+## جدول پشتیبانی پروژهٔ اصلی
+
+این جدول از پروژهٔ اصلی به ارث رسیده است؛ هدف تست نسخهٔ VPN-AIO 2.0.0، اوبونتو 24.04 است و به معنی تست مجدد همهٔ این توزیع‌ها نیست.
 
 
 | | توزیع |نسخه |نسخه |
@@ -70,17 +74,17 @@
 ## نصب پنل
 
 ```bash
-curl -Ls https://raw.githubusercontent.com/Sir-MmD/vpn-ui/refs/heads/main/deploy.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/robin808far/VPN-AIO/main/deploy.sh | sudo bash
 ```
 
 ## حذف پنل
 
 ```bash
-sudo /opt/vpn-ui/vpn-ui-amd64 --uninstall
+sudo /opt/VPN-AIO/VPN-AIO-amd64 --uninstall
 ```
 
 > [!NOTE]
-> مسیر دیتابیس، سرویس systemd و همه‌ی پورت‌های پیش‌فرض تغییر کرده‌اند، پس می‌تونید این پنل رو بدون هیچ مشکلی کنار پنل‌های دیگه‌تون نصب کنید.
+> مسیر نصب `/opt/VPN-AIO`، مسیر دیتابیس `/opt/VPN-AIO/VPN-AIO.db` و نام سرویس و فرمان مدیریت `VPN-AIO` است. منابع سرویس‌های VPN و پورت‌های پیش‌فرض با پروژهٔ اصلی مشترک‌اند؛ نصب هم‌زمان هر دو پنل روی یک سرور در این نسخه پشتیبانی نمی‌شود.
 
 ## نحوه‌ی تعامل پروتکل‌های جدید با هسته‌ی Xray-core
 
