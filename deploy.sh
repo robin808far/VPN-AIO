@@ -370,7 +370,7 @@ fi
 if [[ "$MODE" == "update" && -f "$DB" ]]; then
     install -d -m 0755 "$BACKUP_DIR"
     ts="$(date +%Y%m%d-%H%M%S)"
-    backup="$BACKUP_DIR/vpn-ui_${OLD_VER:-unknown}_${ts}.db"
+    backup="$BACKUP_DIR/VPN-AIO_${OLD_VER:-unknown}_${ts}.db"
     cp -p "$DB" "$backup" || die "DB backup failed ($DB -> $backup) — aborting before replacing the binary."
     for side in wal shm; do
         [[ -f "$DB-$side" ]] && cp -p "$DB-$side" "$backup-$side" || true

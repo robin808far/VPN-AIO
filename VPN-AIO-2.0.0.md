@@ -24,6 +24,21 @@ This branch is work in progress, not a published release.
 - Validate install, management menu, service, update URLs and uninstall on a fresh host.
 - Publish the tested release asset only after these checks.
 
+## Completed runtime checks
+
+On Ubuntu 24.04.5 amd64 with kernel 7.0.0-1017-aws:
+
+- DKMS build/install/load of AmneziaWG 3.1.20261113-02 succeeded.
+- The opt-in `TestAWGKernelHandshakeAndPeerRemoval` passed: actual kernel
+  handshake, encrypted tunnel ping between network namespaces, nonzero receive
+  and transmit counters, and traffic rejection after peer removal.
+- `test_unit/native-core-smoke.py` passed against Xray 26.11.9: AnyTLS TCP/UoT,
+  TUIC TCP and both UDP relay modes, and Naive HTTP/2 plus HTTP/3 carriers.
+  Every case checked per-user traffic counters and wrong-password rejection.
+
+The full Incus VM matrix is not available on this small test host (no /dev/kvm).
+These targeted runtime tests do not claim coverage of every bundled protocol.
+
 The Windows cross-compile with CGO disabled is a compile check only: it is not a
 deployable release (sqlite requires CGO). Real kernel testing requires Linux.
 

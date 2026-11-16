@@ -213,7 +213,7 @@ var coreCatalog = []coreSpec{
 		globs: []string{"/etc/vpn-ui-mtproto/server-*"},
 	},
 	{
-		name: "ssh", title: "SSH", backend: "Built-in (vpn-ui)",
+		name: "ssh", title: "SSH", backend: "Built-in (VPN-AIO)",
 		desc: "SSH tunnel gateway, served by the panel itself", builtin: true,
 	},
 	{
@@ -221,7 +221,7 @@ var coreCatalog = []coreSpec{
 		desc: "The Xray data plane every other core routes through", builtin: true,
 	},
 	{
-		name: "radius", title: "RADIUS", backend: "Built-in (vpn-ui)",
+		name: "radius", title: "RADIUS", backend: "Built-in (VPN-AIO)",
 		desc: "Authentication for the dial-in protocols, served by the panel itself", builtin: true,
 	},
 }

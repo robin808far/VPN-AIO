@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 #
-# build.sh — build the complete, self-contained vpn-ui binary. Run it, that's it.
+# build.sh — build the complete, self-contained VPN-AIO binary.
 #
 #   ./build.sh            the full build, exactly as before
 #   ./build.sh --help     every switch, with what it skips and what that costs
 #
 # The Xray core is pinned as a git submodule (third_party/Xray-core, at a fixed
 # commit). On every run it syncs that submodule, builds the Xray core from it, and
-# fetches the latest geo files — then compiles build/out/vpn-ui-<arch> with everything
+# fetches the latest geo files — then compiles build/out/VPN-AIO-<arch> with everything
 # baked in via go:embed. warpcli.sh is committed project source
 # (web/service/warpcli.sh) and embedded directly. The static VPN daemon bundle is
 # pinned + slow to build, so it is reused when already present.
@@ -23,7 +23,7 @@ cd "$REPO_ROOT"
 
 usage() {
     cat <<'EOF'
-vpn-ui build: compiles build/out/vpn-ui-<arch> with the Xray core, the geo data
+VPN-AIO build: compiles build/out/VPN-AIO-<arch> with the Xray core, the geo data
 files and the static VPN daemon bundle baked in.
 
 Usage: ./build.sh [options]          # no options = the full build
@@ -161,7 +161,7 @@ do_run() {
 }
 
 hr
-step "vpn-ui build ${_CD:-}(${ARCH})${_CR:-}"
+step "VPN-AIO build ${_CD:-}(${ARCH})${_CR:-}"
 hr
 if (( DRY_RUN )); then info "dry run: nothing is fetched, built or written"; fi
 

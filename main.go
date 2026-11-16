@@ -96,7 +96,7 @@ func requireRoot() {
 	if os.Geteuid() == 0 {
 		return
 	}
-	const m = "vpn-ui must be run as root. It binds privileged ports, writes systemd units, and manages nftables, routing and the VPN daemons.\n       Try: sudo vpn-ui"
+	const m = "VPN-AIO must be run as root. It binds privileged ports, writes systemd units, and manages nftables, routing and the VPN daemons.\n       Try: sudo VPN-AIO"
 	if fi, err := os.Stderr.Stat(); err == nil && os.Getenv("NO_COLOR") == "" && fi.Mode()&os.ModeCharDevice != 0 {
 		fmt.Fprintf(os.Stderr, "\x1b[1;38;5;203mError:\x1b[0m %s\n", m)
 	} else {
@@ -316,7 +316,7 @@ func runWebServer() {
 	// a convenience for the CLI, and a panel carrying VPN traffic without it beats a
 	// panel that refused to boot over it.
 	if err := service.StartControlSocket(); err != nil {
-		logger.Warning("control socket unavailable (the vpn-ui menu's Xray/cores items will not work):", err)
+		logger.Warning("control socket unavailable (the VPN-AIO menu's Xray/cores items will not work):", err)
 	}
 
 	var server *web.Server
@@ -474,11 +474,11 @@ func runUninstall(assumeYes bool, coresAnswer string) {
 	askCores := coresAnswer == "" && !assumeYes && (!dbOK || len(installedCores) > 0)
 
 	if !assumeYes {
-		fmt.Println("This will REMOVE vpn-ui and everything it installed on this host:")
+		fmt.Println("This will REMOVE VPN-AIO and everything it installed on this host:")
 		fmt.Println("  • the systemd unit, child daemons (openvpn/xl2tpd/pptpd/pluto)")
 		fmt.Println("  • nftables 'ip vpn' table, firewalld trust, fwmark routing (table 100)")
 		fmt.Println("  • /etc configs, /usr/libexec/vpn-ui bundles, logs, bin/, the database")
-		fmt.Println("  • the vpn-ui binary itself")
+		fmt.Println("  • the VPN-AIO binary itself")
 		fmt.Println("Distro packages and boot/modprobe edits are kept and listed at the end.")
 		if askCores {
 			// The list above is the FULL teardown, which is not what happens if the
@@ -513,7 +513,7 @@ func runUninstall(assumeYes bool, coresAnswer string) {
 		// installed: nothing to spare, so the teardown stays whole.
 	}
 
-	fmt.Println("Uninstalling vpn-ui...")
+	fmt.Println("Uninstalling VPN-AIO...")
 	report := service.Uninstall(service.UninstallOptions{ExePath: exePath, KeepCores: keepCores})
 	if keepCores && len(installedCores) > 0 {
 		report.Kept = append(report.Kept, "cores left installed: "+strings.Join(installedCores, ", "))
@@ -567,7 +567,7 @@ func runUninstall(assumeYes bool, coresAnswer string) {
 			fmt.Println("  !", e)
 		}
 	}
-	fmt.Println("\nvpn-ui uninstalled.")
+	fmt.Println("\nVPN-AIO uninstalled.")
 }
 
 // askKeepCores asks whether the installed VPN cores should come off the host as
@@ -589,9 +589,9 @@ func askKeepCores(stdin *bufio.Reader, installed []string) bool {
 	fmt.Println("  • remove: their daemons, /etc configs, bundled trees and bin/ go too,")
 	fmt.Println("    along with the nftables table and fwmark routing they all pass through")
 	fmt.Println("  • keep:   all of that is left exactly as it is")
-	fmt.Println("RADIUS runs INSIDE the vpn-ui binary, not as a separate daemon, so kept L2TP,")
+	fmt.Println("RADIUS runs INSIDE the VPN-AIO binary, not as a separate daemon, so kept L2TP,")
 	fmt.Println("PPTP, OpenVPN, OpenConnect, SSTP and IKEv2 cores cannot authenticate new logins")
-	fmt.Println("once vpn-ui is gone. WireGuard, AmneziaWG, GRE and MTProto are unaffected.")
+	fmt.Println("once VPN-AIO is gone. WireGuard, AmneziaWG, GRE and MTProto are unaffected.")
 	fmt.Print("Remove the cores too? [y/N]: ")
 	line, _ := stdin.ReadString('\n')
 	switch strings.ToLower(strings.TrimSpace(line)) {
@@ -1165,14 +1165,14 @@ func runCtl(args []string) {
 		os.Exit(2)
 	}
 	if cmd == "" {
-		fmt.Fprintf(os.Stderr, "usage: vpn-ui ctl <command> [--json]\ncommands: %s\n",
+		fmt.Fprintf(os.Stderr, "usage: VPN-AIO ctl <command> [--json]\ncommands: %s\n",
 			strings.Join(service.ControlCommands, ", "))
 		os.Exit(2)
 	}
 
 	conn, err := ctlDial()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "the vpn-ui panel is not running: no answer on %s (%v)\n",
+		fmt.Fprintf(os.Stderr, "the VPN-AIO panel is not running: no answer on %s (%v)\n",
 			service.ControlSocketPath(), err)
 		fmt.Fprintln(os.Stderr, "Xray and the VPN daemons are children of the running panel, so they can only")
 		fmt.Fprintln(os.Stderr, "be controlled through it. Start the panel first, then retry.")
@@ -1370,7 +1370,7 @@ func backupPanelDBForUpdate(fromVersion string) (string, error) {
 	if fromVersion == "" {
 		fromVersion = "unknown"
 	}
-	dst := filepath.Join(dir, fmt.Sprintf("vpn-ui_%s_%s.db", fromVersion, time.Now().Format("20060102-150405")))
+	dst := filepath.Join(dir, fmt.Sprintf("VPN-AIO_%s_%s.db", fromVersion, time.Now().Format("20060102-150405")))
 	if err := service.CopyFile(db, dst); err != nil {
 		return "", fmt.Errorf("%s -> %s: %w", db, dst, err)
 	}
@@ -1429,7 +1429,7 @@ var acmeDnsCfHook []byte
 // into $HOME/.acme.sh/dnsapi/, which is the only place _findHook reads at issue time.
 func installAcmeScript(args []string) {
 	if len(args) == 0 || args[0] == "" {
-		fmt.Fprintln(os.Stderr, "usage: vpn-ui install-acme <path>")
+		fmt.Fprintln(os.Stderr, "usage: VPN-AIO install-acme <path>")
 		os.Exit(1)
 	}
 	if err := backend.WriteFileAtomic(args[0], acmeScript, 0o755); err != nil {
@@ -1457,7 +1457,7 @@ func installAcmeScript(args []string) {
 // also the variable name acme.sh itself expects, so the menu exports it once.
 func runCloudflare(args []string) {
 	if len(args) == 0 || args[0] == "" {
-		fmt.Fprintln(os.Stderr, "usage: CF_Token=... vpn-ui cf {verify|zones}")
+		fmt.Fprintln(os.Stderr, "usage: CF_Token=... VPN-AIO cf {verify|zones}")
 		os.Exit(2)
 	}
 	token := os.Getenv("CF_Token")
@@ -1514,7 +1514,7 @@ func installMenuScript(args []string) {
 		fmt.Fprintln(os.Stderr, "Failed to install the management menu:", err)
 		os.Exit(1)
 	}
-	fmt.Printf("Installed the vpn-ui management menu -> %s (run: %s)\n", dest, filepath.Base(dest))
+	fmt.Printf("Installed the VPN-AIO management menu -> %s (run: %s)\n", dest, filepath.Base(dest))
 }
 
 // ensureMenuInstalled writes the `vpn-ui` management menu to MenuScriptPath on panel
@@ -1535,10 +1535,10 @@ func ensureMenuInstalled() {
 		return
 	}
 	if err := backend.WriteFileAtomic(dest, menuScript, 0o755); err != nil {
-		logger.Warning("could not install the vpn-ui management menu at", dest, ":", err)
+		logger.Warning("could not install the VPN-AIO management menu at", dest, ":", err)
 		return
 	}
-	logger.Info("installed the vpn-ui management menu at", dest)
+	logger.Info("installed the VPN-AIO management menu at", dest)
 }
 
 // applyCredential updates the first user's login from the CLI: both fields set both;
@@ -1889,7 +1889,7 @@ func updateCert(publicKey string, privateKey string) {
 	if !subFollowsPanel {
 		if subCert == "" {
 			fmt.Println("subscription server: NOT changed, it has no certificate of its own and keeps serving plain HTTP")
-			fmt.Println("  give it one with: vpn-ui cert -subCert <cert> -subCertKey <key>")
+			fmt.Println("  give it one with: VPN-AIO cert -subCert <cert> -subCertKey <key>")
 		} else {
 			fmt.Printf("subscription server: NOT changed, it stays on its own certificate (%s)\n", subCert)
 		}
@@ -2069,7 +2069,7 @@ func importDb() {
 		from = importCmd.Arg(0) // also accept `vpn-ui import <path>`
 	}
 	if from == "" {
-		fmt.Fprintln(os.Stderr, "usage: vpn-ui import --from <path-to-backup.db>")
+		fmt.Fprintln(os.Stderr, "usage: VPN-AIO import --from <path-to-backup.db>")
 		os.Exit(1)
 	}
 	src, err := os.Open(from)
@@ -2132,7 +2132,7 @@ func readRadiusSecret() string {
 // The credentials file has username on line 1, password on line 2.
 func openvpnAuth() {
 	if len(os.Args) < 4 {
-		fmt.Fprintln(os.Stderr, "usage: vpn-ui openvpn-auth <inbound_id> <cred_file>")
+		fmt.Fprintln(os.Stderr, "usage: VPN-AIO openvpn-auth <inbound_id> <cred_file>")
 		os.Exit(1)
 	}
 
@@ -2701,7 +2701,7 @@ func ovpnStatusIPs(statusPath string) map[string]bool {
 // Reads common_name and ifconfig_pool_remote_ip from environment.
 func openvpnConnect() {
 	if len(os.Args) < 3 {
-		fmt.Fprintln(os.Stderr, "usage: vpn-ui openvpn-connect <inbound_id>")
+		fmt.Fprintln(os.Stderr, "usage: VPN-AIO openvpn-connect <inbound_id>")
 		os.Exit(1)
 	}
 
@@ -2760,7 +2760,7 @@ func openvpnConnect() {
 // Reads common_name and ifconfig_pool_remote_ip from environment.
 func openvpnDisconnect() {
 	if len(os.Args) < 3 {
-		fmt.Fprintln(os.Stderr, "usage: vpn-ui openvpn-disconnect <inbound_id>")
+		fmt.Fprintln(os.Stderr, "usage: VPN-AIO openvpn-disconnect <inbound_id>")
 		os.Exit(1)
 	}
 
@@ -3010,7 +3010,7 @@ func main() {
 		fmt.Println("    ctl <cmd>      control the RUNNING panel over its socket:")
 		fmt.Println("                   " + strings.Join(service.ControlCommands, ", "))
 		fmt.Println("    update         install the latest release (backs the DB up first)")
-		fmt.Println("    install-menu   install the 'vpn-ui' management menu to " + service.MenuScriptPath)
+		fmt.Println("    install-menu   install the 'VPN-AIO' management menu to " + service.MenuScriptPath)
 		fmt.Println("    --systemd      install+enable+start the panel as a systemd service")
 		fmt.Println("    --random       randomize panel port + username + password + web path")
 		fmt.Println("                   (combinable, e.g. --random --systemd)")
