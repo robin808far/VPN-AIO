@@ -33,14 +33,16 @@ LOG=/tmp/awg_client_setup.log
 apt-get update -y >$LOG 2>&1 || true
 apt-get install -y dkms build-essential linux-headers-$(uname -r) git make gcc >>$LOG 2>&1
 cd /root; rm -rf awg-km awg-tools
-git clone --depth 1 https://github.com/amnezia-vpn/amneziawg-linux-kernel-module awg-km >>$LOG 2>&1
+git clone --depth 1 --branch v3.1.20261113-02 https://github.com/amnezia-vpn/amneziawg-linux-kernel-module awg-km >>$LOG 2>&1
 cd awg-km/src
+sed -i 's/^WIREGUARD_VERSION = .*/WIREGUARD_VERSION = 3.1.20261113-02/' Makefile
+sed -i 's/^PACKAGE_VERSION=.*/PACKAGE_VERSION="3.1.20261113-02"/' dkms.conf
 make dkms-install >>$LOG 2>&1
-dkms add -m amneziawg -v 1.0.0 >>$LOG 2>&1 || true
-dkms build -m amneziawg -v 1.0.0 >>$LOG 2>&1
-dkms install -m amneziawg -v 1.0.0 >>$LOG 2>&1
+dkms add -m amneziawg -v 3.1.20261113-02 >>$LOG 2>&1 || true
+dkms build -m amneziawg -v 3.1.20261113-02 >>$LOG 2>&1
+dkms install -m amneziawg -v 3.1.20261113-02 >>$LOG 2>&1
 modprobe amneziawg
-cd /root; git clone --depth 1 https://github.com/amnezia-vpn/amneziawg-tools awg-tools >>$LOG 2>&1
+cd /root; git clone --depth 1 --branch v3.1.20260812 https://github.com/amnezia-vpn/amneziawg-tools awg-tools >>$LOG 2>&1
 cd awg-tools/src && make >>$LOG 2>&1 && make install >>$LOG 2>&1
 if command -v awg-quick >/dev/null 2>&1 && { lsmod | grep -q '^amneziawg' || modprobe amneziawg; }; then
   echo AWG_READY

@@ -45,6 +45,8 @@ func runGuarded(t *testing.T, user *model.User, guard gin.HandlerFunc, ajax bool
 	req := httptest.NewRequest(http.MethodGet, "/guarded", nil)
 	if ajax {
 		req.Header.Set("X-Requested-With", "XMLHttpRequest")
+	} else {
+		req.Header.Set("Accept", "text/html")
 	}
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -106,7 +108,8 @@ func TestRequireSuperAdmin(t *testing.T) {
 // A page navigation redirects; an XHR gets a JSON status. Denying a page with a raw
 // 403 would leave the browser on a blank screen.
 func TestDenyShapeMatchesRequestKind(t *testing.T) {
-	limited := &model.User{Id: 2, Enable: true}
+	// A redirect requires another permitted page to land on.
+	limited := &model.User{Id: 2, Enable: true, Permissions: model.PermAccessOverview}
 	if got, _ := runGuarded(t, limited, requirePerm(model.PermAccessInbounds), false); got != http.StatusTemporaryRedirect {
 		t.Errorf("page navigation denial = %d; want 307 redirect", got)
 	}
@@ -118,6 +121,10 @@ func TestDenyShapeMatchesRequestKind(t *testing.T) {
 	}
 	if !strings.Contains(body, `"success":false`) || !strings.Contains(body, "forbidden") {
 		t.Errorf("xhr denial must carry success:false and a reason; got %s", body)
+	}
+	noPages := &model.User{Id: 3, Enable: true}
+	if got, _ := runGuarded(t, noPages, requirePerm(model.PermAccessInbounds), false); got != http.StatusForbidden {
+		t.Errorf("page denial without an allowed landing page = %d; want 403", got)
 	}
 }
 

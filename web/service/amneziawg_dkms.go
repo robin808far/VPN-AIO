@@ -377,8 +377,8 @@ const awgSupportedDistros = "Debian 12, Debian 13, Ubuntu 24.04 or Ubuntu 26.04"
 func awgKernelModuleSupported() (bool, string) {
 	if maj, min, ok := runningKernelVersion(); ok && (maj > 7 || (maj == 7 && min >= 1)) {
 		return false, fmt.Sprintf(
-			"not supported on Linux %d.%d: the AmneziaWG module does not build on kernel 7.1 or newer "+
-				"(the kernel removed ipv6_stub and upstream has not adapted yet). Every other protocol "+
+			"not validated on Linux %d.%d: VPN-AIO has not tested this AmneziaWG build on kernel 7.1 or newer. "+
+				"The earlier kernel compatibility restriction remains until validation. Every other protocol "+
 				"is unaffected. For AmneziaWG use %s.", maj, min, awgSupportedDistros)
 	}
 

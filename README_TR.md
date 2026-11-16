@@ -69,13 +69,13 @@ Bu proje, **[3X-UI](https://github.com/MHSanaei/3x-ui)** panelinin (2.9.3 sürü
 ## Panel Kurulumu
 
 ```bash
-curl -Ls https://raw.githubusercontent.com/Sir-MmD/vpn-ui/refs/heads/main/deploy.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/robin808far/VPN-AIO/main/deploy.sh | sudo bash
 ```
 
 ## Panel Kaldırma
 
 ```bash
-sudo /opt/vpn-ui/vpn-ui-amd64 --uninstall
+sudo /opt/VPN-AIO/VPN-AIO-amd64 --uninstall
 ```
 
 > [!NOTE]
@@ -200,7 +200,7 @@ flowchart TB
 ## Kaynaktan Derleme
 
 ```bash
-git clone https://github.com/Sir-MmD/vpn-ui.git && cd vpn-ui
+git clone https://github.com/robin808far/VPN-AIO.git && cd VPN-AIO
 ./build.sh
 ```
 

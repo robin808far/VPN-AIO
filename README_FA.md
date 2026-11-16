@@ -203,7 +203,7 @@ flowchart TB
 ## کامپایل از سورس
 
 ```bash
-git clone https://github.com/Sir-MmD/vpn-ui.git && cd vpn-ui
+git clone https://github.com/robin808far/VPN-AIO.git && cd VPN-AIO
 ./build.sh
 ```
 

@@ -122,7 +122,7 @@ func GetDBFolderPath() string {
 }
 
 // dbBaseName is the database file's base name (without extension). It is fixed
-// rather than derived from GetName() so the on-disk DB is always "vpn-ui.db".
+// rather than derived from GetName(), keeping the fresh-install database stable.
 const dbBaseName = "VPN-AIO"
 
 // GetDBPath returns the full path to the database file (next to the binary).
@@ -158,7 +158,7 @@ func GetLogFolder() string {
 	if logFolderPath != "" {
 		return logFolderPath
 	}
-	return "/var/log/vpn-ui"
+	return "/var/log/VPN-AIO"
 }
 
 // DB migration (moving/renaming a legacy database to GetDBPath) is handled

@@ -69,13 +69,13 @@
 ## تثبيت اللوحة
 
 ```bash
-curl -Ls https://raw.githubusercontent.com/Sir-MmD/vpn-ui/refs/heads/main/deploy.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/robin808far/VPN-AIO/main/deploy.sh | sudo bash
 ```
 
 ## إزالة اللوحة
 
 ```bash
-sudo /opt/vpn-ui/vpn-ui-amd64 --uninstall
+sudo /opt/VPN-AIO/VPN-AIO-amd64 --uninstall
 ```
 
 > [!NOTE]
@@ -200,7 +200,7 @@ flowchart TB
 ## البناء من المصدر
 
 ```bash
-git clone https://github.com/Sir-MmD/vpn-ui.git && cd vpn-ui
+git clone https://github.com/robin808far/VPN-AIO.git && cd VPN-AIO
 ./build.sh
 ```
 

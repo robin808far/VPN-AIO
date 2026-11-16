@@ -2,7 +2,8 @@ name: VPN-AIO Ubuntu validation
 
 on:
   push:
-    branches: [release/v2.0.0]
+    branches: [main, release/v2.0.0]
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -30,6 +31,7 @@ jobs:
         env:
           CGO_ENABLED: '1'
           XRAY_LOCATION_ASSET: ${{ github.workspace }}/corebundle/core
+          VPNUI_LOG_FOLDER: ${{ runner.temp }}/vpn-aio-logs
         run: go test -timeout 10m ./...
       - name: Native Xray protocol integration
         run: python3 test_unit/native-core-smoke.py corebundle/core/amd64/xray
