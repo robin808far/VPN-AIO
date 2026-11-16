@@ -1,7 +1,7 @@
 # VPN-AIO 2.0.0 integration status
 
 Target: fresh installations on Ubuntu 24.04, Linux amd64.
-This branch is work in progress, not a published release.
+Release validation record for the 2.0.0 build.
 
 ## Integrated
 
@@ -14,15 +14,14 @@ This branch is work in progress, not a published release.
 - AmneziaWG kernel source: v3.1.20261113-02 (see awgsrc/UPSTREAM.md).
 - AmneziaWG control library: github.com/Jipok/wgctrl-go v1.3.1.
 
-## Required before release
+## Scope and remaining coverage
 
-- Complete visible branding and documentation review; retain upstream credits/licenses.
-- Validate AWG 3.1 with the current compatibility configuration. Exposing new
-  obfuscation parameters requires matching UI, validation and client export support.
-- Linux panel build with CGO/sqlite enabled and all daemon/geodata bundles.
-- Targeted Go tests and Ubuntu 24.04 DKMS, connection, traffic and user-limit tests.
-- Validate install, management menu, service, update URLs and uninstall on a fresh host.
-- Publish the tested release asset only after these checks.
+- AWG 3.1 is validated with the current compatibility configuration. New 3.x
+  obfuscation parameters are not exposed in the panel UI/client export yet.
+- The full cross-distribution/protocol matrix, complete quota/device-limit flows,
+  and destructive uninstall were not exercised for this release.
+- Internal daemon paths retain upstream names for bundle compatibility. Public
+  installation, service, application, release and primary UI branding use VPN-AIO.
 
 ## Completed runtime checks
 
@@ -35,6 +34,13 @@ On Ubuntu 24.04.5 amd64 with kernel 7.0.0-1017-aws:
 - `test_unit/native-core-smoke.py` passed against Xray 26.11.9: AnyTLS TCP/UoT,
   TUIC TCP and both UDP relay modes, and Naive HTTP/2 plus HTTP/3 carriers.
   Every case checked per-user traffic counters and wrong-password rejection.
+- All panel Go tests (`go test ./...`) and the native-core smoke tests passed
+  in GitHub Actions on Ubuntu 24.04; the CGO/sqlite build also passed.
+- The full Linux amd64 bundle built successfully, including all static VPN
+  daemons and geo databases. The resulting binary is approximately 338 MiB.
+- Fresh binary installation, randomized login, management-menu installation,
+  systemd startup, primary pages and authenticated status/config/inbounds APIs
+  passed on the test host. The embedded core reported Xray 26.11.9.
 
 The full Incus VM matrix is not available on this small test host (no /dev/kvm).
 These targeted runtime tests do not claim coverage of every bundled protocol.
