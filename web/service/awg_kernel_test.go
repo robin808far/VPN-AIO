@@ -23,7 +23,7 @@ func TestAWGKernelCapabilitiesRequire3xParameters(t *testing.T) {
 		t.Fatal("requires root")
 	}
 	if err := exec.Command("modprobe", "amneziawg").Run(); err != nil {
-		t.Skipf("AmneziaWG kernel module unavailable: %v", err)
+		t.Fatalf("AmneziaWG kernel module unavailable: %v", err)
 	}
 	cl, err := wgctrl.New()
 	if err != nil {

@@ -17,6 +17,7 @@ const Protocols = {
     AnyTLS: "anytls",
     Tuic: "tuic",
     Naive: "naive",
+    Masque: "masque",
     // Not an Xray protocol: Xray core ships no ssh outbound. The panel keeps the
     // SSH connection itself and fronts it with a local SOCKS5 proxy, so what
     // reaches the config is a `socks` outbound pointing at that proxy (see
@@ -1053,6 +1054,7 @@ class StreamSettings extends CommonClass {
         finalmask = new FinalMaskStreamSettings(),
         sockopt = undefined,
         xdriveSettings = {},
+        masqueSettings = {},
     ) {
         super();
         this.network = network;
@@ -1069,6 +1071,7 @@ class StreamSettings extends CommonClass {
         this.finalmask = finalmask;
         this.sockopt = sockopt;
         this.xdrive = Object.assign({service: 'local', remoteFolder: '', secrets: [], s3: {endpoint: '', region: '', bucket: '', pathStyle: true}}, xdriveSettings);
+        this.masque = Object.assign({address:'',port:443,remoteDNS:[]},masqueSettings);
     }
 
     addTcpMask(type = 'fragment') {
@@ -1130,6 +1133,7 @@ class StreamSettings extends CommonClass {
             FinalMaskStreamSettings.fromJson(json.finalmask),
             SockoptStreamSettings.fromJson(json.sockopt),
             json.xdriveSettings,
+            json.masqueSettings,
         );
     }
 
@@ -1148,6 +1152,7 @@ class StreamSettings extends CommonClass {
             xhttpSettings: network === 'xhttp' ? this.xhttp.toJson() : undefined,
             hysteriaSettings: network === 'hysteria' ? this.hysteria.toJson() : undefined,
             xdriveSettings: network === 'xdrive' ? {...this.xdrive} : undefined,
+            masqueSettings: this.protocol === Protocols.Masque ? {...this.masque} : undefined,
             finalmask: this.hasFinalMask ? this.finalmask.toJson() : undefined,
             sockopt: this.sockopt != undefined ? this.sockopt.toJson() : undefined,
         };
@@ -1968,6 +1973,7 @@ Outbound.Settings = class extends CommonClass {
             case Protocols.AnyTLS: return new Outbound.AnyTLSSettings();
             case Protocols.Tuic: return new Outbound.TuicSettings();
             case Protocols.Naive: return new Outbound.NaiveSettings();
+            case Protocols.Masque: return new Outbound.MasqueSettings();
             case Protocols.SSH: return new Outbound.SshSettings();
             // Reached only for a protocol nobody added a case for, and the null
             // is load-bearing downstream in the worst way: canEnableMux() reads
@@ -1995,6 +2001,7 @@ Outbound.Settings = class extends CommonClass {
             case Protocols.AnyTLS: return Outbound.AnyTLSSettings.fromJson(json);
             case Protocols.Tuic: return Outbound.TuicSettings.fromJson(json);
             case Protocols.Naive: return Outbound.NaiveSettings.fromJson(json);
+            case Protocols.Masque: return Outbound.MasqueSettings.fromJson(json);
             case Protocols.SSH: return Outbound.SshSettings.fromJson(json);
             // Same null, same consequence as in getSettings above: an outbound
             // read back from the config with no case here reaches the form with
@@ -3603,4 +3610,10 @@ Outbound.HysteriaSettings = class extends CommonClass {
             version: this.version
         };
     }
+};
+
+Outbound.MasqueSettings = class extends Outbound.Settings {
+    constructor(address='', port=443, remoteDNS=[]) { super(Protocols.Masque); this.address=address; this.port=port; this.remoteDNS=remoteDNS; }
+    static fromJson(json={}) { return new Outbound.MasqueSettings(json.address||'', json.port||443, Array.isArray(json.remoteDNS)?json.remoteDNS:[]); }
+    toJson() { return {address:this.address, port:this.port, remoteDNS:this.remoteDNS}; }
 };

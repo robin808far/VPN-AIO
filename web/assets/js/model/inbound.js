@@ -1693,6 +1693,11 @@ class QuicParams extends XrayCommonClass {
         keepAlivePeriod = 0,
         disablePathMTUDiscovery = false,
         maxIncomingStreams = 1024,
+        bbrProfile = 'standard',
+        brutalDisableLossCompensation = false,
+        disableChromeParrot = false,
+        disableGSO = false,
+        disableStatelessReset = false,
     ) {
         super();
         this.congestion = congestion;
@@ -1708,6 +1713,8 @@ class QuicParams extends XrayCommonClass {
         this.keepAlivePeriod = keepAlivePeriod;
         this.disablePathMTUDiscovery = disablePathMTUDiscovery;
         this.maxIncomingStreams = maxIncomingStreams;
+        this.bbrProfile=bbrProfile; this.brutalDisableLossCompensation=brutalDisableLossCompensation;
+        this.disableChromeParrot=disableChromeParrot; this.disableGSO=disableGSO; this.disableStatelessReset=disableStatelessReset;
     }
 
     get hasUdpHop() {
@@ -1734,6 +1741,11 @@ class QuicParams extends XrayCommonClass {
             json.keepAlivePeriod,
             json.disablePathMTUDiscovery,
             json.maxIncomingStreams,
+            json.bbrProfile,
+            json.brutalDisableLossCompensation,
+            json.disableChromeParrot,
+            json.disableGSO,
+            json.disableStatelessReset,
         );
     }
 
@@ -1751,6 +1763,11 @@ class QuicParams extends XrayCommonClass {
         if (this.keepAlivePeriod > 0) result.keepAlivePeriod = this.keepAlivePeriod;
         if (this.disablePathMTUDiscovery) result.disablePathMTUDiscovery = this.disablePathMTUDiscovery;
         if (this.maxIncomingStreams > 0) result.maxIncomingStreams = this.maxIncomingStreams;
+        if (this.bbrProfile && this.bbrProfile!=='standard') result.bbrProfile=this.bbrProfile;
+        if (this.brutalDisableLossCompensation) result.brutalDisableLossCompensation=true;
+        if (this.disableChromeParrot) result.disableChromeParrot=true;
+        if (this.disableGSO) result.disableGSO=true;
+        if (this.disableStatelessReset) result.disableStatelessReset=true;
         return result;
     }
 }
