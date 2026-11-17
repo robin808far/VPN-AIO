@@ -41,7 +41,7 @@
       <a-select-option value="grpc">gRPC</a-select-option>
       <a-select-option value="httpupgrade">HTTPUpgrade</a-select-option>
       <a-select-option value="xhttp">XHTTP</a-select-option>
-      <a-select-option value="xdrive">XDRIVE</a-select-option>
+      <a-select-option v-if="inbound.protocol === Protocols.VLESS" value="xdrive">XDRIVE</a-select-option>
       <!--
         The inbound's stored transport, when it is not one of the options above. Without
         this the select renders BLANK for such an inbound, which reads as an unset field
@@ -106,6 +106,7 @@
 
 <!-- sockopt -->
 <template v-if="inbound.stream.network === 'xdrive'">
+  <a-alert type="info" show-icon message="XDRIVE requires VLESS encryption/decryption, no flow, and one listening port. Clients must enable Mux. Configure matching encryption keys before saving."></a-alert>
   <a-form-item label="XDRIVE service">
     <a-select v-model="inbound.stream.xdrive.service">
       <a-select-option value="local">Local folder</a-select-option>
