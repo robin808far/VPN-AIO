@@ -25,6 +25,8 @@ jobs:
           for file in deploy.sh vpn-ui.sh build.sh build/core/build.sh; do
             bash -n "$file"
           done
+      - name: Check GUI model round trips
+        run: node test_unit/export_test/core-webgui.test.js
       - name: Build pinned Xray and fetch geodata
         run: GEO_LEAN=1 bash build/core/build.sh amd64
       - name: Test panel integration

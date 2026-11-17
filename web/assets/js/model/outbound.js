@@ -1052,6 +1052,7 @@ class StreamSettings extends CommonClass {
         hysteriaSettings = new HysteriaStreamSettings(),
         finalmask = new FinalMaskStreamSettings(),
         sockopt = undefined,
+        xdriveSettings = {},
     ) {
         super();
         this.network = network;
@@ -1067,6 +1068,7 @@ class StreamSettings extends CommonClass {
         this.hysteria = hysteriaSettings;
         this.finalmask = finalmask;
         this.sockopt = sockopt;
+        this.xdrive = Object.assign({service: 'local', remoteFolder: '', secrets: []}, xdriveSettings);
     }
 
     addTcpMask(type = 'fragment') {
@@ -1127,6 +1129,7 @@ class StreamSettings extends CommonClass {
             HysteriaStreamSettings.fromJson(json.hysteriaSettings),
             FinalMaskStreamSettings.fromJson(json.finalmask),
             SockoptStreamSettings.fromJson(json.sockopt),
+            json.xdriveSettings,
         );
     }
 
@@ -1144,6 +1147,7 @@ class StreamSettings extends CommonClass {
             httpupgradeSettings: network === 'httpupgrade' ? this.httpupgrade.toJson() : undefined,
             xhttpSettings: network === 'xhttp' ? this.xhttp.toJson() : undefined,
             hysteriaSettings: network === 'hysteria' ? this.hysteria.toJson() : undefined,
+            xdriveSettings: network === 'xdrive' ? {...this.xdrive} : undefined,
             finalmask: this.hasFinalMask ? this.finalmask.toJson() : undefined,
             sockopt: this.sockopt != undefined ? this.sockopt.toJson() : undefined,
         };
