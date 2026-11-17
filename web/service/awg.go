@@ -338,9 +338,6 @@ func (o *awgSettings) validate31() error {
 			}
 		}
 	}
-	if o.RandomTrailers != nil && *o.RandomTrailers && o.DisableCookies != nil && !*o.DisableCookies {
-		return errors.New("AmneziaWG 3.1 randomTrailers must be paired with disableCookies")
-	}
 	return nil
 }
 

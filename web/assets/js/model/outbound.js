@@ -2793,6 +2793,20 @@ const VPN_OUT_AWG_FIELDS = VPN_OUT_WG_FIELDS.concat([
     { name: 'h2', type: 'text', def: '', plain: 'H2' },
     { name: 'h3', type: 'text', def: '', plain: 'H3' },
     { name: 'h4', type: 'text', def: '', plain: 'H4' },
+    { name: 'i1', type: 'text', def: '', plain: 'I1 (init packet pattern)' },
+    { name: 'i2', type: 'text', def: '', plain: 'I2' },
+    { name: 'i3', type: 'text', def: '', plain: 'I3' },
+    { name: 'i4', type: 'text', def: '', plain: 'I4' },
+    { name: 'i5', type: 'text', def: '', plain: 'I5' },
+    { name: 'headerProtectionKey', type: 'text', def: '', plain: 'Header protection key (base64)' },
+    { name: 'contentPaddingAddition', type: 'text', def: '', plain: 'Content padding range' },
+    { name: 'rekeyAfterTime', type: 'text', def: '', plain: 'Rekey-after range' },
+    { name: 'rekeyTimeout', type: 'text', def: '', plain: 'Rekey-timeout range' },
+    { name: 'rejectAfterTime', type: 'text', def: '', plain: 'Reject-after range' },
+    { name: 'keepaliveTimeout', type: 'text', def: '', plain: 'Keepalive-timeout range' },
+    { name: 'maxHandshakeAttempts', type: 'text', def: '', plain: 'Handshake-attempt range' },
+    { name: 'randomTrailers', type: 'boolean', def: false, plain: 'Random trailers' },
+    { name: 'disableCookies', type: 'boolean', def: false, plain: 'Disable cookies' },
 ]);
 
 const VPN_OUT_KINDS = {

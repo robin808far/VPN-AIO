@@ -518,6 +518,13 @@ func TestDefaultSettingsForRoundTripsIntoTheProtocolStruct(t *testing.T) {
 		if s.S3 != nil || s.S4 != nil || s.RandomTrailers != nil || s.DisableCookies != nil || s.HeaderProtectionKey != "" {
 			t.Errorf("nested AWG 3.1 options should not leak into legacy fields: %+v", s)
 		}
+		merged, err := (&AwgService{}).parseSettings(&model.Inbound{Settings: settings})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if merged.RandomTrailers == nil || *merged.RandomTrailers || merged.DisableCookies == nil || *merged.DisableCookies {
+			t.Fatalf("AWG nested defaults not materialized: %+v", merged)
+		}
 	})
 
 	t.Run("gre", func(t *testing.T) {
