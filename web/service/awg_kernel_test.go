@@ -100,6 +100,8 @@ func TestAWGKernelHandshakeAndPeerRemoval(t *testing.T) {
 	if p.LastHandshakeTime.IsZero() || p.ReceiveBytes == 0 || p.TransmitBytes == 0 {
 		t.Fatalf("missing handshake or traffic counters: %+v", p)
 	}
+	if got:=sdev.S3;got!=12 {t.Errorf("kernel S3=%d, want 12",got)}
+	if got:=sdev.S4;got!=12 {t.Errorf("kernel S4=%d, want 12",got)}
 	if err := ctl.ConfigureDevice(server, wgtypes.Config{Peers: []wgtypes.PeerConfig{{PublicKey: clientKey.PublicKey(), Remove: true}}}); err != nil {
 		t.Fatal(err)
 	}

@@ -4,6 +4,7 @@ import (
 	cryptorand "crypto/rand"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 	"net"
