@@ -205,7 +205,7 @@ func (o *awgSettings) resolveObfs() awgObfs {
 }
 
 func (b awgObfs) sig() string {
-	return fmt.Sprintf("%d|%d|%d|%d|%d|%d|%d|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%v|%v",
+	return fmt.Sprintf("%d|%d|%d|%d|%d|%d|%d|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%v|%v",
 		b.Jc, b.Jmin, b.Jmax, b.S1, b.S2, b.S3, b.S4, b.H1, b.H2, b.H3, b.H4, b.I1, b.I2, b.I3, b.I4, b.I5, b.HeaderProtectionKey,
 		b.ContentPaddingAddition, b.RekeyAfterTime, b.RekeyTimeout, b.RejectAfterTime, b.KeepaliveTimeout, b.MaxHandshakeAttempts, b.RandomTrailers, b.DisableCookies)
 }
