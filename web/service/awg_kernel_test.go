@@ -15,6 +15,48 @@ import (
 	"github.com/Jipok/wgctrl-go/wgtypes"
 )
 
+func TestAWGKernelCapabilitiesRequire3xParameters(t *testing.T) {
+	if os.Getenv("VPN_AIO_KERNEL_TEST") != "1" {
+		t.Skip("set VPN_AIO_KERNEL_TEST=1 on a disposable Linux host")
+	}
+	if os.Geteuid() != 0 {
+		t.Fatal("requires root")
+	}
+	if err := exec.Command("modprobe", "amneziawg").Run(); err != nil {
+		t.Skipf("AmneziaWG kernel module unavailable: %v", err)
+	}
+	cl, err := wgctrl.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cl.Close()
+	device := "awgcaps"
+	if err := exec.Command("ip", "link", "add", device, "type", "amneziawg").Run(); err != nil {
+		t.Fatal(err)
+	}
+	defer exec.Command("ip", "link", "del", device).Run()
+	priv, err := wgtypes.GeneratePrivateKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	key, _ := wgtypes.GenerateKey()
+	obfs := (&awgSettings{S1: intPtr(16), S2: intPtr(20), S3: intPtr(12), S4: intPtr(12), HeaderProtectionKey: base64.StdEncoding.EncodeToString(key[:]),
+		RandomTrailers: awgBoolPtr(true), DisableCookies: awgBoolPtr(true)}).resolveObfs()
+	var cfg wgtypes.Config
+	cfg.PrivateKey = &priv
+	obfs.apply(&cfg)
+	if err := cl.ConfigureDevice(device, cfg); err != nil {
+		t.Fatalf("current kernel rejected AWG 3.1 netlink attributes: %v", err)
+	}
+	got, err := cl.Device(device)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !got.IsAmnezia || got.AmneziaVersion < wgtypes.AWG31 || !got.RandomTrailers || !got.DisableCookies || got.S3 != 12 || got.S4 != 12 || got.HeaderProtectionKey == nil {
+		t.Fatalf("kernel didn't retain AWG 3.1 parameters: %+v", got)
+	}
+}
+
 // Opt-in integration test for the actual kernel ABI, not a mock. Both UDP sockets
 // are born in the host namespace; moving the client link isolates its inner route
 // while leaving its encrypted transport reachable over host loopback.
@@ -100,8 +142,12 @@ func TestAWGKernelHandshakeAndPeerRemoval(t *testing.T) {
 	if p.LastHandshakeTime.IsZero() || p.ReceiveBytes == 0 || p.TransmitBytes == 0 {
 		t.Fatalf("missing handshake or traffic counters: %+v", p)
 	}
-	if got:=sdev.S3;got!=12 {t.Errorf("kernel S3=%d, want 12",got)}
-	if got:=sdev.S4;got!=12 {t.Errorf("kernel S4=%d, want 12",got)}
+	if got := sdev.S3; got != 12 {
+		t.Errorf("kernel S3=%d, want 12", got)
+	}
+	if got := sdev.S4; got != 12 {
+		t.Errorf("kernel S4=%d, want 12", got)
+	}
 	if err := ctl.ConfigureDevice(server, wgtypes.Config{Peers: []wgtypes.PeerConfig{{PublicKey: clientKey.PublicKey(), Remove: true}}}); err != nil {
 		t.Fatal(err)
 	}
