@@ -16,8 +16,8 @@ Release validation record for the 2.0.0 build.
 
 ## Scope and remaining coverage
 
-- AWG 3.1 is validated with the current compatibility configuration. New 3.x
-  obfuscation parameters are not exposed in the panel UI/client export yet.
+- AWG 3.1 UI and client export are part of the 2.1.0 development branch; this
+  2.0.0 release intentionally retains the compatibility profile.
 - The full cross-distribution/protocol matrix, complete quota/device-limit flows,
   and destructive uninstall were not exercised for this release.
 - Internal daemon paths retain upstream names for bundle compatibility. Public

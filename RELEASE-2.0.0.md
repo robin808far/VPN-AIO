@@ -19,8 +19,8 @@ Manage with `sudo VPN-AIO`; service `VPN-AIO`; installation `/opt/VPN-AIO`.
 The installer generates login credentials. Asset: `VPN-AIO-amd64`; verify its
 checksum using `sha256sum -c SHA256SUMS` in the download directory.
 
-**Scope:** AWG uses the existing compatibility configuration fields; new 3.x
-obfuscation controls are not yet exposed. Only Ubuntu 24.04 amd64 was validated.
+**Scope:** This 2.0.0 release uses the compatibility AWG profile. AWG 3.1 UI
+controls are being developed for 2.1.0. Only Ubuntu 24.04 amd64 was validated.
 See [validation record](VPN-AIO-2.0.0.md) for exact test coverage. Existing
 upstream daemon paths remain; do not install alongside vpn-ui on the same host.
 
