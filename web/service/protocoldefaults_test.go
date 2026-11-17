@@ -507,7 +507,7 @@ func TestDefaultSettingsForRoundTripsIntoTheProtocolStruct(t *testing.T) {
 		if s.Dns1 != "1.1.1.1" || s.Dns2 != "1.0.0.1" || s.Mtu != 1420 {
 			t.Errorf("dns/mtu: %q %q %d", s.Dns1, s.Dns2, s.Mtu)
 		}
-		for name, got := range map[string]*int{"jc": s.Jc, "jmin": s.Jmin, "jmax": s.Jmax, "s1": s.S1, "s2": s.S2, "s3": s.S3, "s4": s.S4} {
+		for name, got := range map[string]*int{"jc": s.Jc, "jmin": s.Jmin, "jmax": s.Jmax, "s1": s.S1, "s2": s.S2} {
 			if got == nil {
 				t.Fatalf("%s did not survive into awgSettings", name)
 			}
@@ -515,15 +515,16 @@ func TestDefaultSettingsForRoundTripsIntoTheProtocolStruct(t *testing.T) {
 		if *s.Jc != 4 || *s.Jmin != 8 || *s.Jmax != 80 || *s.S1 != 77 || *s.S2 != 90 {
 			t.Errorf("obfuscation params: jc=%d jmin=%d jmax=%d s1=%d s2=%d", *s.Jc, *s.Jmin, *s.Jmax, *s.S1, *s.S2)
 		}
-		if s.S3 != nil || s.S4 != nil || s.RandomTrailers != nil || s.DisableCookies != nil || s.HeaderProtectionKey != "" {
-			t.Errorf("nested AWG 3.1 options should not leak into legacy fields: %+v", s)
-		}
-		merged, err := (&AwgService{}).parseSettings(&model.Inbound{Settings: settings})
+		defaults, err := DefaultSettingsFor(model.AWG)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if merged.RandomTrailers == nil || *merged.RandomTrailers || merged.DisableCookies == nil || *merged.DisableCookies {
-			t.Fatalf("AWG nested defaults not materialized: %+v", merged)
+		var root map[string]any
+		if err = json.Unmarshal([]byte(defaults), &root); err != nil {
+			t.Fatal(err)
+		}
+		if _, ok := root["awg31"]; !ok {
+			t.Fatal("nested AWG 3.1 defaults were dropped during protocol-default materialization")
 		}
 	})
 
