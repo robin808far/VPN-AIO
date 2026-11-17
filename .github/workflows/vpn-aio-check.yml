@@ -37,6 +37,8 @@ jobs:
         run: go test -timeout 10m ./...
       - name: Native Xray protocol integration
         run: python3 test_unit/native-core-smoke.py corebundle/core/amd64/xray
+      - name: XDRIVE core configuration validation
+        run: python3 test_unit/xdrive-config-check.py corebundle/core/amd64/xray
       - name: Compile panel with sqlite support
         env:
           CGO_ENABLED: '1'

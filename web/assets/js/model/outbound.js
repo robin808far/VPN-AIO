@@ -1068,7 +1068,7 @@ class StreamSettings extends CommonClass {
         this.hysteria = hysteriaSettings;
         this.finalmask = finalmask;
         this.sockopt = sockopt;
-        this.xdrive = Object.assign({service: 'local', remoteFolder: '', secrets: []}, xdriveSettings);
+        this.xdrive = Object.assign({service: 'local', remoteFolder: '', secrets: [], s3: {endpoint: '', region: '', bucket: '', pathStyle: true}}, xdriveSettings);
     }
 
     addTcpMask(type = 'fragment') {

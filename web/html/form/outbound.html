@@ -1322,6 +1322,7 @@
             <a-select v-model="outbound.stream.xdrive.service">
               <a-select-option value="local">Local folder</a-select-option>
               <a-select-option value="google-drive">Google Drive</a-select-option>
+              <a-select-option value="s3">S3-compatible storage</a-select-option>
             </a-select>
           </a-form-item>
           <a-form-item label="Remote folder">
@@ -1329,6 +1330,15 @@
           </a-form-item>
           <template v-if="outbound.stream.xdrive.service === 'google-drive'">
             <a-form-item v-for="(label, index) in ['Client ID', 'Client secret', 'Refresh token']" :key="'xd-secret-'+index" :label="label">
+              <a-input-password :value="outbound.stream.xdrive.secrets[index]" @input="$set(outbound.stream.xdrive.secrets, index, $event.target.value)"></a-input-password>
+            </a-form-item>
+          </template>
+          <template v-if="outbound.stream.xdrive.service === 's3'">
+            <a-form-item v-for="key in ['endpoint', 'region', 'bucket']" :key="'xd-s3-'+key" :label="'S3 '+key">
+              <a-input :value="outbound.stream.xdrive.s3[key]" @input="$set(outbound.stream.xdrive.s3, key, $event.target.value)"></a-input>
+            </a-form-item>
+            <a-form-item label="S3 path-style addressing"><a-switch v-model="outbound.stream.xdrive.s3.pathStyle"></a-switch></a-form-item>
+            <a-form-item v-for="(label, index) in ['Access key ID', 'Secret access key', 'Session token (optional)']" :key="'xd-s3-secret-'+index" :label="label">
               <a-input-password :value="outbound.stream.xdrive.secrets[index]" @input="$set(outbound.stream.xdrive.secrets, index, $event.target.value)"></a-input-password>
             </a-form-item>
           </template>

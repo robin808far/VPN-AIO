@@ -24,6 +24,11 @@ for (const model of ["inbound", "outbound"]) {
     expected.pollIntervalMs = 20;
     assert.deepEqual(JSON.parse(JSON.stringify(stream.toJson().xdriveSettings)), expected);
     assert.equal(context.Stream.fromJson({network: "tcp"}).toJson().xdriveSettings, undefined);
+    const fresh = context.Stream.fromJson({network: "xdrive"});
+    assert.equal(fresh.xdrive.s3.pathStyle, true);
+    fresh.xdrive.service = "s3";
+    fresh.xdrive.s3.bucket = "new-bucket";
+    assert.equal(fresh.toJson().xdriveSettings.s3.bucket, "new-bucket");
     if (model === "inbound") {
         vm.runInContext("globalThis.Awg = Inbound.AwgSettings;", context);
         const awg = context.Awg.fromJson({s3: 12, s4: 24, clients: []});
