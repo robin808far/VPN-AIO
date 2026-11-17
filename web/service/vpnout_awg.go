@@ -201,6 +201,17 @@ func (d *awgOutDriver) settings(cfg VpnOutboundConfig) (*awgOutSettings, error) 
 		if err := json.Unmarshal(nested, &values); err != nil {
 			return st, fmt.Errorf("bad awg31 settings: %w", err)
 		}
+		for key, value := range values {
+			if _, exists := raw[key]; !exists {
+				raw[key] = value
+			}
+		}
+	}
+	if nested := raw["awg31"]; len(nested) > 0 && string(nested) != "null" {
+		var values map[string]json.RawMessage
+		if err := json.Unmarshal(nested, &values); err != nil {
+			return st, fmt.Errorf("bad awg31 settings: %w", err)
+		}
 		for k, v := range values {
 			if _, exists := raw[k]; !exists {
 				raw[k] = v

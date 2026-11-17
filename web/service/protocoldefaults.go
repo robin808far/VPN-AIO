@@ -306,7 +306,6 @@ func protocolSettingDefaults(protocol model.Protocol) []settingDefault {
 			def("s1", 77),
 			def("s2", 90),
 			def("awg31", map[string]any{}),
-			def("awg31", map[string]any{}),
 			def("h1", ""),
 			def("h2", ""),
 			def("h3", ""),
