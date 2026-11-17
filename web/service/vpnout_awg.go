@@ -51,6 +51,8 @@ type awgOutSettings struct {
 	Jmax *int   `json:"jmax"`
 	S1   *int   `json:"s1"`
 	S2   *int   `json:"s2"`
+	S3   *int   `json:"s3"`
+	S4   *int   `json:"s4"`
 	H1   string `json:"h1"`
 	H2   string `json:"h2"`
 	H3   string `json:"h3"`
@@ -61,7 +63,11 @@ func (o *awgOutSettings) mtu() int {
 	if o.Mtu > 0 {
 		return o.Mtu
 	}
-	return wgDefaultMTU
+	s4 := 0
+	if o.S4 != nil {
+		s4 = *o.S4
+	}
+	return max(1280, wgDefaultMTU-s4)
 }
 
 func (o *awgOutSettings) keepalive() time.Duration {
@@ -96,6 +102,7 @@ func (o *awgOutSettings) obfs() awgObfs {
 	return awgObfs{
 		Jc: pick(o.Jc), Jmin: pick(o.Jmin), Jmax: pick(o.Jmax),
 		S1: pick(o.S1), S2: pick(o.S2),
+		S3: pick(o.S3), S4: pick(o.S4),
 		H1: strings.TrimSpace(o.H1), H2: strings.TrimSpace(o.H2),
 		H3: strings.TrimSpace(o.H3), H4: strings.TrimSpace(o.H4),
 	}
@@ -222,6 +229,9 @@ func (o *awgOutSettings) validate() error {
 	}
 
 	b := o.obfs()
+	if b.S3 < 0 || b.S3 > 1280 || b.S4 < 0 || b.S4 > 1280 {
+		return errors.New("s3 and s4 must be between 0 and 1280")
+	}
 	// Junk packets are only emitted when Jc > 0, and then their size is drawn from
 	// [Jmin, Jmax]. An inverted or empty range is a config the module cannot honour.
 	if b.Jc > 0 && (b.Jmax <= 0 || b.Jmin > b.Jmax) {

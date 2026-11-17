@@ -5719,6 +5719,8 @@ Inbound.AwgSettings = class extends Inbound.Settings {
     userLimit = 10,
     userLimitStrategy = "accept",
     externalProxy = [],
+    s3 = 0,
+    s4 = 0,
   ) {
     super(protocol);
     this.dns1 = dns1;
@@ -5731,6 +5733,8 @@ Inbound.AwgSettings = class extends Inbound.Settings {
     this.jmax = jmax;
     this.s1 = s1;
     this.s2 = s2;
+    this.s3 = s3;
+    this.s4 = s4;
     this.h1 = h1;
     this.h2 = h2;
     this.h3 = h3;
@@ -5777,6 +5781,8 @@ Inbound.AwgSettings = class extends Inbound.Settings {
       json.userLimit ?? 1,
       json.userLimitStrategy ?? "accept",
       Array.isArray(json.externalProxy) ? json.externalProxy : [],
+      json.s3 ?? 0,
+      json.s4 ?? 0,
     );
   }
 
@@ -5790,6 +5796,8 @@ Inbound.AwgSettings = class extends Inbound.Settings {
       jmax: this.jmax,
       s1: this.s1,
       s2: this.s2,
+      s3: this.s3,
+      s4: this.s4,
       h1: this.h1,
       h2: this.h2,
       h3: this.h3,

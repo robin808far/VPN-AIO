@@ -261,6 +261,14 @@
                         :style="{ width: '100%' }"
                     ></a-input-number>
                 </a-col>
+                <a-col :xs="12" :md="8">
+                    <div>S3 — Cookie padding</div>
+                    <a-input-number v-model.number="inbound.settings.s3" :min="0" :max="1280" :precision="0"></a-input-number>
+                </a-col>
+                <a-col :xs="12" :md="8">
+                    <div>S4 — Transport padding</div>
+                    <a-input-number v-model.number="inbound.settings.s4" :min="0" :max="1280" :precision="0"></a-input-number>
+                </a-col>
             </a-row>
             <a-row type="flex" :gutter="8">
                 <a-col :xs="12" :md="8" :style="{ marginBottom: '8px' }">

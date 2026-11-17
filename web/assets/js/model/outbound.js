@@ -2780,6 +2780,8 @@ const VPN_OUT_AWG_FIELDS = VPN_OUT_WG_FIELDS.concat([
     { name: 'jmax', type: 'number', def: null, min: 0, max: 1280, plain: 'Jmax' },
     { name: 's1', type: 'number', def: null, min: 0, max: 1280, plain: 'S1' },
     { name: 's2', type: 'number', def: null, min: 0, max: 1280, plain: 'S2' },
+    { name: 's3', type: 'number', def: null, min: 0, max: 1280, plain: 'S3 (cookie padding)' },
+    { name: 's4', type: 'number', def: null, min: 0, max: 1280, plain: 'S4 (transport padding)' },
     // All four or none: they replace the four packet types together, so a partial
     // set breaks half the packets. The driver rejects it, but the rule is not
     // guessable from the form.

@@ -215,13 +215,16 @@ func validateAwgSettings(m map[string]any) error {
 	}
 	// AWG 1.0 obfuscation. Jc is a packet COUNT and Jmin/Jmax a byte range, so
 	// Jmin > Jmax is not a preference, it is a range the generator cannot satisfy.
-	for _, key := range []string{"jc", "jmin", "jmax", "s1", "s2"} {
+	for _, key := range []string{"jc", "jmin", "jmax", "s1", "s2", "s3", "s4"} {
 		v, present, err := optInt(m, key)
 		if err != nil {
 			return err
 		}
 		if present && v < 0 {
 			return common.NewErrorf("%q must not be negative (got %d)", key, v)
+		}
+		if present && (key == "s3" || key == "s4") && v > 1280 {
+			return common.NewErrorf("%q must not exceed 1280", key)
 		}
 	}
 	jmin, hasMin, err := optInt(m, "jmin")

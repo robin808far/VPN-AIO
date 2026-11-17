@@ -71,6 +71,8 @@ type awgSettings struct {
 	Jmax *int   `json:"jmax"`
 	S1   *int   `json:"s1"`
 	S2   *int   `json:"s2"`
+	S3   *int   `json:"s3"`
+	S4   *int   `json:"s4"`
 	H1   string `json:"h1"`
 	H2   string `json:"h2"`
 	H3   string `json:"h3"`
@@ -139,12 +141,17 @@ func (o *awgSettings) mtu() int {
 	if o.Mtu > 0 {
 		return o.Mtu
 	}
-	return wgDefaultMTU
+	s4 := 0
+	if o.S4 != nil {
+		s4 = *o.S4
+	}
+	return max(1280, wgDefaultMTU-s4)
 }
 
 // awgObfs is the resolved (defaults applied) AWG 1.0 obfuscation parameter set.
 type awgObfs struct {
 	Jc, Jmin, Jmax, S1, S2 int
+	S3, S4                 int
 	H1, H2, H3, H4         string
 }
 
@@ -163,12 +170,14 @@ func (o *awgSettings) resolveObfs() awgObfs {
 		Jmax: pick(o.Jmax, 80),
 		S1:   pick(o.S1, 77),
 		S2:   pick(o.S2, 90),
+		S3:   pick(o.S3, 0),
+		S4:   pick(o.S4, 0),
 		H1:   o.H1, H2: o.H2, H3: o.H3, H4: o.H4,
 	}
 }
 
 func (b awgObfs) sig() string {
-	return fmt.Sprintf("%d|%d|%d|%d|%d|%s|%s|%s|%s", b.Jc, b.Jmin, b.Jmax, b.S1, b.S2, b.H1, b.H2, b.H3, b.H4)
+	return fmt.Sprintf("%d|%d|%d|%d|%d|%d|%d|%s|%s|%s|%s", b.Jc, b.Jmin, b.Jmax, b.S1, b.S2, b.S3, b.S4, b.H1, b.H2, b.H3, b.H4)
 }
 
 // apply writes the obfuscation params into a wgtypes.Config (only when H1-H4 are present).
@@ -176,6 +185,8 @@ func (b awgObfs) apply(cfg *wgtypes.Config) {
 	jc, jmin, jmax, s1, s2 := b.Jc, b.Jmin, b.Jmax, b.S1, b.S2
 	cfg.Jc, cfg.Jmin, cfg.Jmax = &jc, &jmin, &jmax
 	cfg.S1, cfg.S2 = &s1, &s2
+	s3, s4 := b.S3, b.S4
+	cfg.S3, cfg.S4 = &s3, &s4
 	if b.H1 != "" {
 		h1, h2, h3, h4 := b.H1, b.H2, b.H3, b.H4
 		cfg.H1, cfg.H2, cfg.H3, cfg.H4 = &h1, &h2, &h3, &h4
@@ -709,6 +720,7 @@ func (s *AwgService) RenderClientConfigs(inbound *model.Inbound, email, endpoint
 				b.WriteString(fmt.Sprintf("Jmax = %d\n", obfs.Jmax))
 				b.WriteString(fmt.Sprintf("S1 = %d\n", obfs.S1))
 				b.WriteString(fmt.Sprintf("S2 = %d\n", obfs.S2))
+				b.WriteString(fmt.Sprintf("S3 = %d\nS4 = %d\n", obfs.S3, obfs.S4))
 				b.WriteString("H1 = " + obfs.H1 + "\n")
 				b.WriteString("H2 = " + obfs.H2 + "\n")
 				b.WriteString("H3 = " + obfs.H3 + "\n")
@@ -757,6 +769,7 @@ func (s *AwgService) RenderClientConfigs(inbound *model.Inbound, email, endpoint
 type AwgClientParams struct {
 	WgcClientParams
 	Jc, Jmin, Jmax, S1, S2 int
+	S3, S4                int
 	H1, H2, H3, H4         string
 }
 
@@ -839,6 +852,7 @@ func (s *AwgService) RenderClientParams(inbound *model.Inbound, email, endpointH
 						AllowedIPs:   []string{"0.0.0.0/0"},
 					},
 					Jc: obfs.Jc, Jmin: obfs.Jmin, Jmax: obfs.Jmax, S1: obfs.S1, S2: obfs.S2,
+					S3: obfs.S3, S4: obfs.S4,
 					H1: obfs.H1, H2: obfs.H2, H3: obfs.H3, H4: obfs.H4,
 				})
 			}
