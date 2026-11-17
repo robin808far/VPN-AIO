@@ -58,7 +58,7 @@ func TestAWGKernelHandshakeAndPeerRemoval(t *testing.T) {
 		S1: intPtr(16), S2: intPtr(20), S3: intPtr(12), S4: intPtr(12),
 		HeaderProtectionKey:    base64.StdEncoding.EncodeToString(protection[:]),
 		ContentPaddingAddition: "8-16", RekeyAfterTime: "100-120", RekeyTimeout: "3-6", RejectAfterTime: "160-200",
-		KeepaliveTimeout: "8-16", MaxHandshakeAttempts: "15-25", RandomTrailers: boolPtr(true), DisableCookies: boolPtr(true),
+		KeepaliveTimeout: "8-16", MaxHandshakeAttempts: "15-25", RandomTrailers: awgBoolPtr(true), DisableCookies: awgBoolPtr(true),
 	}).resolveObfs()
 	scfg := wgtypes.Config{PrivateKey: &serverKey, ReplacePeers: true, Peers: []wgtypes.PeerConfig{{
 		PublicKey: clientKey.PublicKey(), ReplaceAllowedIPs: true,
@@ -108,3 +108,5 @@ func TestAWGKernelHandshakeAndPeerRemoval(t *testing.T) {
 	}
 	t.Logf("kernel handshake, bidirectional counters (%d/%d) and peer removal verified", p.ReceiveBytes, p.TransmitBytes)
 }
+
+func awgBoolPtr(v bool) *bool { return &v }

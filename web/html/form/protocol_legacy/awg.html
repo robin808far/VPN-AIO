@@ -211,6 +211,19 @@
                 them. The magic headers (H1-H4) are minted by the server.
             </p>
             <a-row type="flex" :gutter="8">
+                <a-col :xs="12" :md="8" v-for="key in ['i1','i2','i3','i4','i5']" :key="'legacy-awg-'+key">
+                    <a-form-item :label="key.toUpperCase()"><a-input v-model.trim="inbound.settings.awg31[key]"></a-input></a-form-item>
+                </a-col>
+                <a-col :xs="12" :md="8" v-for="key in ['contentPaddingAddition','rekeyAfterTime','rekeyTimeout','rejectAfterTime','keepaliveTimeout','maxHandshakeAttempts']" :key="'legacy-awg-'+key">
+                    <a-form-item :label="key"><a-input v-model.trim="inbound.settings.awg31[key]" placeholder="disabled"></a-input></a-form-item>
+                </a-col>
+            </a-row>
+            <a-form-item label="Header protection key (base64)"><a-input-password v-model.trim="inbound.settings.awg31.headerProtectionKey"></a-input-password></a-form-item>
+            <a-row type="flex" :gutter="12">
+                <a-col :span="12"><a-form-item label="Random trailers"><a-switch v-model="inbound.settings.awg31.randomTrailers"></a-switch></a-form-item></a-col>
+                <a-col :span="12"><a-form-item label="Disable cookies"><a-switch v-model="inbound.settings.awg31.disableCookies"></a-switch></a-form-item></a-col>
+            </a-row>
+            <a-row type="flex" :gutter="8">
                 <a-col :xs="12" :md="8" :style="{ marginBottom: '8px' }">
                     <a-tooltip title="Junk packet count sent before the handshake">
                         <div :style="{ marginBottom: '4px' }">Jc</div>

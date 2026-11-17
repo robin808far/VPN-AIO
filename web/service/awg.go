@@ -283,8 +283,65 @@ func (s *AwgService) GetAwgInbounds() ([]*model.Inbound, error) {
 
 func (s *AwgService) parseSettings(inbound *model.Inbound) (*awgSettings, error) {
 	settings := &awgSettings{}
-	err := json.Unmarshal([]byte(inbound.Settings), settings)
+	var raw map[string]json.RawMessage
+	err := json.Unmarshal([]byte(inbound.Settings), &raw)
+	if err == nil {
+		if extra := raw["awg31"]; len(extra) > 0 && string(extra) != "null" {
+			var value map[string]json.RawMessage
+			if err = json.Unmarshal(extra, &value); err == nil {
+				for key, item := range value {
+					raw[key] = item
+				}
+			}
+		}
+	}
+	if err == nil {
+		var merged []byte
+		merged, err = json.Marshal(raw)
+		if err == nil {
+			err = json.Unmarshal(merged, settings)
+		}
+	}
+	if err == nil {
+		err = settings.validate31()
+	}
 	return settings, err
+}
+
+func (o *awgSettings) validate31() error {
+	if o == nil {
+		return errors.New("missing AmneziaWG settings")
+	}
+	if o.S3 != nil && (*o.S3 < 0 || *o.S3 > 1280) {
+		return errors.New("s3 must be between 0 and 1280")
+	}
+	if o.S4 != nil && (*o.S4 < 0 || *o.S4 > 1280) {
+		return errors.New("s4 must be between 0 and 1280")
+	}
+	if o.HeaderProtectionKey != "" {
+		raw, err := base64.StdEncoding.DecodeString(o.HeaderProtectionKey)
+		if err != nil {
+			raw, err = base64.RawStdEncoding.DecodeString(o.HeaderProtectionKey)
+		}
+		if err != nil || len(raw) != 32 {
+			return errors.New("headerProtectionKey must encode exactly 32 bytes")
+		}
+	}
+	for name, value := range map[string]string{"contentPaddingAddition": o.ContentPaddingAddition, "rekeyAfterTime": o.RekeyAfterTime, "rekeyTimeout": o.RekeyTimeout, "rejectAfterTime": o.RejectAfterTime, "keepaliveTimeout": o.KeepaliveTimeout, "maxHandshakeAttempts": o.MaxHandshakeAttempts} {
+		if value != "" {
+			r, err := wgtypes.ParseUintRange(value)
+			if err != nil {
+				return fmt.Errorf("%s: %w", name, err)
+			}
+			if r.Hi > uint32(^uint16(0)) {
+				return fmt.Errorf("%s exceeds kernel limit", name)
+			}
+		}
+	}
+	if o.RandomTrailers != nil && *o.RandomTrailers && o.DisableCookies != nil && !*o.DisableCookies {
+		return errors.New("AmneziaWG 3.1 randomTrailers must be paired with disableCookies")
+	}
+	return nil
 }
 
 // awgBlockFor returns an inbound's client block network + prefix in the 10.8 /16.

@@ -35,8 +35,8 @@ for (const model of ["inbound", "outbound"]) {
         assert.equal(awg.toJson().s3, 12);
         assert.equal(awg.toJson().s4, 24);
         awg.awg31.randomTrailers=true; awg.awg31.headerProtectionKey='abc';
-        assert.equal(awg.toJson().randomTrailers, true);
-        assert.equal(awg.toJson().headerProtectionKey, 'abc');
+        assert.equal(awg.toJson().awg31.randomTrailers, true);
+        assert.equal(awg.toJson().awg31.headerProtectionKey, 'abc');
     }
     console.log(`PASS ${model}: XDRIVE settings survive edits without losing S3/XMUX`);
 }

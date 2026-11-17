@@ -515,8 +515,8 @@ func TestDefaultSettingsForRoundTripsIntoTheProtocolStruct(t *testing.T) {
 		if *s.Jc != 4 || *s.Jmin != 8 || *s.Jmax != 80 || *s.S1 != 77 || *s.S2 != 90 {
 			t.Errorf("obfuscation params: jc=%d jmin=%d jmax=%d s1=%d s2=%d", *s.Jc, *s.Jmin, *s.Jmax, *s.S1, *s.S2)
 		}
-		if s.S3 == nil || s.S4 == nil || *s.S3 != 0 || *s.S4 != 0 || s.RandomTrailers == nil || *s.RandomTrailers || s.DisableCookies == nil || *s.DisableCookies {
-			t.Errorf("new AWG options must default disabled: S3=%v S4=%v trailers=%v cookies=%v", s.S3, s.S4, s.RandomTrailers, s.DisableCookies)
+		if s.S3 != nil || s.S4 != nil || s.RandomTrailers != nil || s.DisableCookies != nil || s.HeaderProtectionKey != "" {
+			t.Errorf("nested AWG 3.1 options should not leak into legacy fields: %+v", s)
 		}
 	})
 

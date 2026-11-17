@@ -192,7 +192,26 @@ func (d *awgOutDriver) settings(cfg VpnOutboundConfig) (*awgOutSettings, error) 
 	if len(cfg.Settings) == 0 {
 		return st, errors.New("this AmneziaWG outbound has no settings")
 	}
-	if err := json.Unmarshal([]byte(cfg.Settings), st); err != nil {
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(cfg.Settings), &raw); err != nil {
+		return st, fmt.Errorf("bad AmneziaWG outbound settings: %w", err)
+	}
+	if nested := raw["awg31"]; len(nested) > 0 && string(nested) != "null" {
+		var values map[string]json.RawMessage
+		if err := json.Unmarshal(nested, &values); err != nil {
+			return st, fmt.Errorf("bad awg31 settings: %w", err)
+		}
+		for k, v := range values {
+			if _, exists := raw[k]; !exists {
+				raw[k] = v
+			}
+		}
+	}
+	merged, err := json.Marshal(raw)
+	if err != nil {
+		return st, err
+	}
+	if err := json.Unmarshal(merged, st); err != nil {
 		return st, fmt.Errorf("bad AmneziaWG outbound settings: %w", err)
 	}
 	return st, nil

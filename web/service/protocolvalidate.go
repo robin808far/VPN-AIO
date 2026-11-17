@@ -215,6 +215,17 @@ func validateAwgSettings(m map[string]any) error {
 	if err := validateWireguardFamily(m); err != nil {
 		return err
 	}
+	if nested, ok := m["awg31"]; ok && nested != nil {
+		options, ok := nested.(map[string]any)
+		if !ok {
+			return common.NewError(`"awg31" must be an object`)
+		}
+		for key, value := range options {
+			if _, exists := m[key]; !exists {
+				m[key] = value
+			}
+		}
+	}
 	// AWG 1.0 obfuscation. Jc is a packet COUNT and Jmin/Jmax a byte range, so
 	// Jmin > Jmax is not a preference, it is a range the generator cannot satisfy.
 	for _, key := range []string{"jc", "jmin", "jmax", "s1", "s2", "s3", "s4"} {
@@ -252,6 +263,9 @@ func validateAwgSettings(m map[string]any) error {
 	}
 	if key, _, _ := optString(m, "headerProtectionKey"); key != "" {
 		decoded, err := base64.StdEncoding.DecodeString(key)
+		if err != nil {
+			decoded, err = base64.RawStdEncoding.DecodeString(key)
+		}
 		if err != nil || len(decoded) != 32 {
 			return common.NewErrorf("%q must be base64 encoding of exactly 32 bytes", "headerProtectionKey")
 		}

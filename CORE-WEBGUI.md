@@ -35,8 +35,9 @@ References:
       inbound/outbound forms and supported subscription output.
 - [ ] FinalMask TCP/UDP mask options and current QUIC parameters.
 - [ ] Audit updated XHTTP, TLS/REALITY, socket, DNS and routing settings.
-- [ ] AWG S3/S4, I1-I5, header protection, padding/timing ranges,
-      random trailers and cookie control: server, outbound and client export.
+- [x] AWG S3/S4, I1-I5, header protection, padding/timing ranges,
+      random trailers and cookie control: inbound form/model, outbound parser,
+      kernel netlink, client config and Clash option serialization.
 - [ ] AWG parameter validation, compatible defaults and MTU handling.
 - [ ] Round-trip tests ensuring edits do not discard existing settings.
 - [ ] Actual pinned-core configuration validation and UI tests.
