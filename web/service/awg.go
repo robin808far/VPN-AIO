@@ -2,6 +2,7 @@ package service
 
 import (
 	cryptorand "crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -66,17 +67,31 @@ type awgSettings struct {
 	Mtu  int    `json:"mtu"`
 
 	// AWG 1.0 obfuscation parameters (per-inbound, shared by all this inbound's clients).
-	Jc   *int   `json:"jc"`
-	Jmin *int   `json:"jmin"`
-	Jmax *int   `json:"jmax"`
-	S1   *int   `json:"s1"`
-	S2   *int   `json:"s2"`
-	S3   *int   `json:"s3"`
-	S4   *int   `json:"s4"`
-	H1   string `json:"h1"`
-	H2   string `json:"h2"`
-	H3   string `json:"h3"`
-	H4   string `json:"h4"`
+	Jc                     *int   `json:"jc"`
+	Jmin                   *int   `json:"jmin"`
+	Jmax                   *int   `json:"jmax"`
+	S1                     *int   `json:"s1"`
+	S2                     *int   `json:"s2"`
+	S3                     *int   `json:"s3"`
+	S4                     *int   `json:"s4"`
+	I1                     string `json:"i1"`
+	I2                     string `json:"i2"`
+	I3                     string `json:"i3"`
+	I4                     string `json:"i4"`
+	I5                     string `json:"i5"`
+	HeaderProtectionKey    string `json:"headerProtectionKey"`
+	ContentPaddingAddition string `json:"contentPaddingAddition"`
+	RekeyAfterTime         string `json:"rekeyAfterTime"`
+	RekeyTimeout           string `json:"rekeyTimeout"`
+	RejectAfterTime        string `json:"rejectAfterTime"`
+	KeepaliveTimeout       string `json:"keepaliveTimeout"`
+	MaxHandshakeAttempts   string `json:"maxHandshakeAttempts"`
+	RandomTrailers         *bool  `json:"randomTrailers"`
+	DisableCookies         *bool  `json:"disableCookies"`
+	H1                     string `json:"h1"`
+	H2                     string `json:"h2"`
+	H3                     string `json:"h3"`
+	H4                     string `json:"h4"`
 
 	ClientToClient    bool               `json:"clientToClient"`
 	CrossInbound      bool               `json:"crossInbound"`
@@ -150,9 +165,14 @@ func (o *awgSettings) mtu() int {
 
 // awgObfs is the resolved (defaults applied) AWG 1.0 obfuscation parameter set.
 type awgObfs struct {
-	Jc, Jmin, Jmax, S1, S2 int
-	S3, S4                 int
-	H1, H2, H3, H4         string
+	Jc, Jmin, Jmax, S1, S2                                  int
+	S3, S4                                                  int
+	H1, H2, H3, H4                                          string
+	I1, I2, I3, I4, I5                                      string
+	HeaderProtectionKey                                     string
+	ContentPaddingAddition, RekeyAfterTime, RekeyTimeout    string
+	RejectAfterTime, KeepaliveTimeout, MaxHandshakeAttempts string
+	RandomTrailers, DisableCookies                          *bool
 }
 
 // resolveObfs applies recommended defaults for any unset numeric params (magic headers are
@@ -173,11 +193,20 @@ func (o *awgSettings) resolveObfs() awgObfs {
 		S3:   pick(o.S3, 0),
 		S4:   pick(o.S4, 0),
 		H1:   o.H1, H2: o.H2, H3: o.H3, H4: o.H4,
+		I1: o.I1, I2: o.I2, I3: o.I3, I4: o.I4, I5: o.I5,
+		HeaderProtectionKey:    o.HeaderProtectionKey,
+		ContentPaddingAddition: o.ContentPaddingAddition,
+		RekeyAfterTime:         o.RekeyAfterTime, RekeyTimeout: o.RekeyTimeout,
+		RejectAfterTime: o.RejectAfterTime, KeepaliveTimeout: o.KeepaliveTimeout,
+		MaxHandshakeAttempts: o.MaxHandshakeAttempts,
+		RandomTrailers:       o.RandomTrailers, DisableCookies: o.DisableCookies,
 	}
 }
 
 func (b awgObfs) sig() string {
-	return fmt.Sprintf("%d|%d|%d|%d|%d|%d|%d|%s|%s|%s|%s", b.Jc, b.Jmin, b.Jmax, b.S1, b.S2, b.S3, b.S4, b.H1, b.H2, b.H3, b.H4)
+	return fmt.Sprintf("%d|%d|%d|%d|%d|%d|%d|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%v|%v",
+		b.Jc, b.Jmin, b.Jmax, b.S1, b.S2, b.S3, b.S4, b.H1, b.H2, b.H3, b.H4, b.I1, b.I2, b.I3, b.I4, b.I5, b.HeaderProtectionKey,
+		b.ContentPaddingAddition, b.RekeyAfterTime, b.RekeyTimeout, b.RejectAfterTime, b.KeepaliveTimeout, b.MaxHandshakeAttempts, b.RandomTrailers, b.DisableCookies)
 }
 
 // apply writes the obfuscation params into a wgtypes.Config (only when H1-H4 are present).
@@ -191,6 +220,55 @@ func (b awgObfs) apply(cfg *wgtypes.Config) {
 		h1, h2, h3, h4 := b.H1, b.H2, b.H3, b.H4
 		cfg.H1, cfg.H2, cfg.H3, cfg.H4 = &h1, &h2, &h3, &h4
 	}
+	if b.I1 != "" {
+		i1 := b.I1
+		cfg.I1 = &i1
+	}
+	if b.I2 != "" {
+		i2 := b.I2
+		cfg.I2 = &i2
+	}
+	if b.I3 != "" {
+		i3 := b.I3
+		cfg.I3 = &i3
+	}
+	if b.I4 != "" {
+		i4 := b.I4
+		cfg.I4 = &i4
+	}
+	if b.I5 != "" {
+		i5 := b.I5
+		cfg.I5 = &i5
+	}
+	if b.HeaderProtectionKey != "" {
+		key, err := base64.StdEncoding.DecodeString(b.HeaderProtectionKey)
+		if err != nil {
+			key, err = base64.RawStdEncoding.DecodeString(b.HeaderProtectionKey)
+		}
+		if err == nil && len(key) == 32 {
+			var k [32]byte
+			copy(k[:], key)
+			cfg.HeaderProtectionKey = &k
+		}
+	}
+	setRange := func(raw string) *wgtypes.UintRange {
+		if raw == "" {
+			return nil
+		}
+		r, err := wgtypes.ParseUintRange(raw)
+		if err != nil {
+			return nil
+		}
+		return &r
+	}
+	cfg.ContentPaddingAddition = setRange(b.ContentPaddingAddition)
+	cfg.RekeyAfterTime = setRange(b.RekeyAfterTime)
+	cfg.RekeyTimeout = setRange(b.RekeyTimeout)
+	cfg.RejectAfterTime = setRange(b.RejectAfterTime)
+	cfg.KeepaliveTimeout = setRange(b.KeepaliveTimeout)
+	cfg.MaxHandshakeAttempts = setRange(b.MaxHandshakeAttempts)
+	cfg.RandomTrailers = b.RandomTrailers
+	cfg.DisableCookies = b.DisableCookies
 }
 
 // awgIfaceName returns the kernel interface name for an inbound.
@@ -713,7 +791,13 @@ func (s *AwgService) RenderClientConfigs(inbound *model.Inbound, email, endpoint
 				b.WriteString("PrivateKey = " + dev.PrivKey + "\n")
 				b.WriteString("Address = " + cidr + "\n")
 				b.WriteString("DNS = " + settings.dnsList() + "\n")
-				b.WriteString(fmt.Sprintf("MTU = %d\n", settings.mtu()))
+				clientMTU := settings.mtu()
+				if obfs.HeaderProtectionKey != "" {
+					if raw, e := base64.StdEncoding.DecodeString(obfs.HeaderProtectionKey); e == nil && len(raw) == 32 {
+						clientMTU = max(1280, clientMTU-obfs.S1-obfs.S2-obfs.S3-obfs.S4)
+					}
+				}
+				b.WriteString(fmt.Sprintf("MTU = %d\n", clientMTU))
 				// AWG 1.0 obfuscation (must match the server, except Jc/Jmin/Jmax).
 				b.WriteString(fmt.Sprintf("Jc = %d\n", obfs.Jc))
 				b.WriteString(fmt.Sprintf("Jmin = %d\n", obfs.Jmin))
@@ -725,6 +809,19 @@ func (s *AwgService) RenderClientConfigs(inbound *model.Inbound, email, endpoint
 				b.WriteString("H2 = " + obfs.H2 + "\n")
 				b.WriteString("H3 = " + obfs.H3 + "\n")
 				b.WriteString("H4 = " + obfs.H4 + "\n")
+				for key, value := range map[string]string{"I1": obfs.I1, "I2": obfs.I2, "I3": obfs.I3, "I4": obfs.I4, "I5": obfs.I5,
+					"HeaderProtectionKey": obfs.HeaderProtectionKey, "ContentPaddingAddition": obfs.ContentPaddingAddition, "RekeyAfterTime": obfs.RekeyAfterTime,
+					"RekeyTimeout": obfs.RekeyTimeout, "RejectAfterTime": obfs.RejectAfterTime, "KeepaliveTimeout": obfs.KeepaliveTimeout, "MaxHandshakeAttempts": obfs.MaxHandshakeAttempts} {
+					if value != "" {
+						b.WriteString(key + " = " + value + "\n")
+					}
+				}
+				if obfs.RandomTrailers != nil {
+					b.WriteString(fmt.Sprintf("RandomTrailers = %t\n", *obfs.RandomTrailers))
+				}
+				if obfs.DisableCookies != nil {
+					b.WriteString(fmt.Sprintf("DisableCookies = %t\n", *obfs.DisableCookies))
+				}
 				b.WriteString("\n[Peer]\n")
 				b.WriteString("PublicKey = " + settings.ServerPubKey + "\n")
 				if psk != "" {
@@ -768,9 +865,14 @@ func (s *AwgService) RenderClientConfigs(inbound *model.Inbound, email, endpoint
 // lock-step with RenderClientConfigs.
 type AwgClientParams struct {
 	WgcClientParams
-	Jc, Jmin, Jmax, S1, S2 int
-	S3, S4                int
-	H1, H2, H3, H4         string
+	Jc, Jmin, Jmax, S1, S2                                  int
+	S3, S4                                                  int
+	H1, H2, H3, H4                                          string
+	I1, I2, I3, I4, I5                                      string
+	HeaderProtectionKey                                     string
+	ContentPaddingAddition, RekeyAfterTime, RekeyTimeout    string
+	RejectAfterTime, KeepaliveTimeout, MaxHandshakeAttempts string
+	RandomTrailers, DisableCookies                          bool
 }
 
 // RenderClientParams mirrors RenderClientConfigs (same targets/devices loop + obfs)
@@ -854,6 +956,12 @@ func (s *AwgService) RenderClientParams(inbound *model.Inbound, email, endpointH
 					Jc: obfs.Jc, Jmin: obfs.Jmin, Jmax: obfs.Jmax, S1: obfs.S1, S2: obfs.S2,
 					S3: obfs.S3, S4: obfs.S4,
 					H1: obfs.H1, H2: obfs.H2, H3: obfs.H3, H4: obfs.H4,
+					I1: obfs.I1, I2: obfs.I2, I3: obfs.I3, I4: obfs.I4, I5: obfs.I5,
+					HeaderProtectionKey: obfs.HeaderProtectionKey, ContentPaddingAddition: obfs.ContentPaddingAddition,
+					RekeyAfterTime: obfs.RekeyAfterTime, RekeyTimeout: obfs.RekeyTimeout, RejectAfterTime: obfs.RejectAfterTime,
+					KeepaliveTimeout: obfs.KeepaliveTimeout, MaxHandshakeAttempts: obfs.MaxHandshakeAttempts,
+					RandomTrailers: obfs.RandomTrailers != nil && *obfs.RandomTrailers,
+					DisableCookies: obfs.DisableCookies != nil && *obfs.DisableCookies,
 				})
 			}
 		}

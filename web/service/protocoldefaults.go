@@ -184,6 +184,13 @@ func protocolSettingDefaults(protocol model.Protocol) []settingDefault {
 			def("dns1", "8.8.8.8"),
 			def("dns2", "8.8.4.4"),
 			def("mtu", 1420),
+			// AWG 3.x is opt-in; zero/empty preserves the prior 1.x/2.x wire profile.
+			def("s3", 0), def("s4", 0),
+			def("i1", ""), def("i2", ""), def("i3", ""), def("i4", ""), def("i5", ""),
+			def("headerProtectionKey", ""), def("contentPaddingAddition", ""),
+			def("rekeyAfterTime", ""), def("rekeyTimeout", ""), def("rejectAfterTime", ""),
+			def("keepaliveTimeout", ""), def("maxHandshakeAttempts", ""),
+			def("randomTrailers", false), def("disableCookies", false),
 			def("tlsUseFile", false),
 			def("certificateFile", ""),
 			def("keyFile", ""),
@@ -287,9 +294,8 @@ func protocolSettingDefaults(protocol model.Protocol) []settingDefault {
 		}
 
 	case model.AWG:
-		// Inbound.AwgSettings: WgcSettings plus the AWG 1.0 obfuscation parameters.
-		// Jc/Jmin/Jmax/S1/S2 are the AmneziaWG defaults; the magic headers H1-H4 are
-		// minted by AwgService (like serverPubKey) and start empty.
+		// Inbound.AwgSettings: WgcSettings plus the compatible AWG 1.0 profile and
+		// optional AWG 3.x parameters. New 3.x fields stay disabled for legacy peers.
 		return []settingDefault{
 			def("dns1", "1.1.1.1"),
 			def("dns2", "1.0.0.1"),
@@ -299,6 +305,13 @@ func protocolSettingDefaults(protocol model.Protocol) []settingDefault {
 			def("jmax", 80),
 			def("s1", 77),
 			def("s2", 90),
+			def("s3", 0),
+			def("s4", 0),
+			def("i1", ""), def("i2", ""), def("i3", ""), def("i4", ""), def("i5", ""),
+			def("headerProtectionKey", ""),
+			def("contentPaddingAddition", ""), def("rekeyAfterTime", ""), def("rekeyTimeout", ""),
+			def("rejectAfterTime", ""), def("keepaliveTimeout", ""), def("maxHandshakeAttempts", ""),
+			def("randomTrailers", false), def("disableCookies", false),
 			def("h1", ""),
 			def("h2", ""),
 			def("h3", ""),

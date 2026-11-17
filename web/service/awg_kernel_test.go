@@ -3,6 +3,7 @@
 package service
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net"
 	"os"
@@ -52,7 +53,13 @@ func TestAWGKernelHandshakeAndPeerRemoval(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	obfs := (&awgSettings{H1: "11111111", H2: "22222222", H3: "33333333", H4: "44444444"}).resolveObfs()
+	protection, _ := wgtypes.GenerateKey()
+	obfs := (&awgSettings{H1: "11111111", H2: "22222222", H3: "33333333", H4: "44444444",
+		S1: intPtr(16), S2: intPtr(20), S3: intPtr(12), S4: intPtr(12),
+		HeaderProtectionKey:    base64.StdEncoding.EncodeToString(protection[:]),
+		ContentPaddingAddition: "8-16", RekeyAfterTime: "100-120", RekeyTimeout: "3-6", RejectAfterTime: "160-200",
+		KeepaliveTimeout: "8-16", MaxHandshakeAttempts: "15-25", RandomTrailers: boolPtr(true), DisableCookies: boolPtr(true),
+	}).resolveObfs()
 	scfg := wgtypes.Config{PrivateKey: &serverKey, ReplacePeers: true, Peers: []wgtypes.PeerConfig{{
 		PublicKey: clientKey.PublicKey(), ReplaceAllowedIPs: true,
 		AllowedIPs: []net.IPNet{{IP: net.ParseIP("198.18.55.2"), Mask: net.CIDRMask(32, 32)}},

@@ -208,6 +208,12 @@ func (s *SubClashService) buildWireguardProxies(inbound *model.Inbound, client m
 				"s1": p.S1, "s2": p.S2,
 				"s3": p.S3, "s4": p.S4,
 				"h1": p.H1, "h2": p.H2, "h3": p.H3, "h4": p.H4,
+				"i1": p.I1, "i2": p.I2, "i3": p.I3, "i4": p.I4, "i5": p.I5,
+				"headerProtectionKey":    p.HeaderProtectionKey,
+				"contentPaddingAddition": p.ContentPaddingAddition, "rekeyAfterTime": p.RekeyAfterTime,
+				"rekeyTimeout": p.RekeyTimeout, "rejectAfterTime": p.RejectAfterTime,
+				"keepaliveTimeout": p.KeepaliveTimeout, "maxHandshakeAttempts": p.MaxHandshakeAttempts,
+				"randomTrailers": p.RandomTrailers, "disableCookies": p.DisableCookies,
 			}
 			proxies = append(proxies, proxy)
 		}

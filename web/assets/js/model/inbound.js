@@ -5725,6 +5725,7 @@ Inbound.AwgSettings = class extends Inbound.Settings {
     externalProxy = [],
     s3 = 0,
     s4 = 0,
+    awg31 = {},
   ) {
     super(protocol);
     this.dns1 = dns1;
@@ -5739,6 +5740,7 @@ Inbound.AwgSettings = class extends Inbound.Settings {
     this.s2 = s2;
     this.s3 = s3;
     this.s4 = s4;
+    this.awg31 = Object.assign({}, awg31);
     this.h1 = h1;
     this.h2 = h2;
     this.h3 = h3;
@@ -5787,6 +5789,7 @@ Inbound.AwgSettings = class extends Inbound.Settings {
       Array.isArray(json.externalProxy) ? json.externalProxy : [],
       json.s3 ?? 0,
       json.s4 ?? 0,
+      json,
     );
   }
 
@@ -5802,6 +5805,12 @@ Inbound.AwgSettings = class extends Inbound.Settings {
       s2: this.s2,
       s3: this.s3,
       s4: this.s4,
+      i1:this.awg31.i1 || '', i2:this.awg31.i2 || '', i3:this.awg31.i3 || '', i4:this.awg31.i4 || '', i5:this.awg31.i5 || '',
+      headerProtectionKey:this.awg31.headerProtectionKey || '', contentPaddingAddition:this.awg31.contentPaddingAddition || '',
+      rekeyAfterTime:this.awg31.rekeyAfterTime || '', rekeyTimeout:this.awg31.rekeyTimeout || '',
+      rejectAfterTime:this.awg31.rejectAfterTime || '', keepaliveTimeout:this.awg31.keepaliveTimeout || '',
+      maxHandshakeAttempts:this.awg31.maxHandshakeAttempts || '', randomTrailers:!!this.awg31.randomTrailers,
+      disableCookies:!!this.awg31.disableCookies,
       h1: this.h1,
       h2: this.h2,
       h3: this.h3,

@@ -31,9 +31,12 @@ for (const model of ["inbound", "outbound"]) {
     assert.equal(fresh.toJson().xdriveSettings.s3.bucket, "new-bucket");
     if (model === "inbound") {
         vm.runInContext("globalThis.Awg = Inbound.AwgSettings;", context);
-        const awg = context.Awg.fromJson({s3: 12, s4: 24, clients: []});
+        const awg = context.Awg.fromJson({s3: 12, s4: 24, randomTrailers:true, headerProtectionKey:'abc', clients: []});
         assert.equal(awg.toJson().s3, 12);
         assert.equal(awg.toJson().s4, 24);
+        awg.awg31.randomTrailers=true; awg.awg31.headerProtectionKey='abc';
+        assert.equal(awg.toJson().randomTrailers, true);
+        assert.equal(awg.toJson().headerProtectionKey, 'abc');
     }
     console.log(`PASS ${model}: XDRIVE settings survive edits without losing S3/XMUX`);
 }

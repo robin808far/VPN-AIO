@@ -29,7 +29,8 @@ References:
 ## Work items
 
 - [ ] Audit upstream fields against current models and serializers.
-- [ ] XDRIVE transport: form, defaults, validation, inbound/outbound serialization.
+- [x] XDRIVE transport: initial local/Google Drive/S3 forms, defaults and
+      inbound/outbound serialization. Core config validation covers all three.
 - [ ] MASQUE protocol and transport: core configuration, account management,
       inbound/outbound forms and supported subscription output.
 - [ ] FinalMask TCP/UDP mask options and current QUIC parameters.

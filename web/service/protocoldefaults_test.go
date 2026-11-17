@@ -507,13 +507,16 @@ func TestDefaultSettingsForRoundTripsIntoTheProtocolStruct(t *testing.T) {
 		if s.Dns1 != "1.1.1.1" || s.Dns2 != "1.0.0.1" || s.Mtu != 1420 {
 			t.Errorf("dns/mtu: %q %q %d", s.Dns1, s.Dns2, s.Mtu)
 		}
-		for name, got := range map[string]*int{"jc": s.Jc, "jmin": s.Jmin, "jmax": s.Jmax, "s1": s.S1, "s2": s.S2} {
+		for name, got := range map[string]*int{"jc": s.Jc, "jmin": s.Jmin, "jmax": s.Jmax, "s1": s.S1, "s2": s.S2, "s3": s.S3, "s4": s.S4} {
 			if got == nil {
 				t.Fatalf("%s did not survive into awgSettings", name)
 			}
 		}
 		if *s.Jc != 4 || *s.Jmin != 8 || *s.Jmax != 80 || *s.S1 != 77 || *s.S2 != 90 {
 			t.Errorf("obfuscation params: jc=%d jmin=%d jmax=%d s1=%d s2=%d", *s.Jc, *s.Jmin, *s.Jmax, *s.S1, *s.S2)
+		}
+		if s.S3 == nil || s.S4 == nil || *s.S3 != 0 || *s.S4 != 0 || s.RandomTrailers == nil || *s.RandomTrailers || s.DisableCookies == nil || *s.DisableCookies {
+			t.Errorf("new AWG options must default disabled: S3=%v S4=%v trailers=%v cookies=%v", s.S3, s.S4, s.RandomTrailers, s.DisableCookies)
 		}
 	})
 
@@ -738,6 +741,10 @@ func TestValidateProtocolSettings(t *testing.T) {
 
 		{"awg jmin above jmax", model.AWG, `{"jmin":90,"jmax":10}`, `"jmin"`},
 		{"awg negative junk count", model.AWG, `{"jc":-1}`, `"jc"`},
+		{"awg padding above module limit", model.AWG, `{"s4":1281}`, `"s4"`},
+		{"awg 3.1 booleans type checked", model.AWG, `{"randomTrailers":"true"}`, `"randomTrailers"`},
+		{"awg header key has correct size", model.AWG, `{"headerProtectionKey":"short"}`, `"headerProtectionKey"`},
+		{"awg time range is checked", model.AWG, `{"rekeyTimeout":"9-x"}`, `"rekeyTimeout"`},
 
 		{"tuic congestion typo", model.TUIC, `{"congestionControl":"cubik"}`, `"congestionControl"`},
 		{"tuic negative timeout", model.TUIC, `{"udpTimeout":-5}`, `"udpTimeout"`},

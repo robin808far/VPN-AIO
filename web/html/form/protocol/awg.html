@@ -77,6 +77,23 @@
                     <a-input-number v-model.number="inbound.settings.s4" :min="0" :max="1280" :precision="0"></a-input-number>
                 </a-col>
             </a-row>
+            <a-divider>AmneziaWG 3.x</a-divider>
+            <a-alert type="warning" show-icon message="3.x parameters must be supported by every client. Leave disabled for older AmneziaWG clients."></a-alert>
+            <a-row type="flex" :gutter="8">
+                <a-col :xs="12" :md="8" v-for="key in ['i1','i2','i3','i4','i5']" :key="'awg-'+key">
+                    <a-form-item :label="key.toUpperCase()"><a-input v-model.trim="inbound.settings.awg31[key]"></a-input></a-form-item>
+                </a-col>
+                <a-col :xs="12" :md="8" v-for="key in ['contentPaddingAddition','rekeyAfterTime','rekeyTimeout','rejectAfterTime','keepaliveTimeout','maxHandshakeAttempts']" :key="'awg-'+key">
+                    <a-form-item :label="key"><a-input v-model.trim="inbound.settings.awg31[key]" placeholder="disabled"></a-input></a-form-item>
+                </a-col>
+            </a-row>
+            <a-form-item label="Header protection key (base64)">
+                <a-input-password v-model.trim="inbound.settings.awg31.headerProtectionKey"></a-input-password>
+            </a-form-item>
+            <a-row type="flex" :gutter="12">
+                <a-col :span="12"><a-form-item label="Random trailers"><a-switch v-model="inbound.settings.awg31.randomTrailers"></a-switch></a-form-item></a-col>
+                <a-col :span="12"><a-form-item label="Disable cookies"><a-switch v-model="inbound.settings.awg31.disableCookies"></a-switch></a-form-item></a-col>
+            </a-row>
             <a-row type="flex" :gutter="8">
                 <a-col :xs="12" :md="8" :style="{ marginBottom: '8px' }">
                     <a-tooltip title="Magic header for the init packet (server-minted)">

@@ -1,12 +1,14 @@
 package service
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"math"
 	"net/netip"
 	"strings"
 
+	"github.com/Jipok/wgctrl-go/wgtypes"
 	"github.com/mhsanaei/3x-ui/v2/database/model"
 	"github.com/mhsanaei/3x-ui/v2/util/common"
 )
@@ -240,6 +242,30 @@ func validateAwgSettings(m map[string]any) error {
 	}
 	for _, key := range []string{"h1", "h2", "h3", "h4"} {
 		if _, _, err := optString(m, key); err != nil {
+			return err
+		}
+	}
+	for _, key := range []string{"i1", "i2", "i3", "i4", "i5", "headerProtectionKey", "contentPaddingAddition", "rekeyAfterTime", "rekeyTimeout", "rejectAfterTime", "keepaliveTimeout", "maxHandshakeAttempts"} {
+		if _, _, err := optString(m, key); err != nil {
+			return err
+		}
+	}
+	if key, _, _ := optString(m, "headerProtectionKey"); key != "" {
+		decoded, err := base64.StdEncoding.DecodeString(key)
+		if err != nil || len(decoded) != 32 {
+			return common.NewErrorf("%q must be base64 encoding of exactly 32 bytes", "headerProtectionKey")
+		}
+	}
+	for _, key := range []string{"contentPaddingAddition", "rekeyAfterTime", "rekeyTimeout", "rejectAfterTime", "keepaliveTimeout", "maxHandshakeAttempts"} {
+		raw, _, _ := optString(m, key)
+		if raw != "" {
+			if _, err := wgtypes.ParseUintRange(raw); err != nil {
+				return common.NewErrorf("invalid %q range", key)
+			}
+		}
+	}
+	for _, key := range []string{"randomTrailers", "disableCookies"} {
+		if _, _, err := optBool(m, key); err != nil {
 			return err
 		}
 	}
