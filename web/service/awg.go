@@ -205,9 +205,10 @@ func (o *awgSettings) resolveObfs() awgObfs {
 }
 
 func (b awgObfs) sig() string {
-	return fmt.Sprintf("%d|%d|%d|%d|%d|%d|%d|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%v|%v",
-		b.Jc, b.Jmin, b.Jmax, b.S1, b.S2, b.S3, b.S4, b.H1, b.H2, b.H3, b.H4, b.I1, b.I2, b.I3, b.I4, b.I5, b.HeaderProtectionKey,
-		b.ContentPaddingAddition, b.RekeyAfterTime, b.RekeyTimeout, b.RejectAfterTime, b.KeepaliveTimeout, b.MaxHandshakeAttempts, b.RandomTrailers, b.DisableCookies)
+	// JSON encodes pointed-to values rather than allocation addresses, and escapes
+	// separators inside custom packet patterns. Every field is JSON-serializable.
+	encoded, _ := json.Marshal(b)
+	return string(encoded)
 }
 
 // apply writes the obfuscation params into a wgtypes.Config (only when H1-H4 are present).
@@ -846,13 +847,9 @@ func (s *AwgService) RenderClientConfigs(inbound *model.Inbound, email, endpoint
 				b.WriteString("PrivateKey = " + dev.PrivKey + "\n")
 				b.WriteString("Address = " + cidr + "\n")
 				b.WriteString("DNS = " + settings.dnsList() + "\n")
-				clientMTU := settings.mtu()
-				if obfs.HeaderProtectionKey != "" {
-					if raw, e := base64.StdEncoding.DecodeString(obfs.HeaderProtectionKey); e == nil && len(raw) == 32 {
-						clientMTU = max(1280, clientMTU-obfs.S1-obfs.S2-obfs.S3-obfs.S4)
-					}
-				}
-				b.WriteString(fmt.Sprintf("MTU = %d\n", clientMTU))
+				// Match the device MTU and structured export. S1-S3 pad handshake
+				// packets, not data packets; they must not shrink the tunnel MTU.
+				b.WriteString(fmt.Sprintf("MTU = %d\n", settings.mtu()))
 				// AWG 1.0 obfuscation (must match the server, except Jc/Jmin/Jmax).
 				b.WriteString(fmt.Sprintf("Jc = %d\n", obfs.Jc))
 				b.WriteString(fmt.Sprintf("Jmin = %d\n", obfs.Jmin))

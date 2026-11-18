@@ -984,6 +984,15 @@
         </a-form-item>
       </template>
 
+      <template v-if="outbound.protocol === Protocols.Masque">
+        <a-form-item label="Remote DNS IPs">
+          <a-select mode="tags" v-model="outbound.settings.remoteDNS" :token-separators="[',', ' ']"></a-select>
+        </a-form-item>
+        <a-form-item label="MASQUE host"><a-input v-model.trim="outbound.stream.masque.host"></a-input></a-form-item>
+        <a-form-item label="MASQUE path"><a-input v-model.trim="outbound.stream.masque.path" placeholder="Core default"></a-input></a-form-item>
+        <a-form-item label="Username"><a-input v-model="outbound.stream.masque.user"></a-input></a-form-item>
+        <a-form-item label="Password"><a-input-password v-model="outbound.stream.masque.pass"></a-input-password></a-form-item>
+      </template>
       <!-- tuic settings -->
       <template v-if="outbound.protocol === Protocols.Tuic">
         <a-form-item label="UUID">
@@ -1193,7 +1202,7 @@
           <a-select
             v-model="outbound.stream.network"
             @change="streamNetworkChange"
-            :disabled="[Protocols.Tuic, Protocols.Naive].includes(outbound.protocol)"
+            :disabled="[Protocols.Tuic, Protocols.Naive, Protocols.Masque].includes(outbound.protocol)"
             :dropdown-class-name="themeSwitcher.currentTheme"
           >
             <a-select-option value="tcp">TCP (RAW)</a-select-option>
@@ -1202,6 +1211,7 @@
             <a-select-option value="grpc">gRPC</a-select-option>
             <a-select-option value="httpupgrade">HTTPUpgrade</a-select-option>
             <a-select-option value="xhttp">XHTTP</a-select-option>
+            <a-select-option v-if="outbound.protocol === Protocols.Masque" value="masque">MASQUE</a-select-option>
             <a-select-option v-if="outbound.protocol === Protocols.VLESS" value="xdrive">XDRIVE</a-select-option>
             <a-select-option
               v-if="outbound.protocol === Protocols.Hysteria"
@@ -1995,7 +2005,26 @@
             <a-form-item label="Debug">
               <a-switch v-model="outbound.stream.finalmask.quicParams.debug"></a-switch>
             </a-form-item>
+            <a-form-item label="BBR profile" v-if="outbound.stream.finalmask.quicParams.congestion === 'bbr'">
+              <a-select v-model="outbound.stream.finalmask.quicParams.bbrProfile">
+                <a-select-option value="conservative">Conservative</a-select-option>
+                <a-select-option value="standard">Standard</a-select-option>
+                <a-select-option value="aggressive">Aggressive</a-select-option>
+              </a-select>
+            </a-form-item>
+            <a-form-item label="Disable Chrome QUIC fingerprint">
+              <a-switch v-model="outbound.stream.finalmask.quicParams.disableChromeParrot"></a-switch>
+            </a-form-item>
+            <a-form-item label="Disable GSO">
+              <a-switch v-model="outbound.stream.finalmask.quicParams.disableGSO"></a-switch>
+            </a-form-item>
+            <a-form-item label="Disable stateless reset">
+              <a-switch v-model="outbound.stream.finalmask.quicParams.disableStatelessReset"></a-switch>
+            </a-form-item>
             <template v-if="['brutal','force-brutal'].includes(outbound.stream.finalmask.quicParams.congestion)">
+              <a-form-item label="Disable Brutal loss compensation">
+                <a-switch v-model="outbound.stream.finalmask.quicParams.brutalDisableLossCompensation"></a-switch>
+              </a-form-item>
               <a-form-item label="Brutal Up">
                 <a-input v-model.trim="outbound.stream.finalmask.quicParams.brutalUp" placeholder="e.g. 60 mbps" />
               </a-form-item>

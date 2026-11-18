@@ -46,3 +46,21 @@ func TestAwgOutboundPaddingAndLegacyDefaults(t *testing.T) {
 		t.Fatal("legacy configurations must not acquire new padding")
 	}
 }
+
+func TestAwgSignatureTracksValuesNotPointerAllocations(t *testing.T) {
+	first, second := true, true
+	a := awgObfs{RandomTrailers: &first}
+	b := awgObfs{RandomTrailers: &second}
+	if a.sig() != b.sig() {
+		t.Fatal("reloading identical settings would reconfigure a live tunnel")
+	}
+	second = false
+	if a.sig() == b.sig() {
+		t.Fatal("changing a flag must invalidate the applied configuration")
+	}
+	a = awgObfs{I1: "a|b", I2: "c"}
+	b = awgObfs{I1: "a", I2: "b|c"}
+	if a.sig() == b.sig() {
+		t.Fatal("different packet patterns must not collide at field separators")
+	}
+}

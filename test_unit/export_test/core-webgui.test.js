@@ -19,6 +19,21 @@ for (const model of ["inbound", "outbound"]) {
         segmentBytes: 65536, pollIntervalMs: 10, xmux: {maxConnections: 1},
     }};
     const stream = context.Stream.fromJson(input);
+    const quicInput = {
+        congestion: 'bbr', bbrProfile: 'aggressive',
+        initStreamReceiveWindow: 32768, maxStreamReceiveWindow: 65536,
+        initConnectionReceiveWindow: 131072, maxConnectionReceiveWindow: 262144,
+        maxIdleTimeout: 45, keepAlivePeriod: 10, maxIncomingStreams: 32,
+        disablePathMTUDiscovery: true, disableChromeParrot: true,
+        disableGSO: true, disableStatelessReset: true,
+        brutalDisableLossCompensation: true,
+    };
+    const quicStream = context.Stream.fromJson({network: 'xhttp', finalmask: {quicParams: quicInput}});
+    for (const [key, value] of Object.entries(quicInput)) {
+        assert.equal(quicStream.toJson().finalmask.quicParams[key], value, `${model} lost QUIC ${key}`);
+    }
+    quicStream.finalmask.quicParams.disableGSO = false;
+    assert.notEqual(quicStream.toJson().finalmask.quicParams.disableGSO, true);
     stream.xdrive.pollIntervalMs = 20;
     const expected = structuredClone(input.xdriveSettings);
     expected.pollIntervalMs = 20;
@@ -37,6 +52,23 @@ for (const model of ["inbound", "outbound"]) {
         awg.awg31.randomTrailers=true; awg.awg31.headerProtectionKey='abc';
         assert.equal(awg.toJson().awg31.randomTrailers, true);
         assert.equal(awg.toJson().awg31.headerProtectionKey, 'abc');
+    }
+    if (model === "outbound") {
+        vm.runInContext("globalThis.Out = Outbound; globalThis.P = Protocols;", context);
+        const out = new context.Out();
+        out.protocol = context.P.Masque;
+        out.settings.address = 'proxy.example';
+        out.stream.masque.user = 'alice';
+        out.stream.masque.pass = 'test-password';
+        const serialized = JSON.parse(JSON.stringify(out.toJson()));
+        assert.equal(serialized.streamSettings.network, 'masque');
+        assert.equal(serialized.streamSettings.security, 'tls');
+        assert.equal(serialized.streamSettings.masqueSettings.user, 'alice');
+        assert.equal(serialized.settings.address, 'proxy.example');
+        const restored = context.Out.fromJson(serialized);
+        assert.equal(restored.stream.masque.pass, 'test-password');
+        assert.equal(restored.canEnableTls(), true);
+        assert.equal(restored.hasAddressPort(), true);
     }
     console.log(`PASS ${model}: XDRIVE settings survive edits without losing S3/XMUX`);
 }

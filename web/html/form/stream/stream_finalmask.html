@@ -463,7 +463,26 @@
       <a-form-item label="Debug">
         <a-switch v-model="inbound.stream.finalmask.quicParams.debug"></a-switch>
       </a-form-item>
+      <a-form-item label="BBR profile" v-if="inbound.stream.finalmask.quicParams.congestion === 'bbr'">
+        <a-select v-model="inbound.stream.finalmask.quicParams.bbrProfile">
+          <a-select-option value="conservative">Conservative</a-select-option>
+          <a-select-option value="standard">Standard</a-select-option>
+          <a-select-option value="aggressive">Aggressive</a-select-option>
+        </a-select>
+      </a-form-item>
+      <a-form-item label="Disable Chrome QUIC fingerprint">
+        <a-switch v-model="inbound.stream.finalmask.quicParams.disableChromeParrot"></a-switch>
+      </a-form-item>
+      <a-form-item label="Disable GSO">
+        <a-switch v-model="inbound.stream.finalmask.quicParams.disableGSO"></a-switch>
+      </a-form-item>
+      <a-form-item label="Disable stateless reset">
+        <a-switch v-model="inbound.stream.finalmask.quicParams.disableStatelessReset"></a-switch>
+      </a-form-item>
       <template v-if="['brutal','force-brutal'].includes(inbound.stream.finalmask.quicParams.congestion)">
+        <a-form-item label="Disable Brutal loss compensation">
+          <a-switch v-model="inbound.stream.finalmask.quicParams.brutalDisableLossCompensation"></a-switch>
+        </a-form-item>
         <a-form-item label="Brutal Up">
           <a-input v-model.trim="inbound.stream.finalmask.quicParams.brutalUp" placeholder="e.g. 60 mbps" />
         </a-form-item>

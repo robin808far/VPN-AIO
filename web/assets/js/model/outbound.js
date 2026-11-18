@@ -961,6 +961,7 @@ class QuicParams extends CommonClass {
         brutalUp = '',
         brutalDown = '',
         udpHop = undefined,
+        options = {},
     ) {
         super();
         this.congestion = congestion;
@@ -968,6 +969,9 @@ class QuicParams extends CommonClass {
         this.brutalUp = brutalUp;
         this.brutalDown = brutalDown;
         this.udpHop = udpHop;
+        for (const [key, value] of Object.entries(QuicParams.DEFAULTS)) {
+            this[key] = options[key] ?? value;
+        }
     }
 
     get hasUdpHop() {
@@ -986,6 +990,7 @@ class QuicParams extends CommonClass {
             json.brutalUp,
             json.brutalDown,
             json.udpHop ? { ports: json.udpHop.ports, interval: json.udpHop.interval } : undefined,
+            json,
         );
     }
 
@@ -995,9 +1000,28 @@ class QuicParams extends CommonClass {
         if (this.brutalUp) result.brutalUp = this.brutalUp;
         if (this.brutalDown) result.brutalDown = this.brutalDown;
         if (this.udpHop) result.udpHop = { ports: this.udpHop.ports, interval: this.udpHop.interval };
+        for (const key of Object.keys(QuicParams.DEFAULTS)) {
+            if (this[key] !== undefined && this[key] !== null) result[key] = this[key];
+        }
         return result;
     }
 }
+
+QuicParams.DEFAULTS = Object.freeze({
+    bbrProfile: 'standard',
+    brutalDisableLossCompensation: false,
+    initStreamReceiveWindow: 0,
+    maxStreamReceiveWindow: 0,
+    initConnectionReceiveWindow: 0,
+    maxConnectionReceiveWindow: 0,
+    maxIdleTimeout: 30,
+    keepAlivePeriod: 0,
+    disablePathMTUDiscovery: false,
+    disableChromeParrot: false,
+    disableGSO: false,
+    maxIncomingStreams: 0,
+    disableStatelessReset: false,
+});
 
 class FinalMaskStreamSettings extends CommonClass {
     constructor(tcp = [], udp = [], quicParams = undefined) {
@@ -1071,7 +1095,7 @@ class StreamSettings extends CommonClass {
         this.finalmask = finalmask;
         this.sockopt = sockopt;
         this.xdrive = Object.assign({service: 'local', remoteFolder: '', secrets: [], s3: {endpoint: '', region: '', bucket: '', pathStyle: true}}, xdriveSettings);
-        this.masque = Object.assign({address:'',port:443,remoteDNS:[]},masqueSettings);
+        this.masque = Object.assign({host:'',path:'',user:'',pass:'',headers:{},xmux:{}},masqueSettings);
     }
 
     addTcpMask(type = 'fragment') {
@@ -1152,7 +1176,7 @@ class StreamSettings extends CommonClass {
             xhttpSettings: network === 'xhttp' ? this.xhttp.toJson() : undefined,
             hysteriaSettings: network === 'hysteria' ? this.hysteria.toJson() : undefined,
             xdriveSettings: network === 'xdrive' ? {...this.xdrive} : undefined,
-            masqueSettings: this.protocol === Protocols.Masque ? {...this.masque} : undefined,
+            masqueSettings: network === 'masque' ? {...this.masque} : undefined,
             finalmask: this.hasFinalMask ? this.finalmask.toJson() : undefined,
             sockopt: this.sockopt != undefined ? this.sockopt.toJson() : undefined,
         };
@@ -1236,6 +1260,11 @@ class Outbound extends CommonClass {
     // by settings.network while the stream it is dialled over is decided here.
     // They are set together by setNaiveNetwork below and start on the h2 pair.
     static defaultStreamFor(protocol) {
+        if (protocol === Protocols.Masque) {
+            const stream = new StreamSettings('masque', 'tls');
+            stream.tls.alpn = ['h3'];
+            return stream;
+        }
         if (protocol === Protocols.Tuic) {
             const stream = new StreamSettings('tuic', 'tls');
             stream.tls.alpn = ['h3'];
@@ -1300,6 +1329,7 @@ class Outbound extends CommonClass {
     }
 
     canEnableTls() {
+        if (this.protocol === Protocols.Masque) return true;
         if (this.protocol === Protocols.Hysteria) return true;
         // TUIC is QUIC, so TLS is not a choice the operator makes, it is the only
         // way the protocol exists. The section is offered anyway because it is
@@ -1367,6 +1397,7 @@ class Outbound extends CommonClass {
             Protocols.AnyTLS,
             Protocols.Tuic,
             Protocols.Naive,
+            Protocols.Masque,
         ].includes(this.protocol);
     }
 
@@ -1423,7 +1454,8 @@ class Outbound extends CommonClass {
             Protocols.Hysteria,
             Protocols.AnyTLS,
             Protocols.Tuic,
-            Protocols.Naive
+            Protocols.Naive,
+            Protocols.Masque
         ].includes(this.protocol);
     }
 
