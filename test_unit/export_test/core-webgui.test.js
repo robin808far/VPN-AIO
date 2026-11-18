@@ -79,6 +79,11 @@ for (const model of ["inbound", "outbound"]) {
         assert.equal(warpJson.streamSettings.masqueSettings.pass, undefined);
         assert.equal(warpJson.streamSettings.masqueSettings.warp.privateKey, 'warp-private');
         assert.equal(warpJson.mux, undefined, 'generic Xray Mux must not wrap MASQUE');
+        const warpRestored = context.Out.fromJson(warpJson);
+        assert.equal(warpRestored.stream.masque.warp.privateKey, 'warp-private');
+        assert.equal(warpRestored.stream.masque.user, '');
+        const badLegacyMux = {...serialized, mux: {enabled:true, concurrency:8}};
+        assert.equal(context.Out.fromJson(badLegacyMux).toJson().mux, undefined);
     }
     console.log(`PASS ${model}: XDRIVE settings survive edits without losing S3/XMUX`);
 }

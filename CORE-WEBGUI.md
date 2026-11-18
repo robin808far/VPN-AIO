@@ -31,16 +31,23 @@ References:
 - [ ] Audit upstream fields against current models and serializers.
 - [x] XDRIVE transport: initial local/Google Drive/S3 forms, defaults and
       inbound/outbound serialization. Core config validation covers all three.
-- [ ] MASQUE protocol and transport: core configuration, account management,
-      inbound/outbound forms and supported subscription output.
-- [ ] FinalMask TCP/UDP mask options and current QUIC parameters.
+- [x] MASQUE outbound: model, TLS/auth/WARP form controls, h2/h3 core config
+      validation and live TCP/UDP/accounting/authentication smoke tests.
+- [ ] MASQUE inbound: account management, address pool, inbound form and
+      supported subscription output remain a separate integration task.
+- [x] FinalMask current QUIC parameters: BBR profile, Brutal compensation,
+      receive windows, timeouts, GSO, Chrome parrot, stateless reset and UDP hop
+      round-trip through the Vue model and form.
+- [ ] Full TCP/UDP FinalMask mask-variant inventory/UI audit against the pinned
+      core; the current form covers the existing subset but needs a systematic diff.
 - [ ] Audit updated XHTTP, TLS/REALITY, socket, DNS and routing settings.
 - [x] AWG S3/S4, I1-I5, header protection, padding/timing ranges,
       random trailers and cookie control: inbound form/model, outbound parser,
       kernel netlink, client config and Clash option serialization.
-- [ ] AWG parameter validation, compatible defaults and MTU handling.
-- [ ] Round-trip tests ensuring edits do not discard existing settings.
-- [ ] Actual pinned-core configuration validation and UI tests.
+- [x] AWG parameter validation, compatible defaults and MTU handling.
+- [x] Round-trip tests ensuring edits do not discard existing settings.
+- [x] Actual pinned-core configuration validation and UI tests for XDRIVE,
+      MASQUE outbound, FinalMask and AWG model paths.
 - [ ] Linux runtime checks and release notes with client compatibility limits.
 
 Do not copy React components into the Vue application. Use upstream schemas as
