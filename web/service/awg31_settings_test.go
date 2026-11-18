@@ -43,6 +43,13 @@ func TestAwg31SettingsRejectInvalidKeyAndRanges(t *testing.T) {
 	}
 }
 
+func TestAwg31ValidationUsesEffectiveNestedValues(t *testing.T) {
+	settings := `{"s4":0,"awg31":{"s4":1281}}`
+	if err := ValidateProtocolSettings(model.AWG, settings); err == nil {
+		t.Fatal("a valid top-level value masked the invalid value applied to the kernel")
+	}
+}
+
 func TestAwg31NestedClientSettingsMerge(t *testing.T) {
 	key := base64.StdEncoding.EncodeToString(make([]byte, 32))
 	d := &awgOutDriver{}

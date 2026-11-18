@@ -221,9 +221,8 @@ func validateAwgSettings(m map[string]any) error {
 			return common.NewError(`"awg31" must be an object`)
 		}
 		for key, value := range options {
-			if _, exists := m[key]; !exists {
-				m[key] = value
-			}
+			// Match parseSettings: validate the value that the device will receive.
+			m[key] = value
 		}
 	}
 	// AWG 1.0 obfuscation. Jc is a packet COUNT and Jmin/Jmax a byte range, so
