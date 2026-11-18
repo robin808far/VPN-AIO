@@ -60,20 +60,25 @@ for (const model of ["inbound", "outbound"]) {
         out.settings.address = 'proxy.example';
         out.stream.masque.user = 'alice';
         out.stream.masque.pass = 'test-password';
-        out.stream.masque.warp = {privateKey:'private',publicKey:'public',address:['172.16.0.2/32']};
         const serialized = JSON.parse(JSON.stringify(out.toJson()));
         assert.equal(serialized.streamSettings.network, 'masque');
         assert.equal(serialized.streamSettings.security, 'tls');
         assert.equal(serialized.streamSettings.masqueSettings.user, 'alice');
-        assert.deepEqual(JSON.parse(JSON.stringify(serialized.streamSettings.masqueSettings.warp.address)), ['172.16.0.2/32']);
         assert.equal(serialized.settings.address, 'proxy.example');
         const restored = context.Out.fromJson(serialized);
         assert.equal(restored.stream.masque.pass, 'test-password');
         assert.equal(restored.canEnableTls(), true);
         assert.equal(restored.hasAddressPort(), true);
-        const legacyMasque = context.Out.fromJson({tag:'masque-legacy',protocol:'masque',settings:{address:'proxy.example',port:443,remoteDNS:[]}});
-        assert.equal(legacyMasque.stream.network, 'masque');
-        assert.equal(legacyMasque.stream.security, 'tls');
+        const warp = context.Out.fromJson(serialized);
+        warp.stream.masque.user = 'must-not-be-sent';
+        warp.stream.masque.pass = 'must-not-be-sent';
+        warp.stream.setMasqueWarp(true);
+        warp.stream.masque.warp.privateKey = 'warp-private';
+        const warpJson = JSON.parse(JSON.stringify(warp.toJson()));
+        assert.equal(warpJson.streamSettings.masqueSettings.user, undefined);
+        assert.equal(warpJson.streamSettings.masqueSettings.pass, undefined);
+        assert.equal(warpJson.streamSettings.masqueSettings.warp.privateKey, 'warp-private');
+        assert.equal(warpJson.mux, undefined, 'generic Xray Mux must not wrap MASQUE');
     }
     console.log(`PASS ${model}: XDRIVE settings survive edits without losing S3/XMUX`);
 }

@@ -988,18 +988,21 @@
         <a-form-item label="Remote DNS IPs">
           <a-select mode="tags" v-model="outbound.settings.remoteDNS" :token-separators="[',', ' ']"></a-select>
         </a-form-item>
+        <a-form-item label="MASQUE host"><a-input v-model.trim="outbound.stream.masque.host"></a-input></a-form-item>
         <a-form-item label="MASQUE path"><a-input v-model.trim="outbound.stream.masque.path" placeholder="Core default"></a-input></a-form-item>
         <a-divider>Cloudflare WARP</a-divider>
         <a-form-item label="Use WARP credentials">
-          <a-switch :checked="!!outbound.stream.masque.warp" @change="v => $set(outbound.stream.masque, 'warp', v ? {privateKey:'',publicKey:'',address:['172.16.0.2/32','2606:4700:110::2/128']} : undefined)"></a-switch>
+          <a-switch :checked="!!outbound.stream.masque.warp" @change="outbound.stream.setMasqueWarp($event)"></a-switch>
         </a-form-item>
         <template v-if="outbound.stream.masque.warp">
           <a-form-item label="WARP private key"><a-input-password v-model.trim="outbound.stream.masque.warp.privateKey"></a-input-password></a-form-item>
           <a-form-item label="WARP public key"><a-input v-model.trim="outbound.stream.masque.warp.publicKey"></a-input></a-form-item>
           <a-form-item label="WARP addresses"><a-select mode="tags" v-model="outbound.stream.masque.warp.address" :token-separators="[',',' ']" placeholder="IPv4/IPv6 CIDR"></a-select></a-form-item>
         </template>
-        <a-form-item label="Username"><a-input v-model="outbound.stream.masque.user"></a-input></a-form-item>
-        <a-form-item label="Password"><a-input-password v-model="outbound.stream.masque.pass"></a-input-password></a-form-item>
+        <template v-else>
+          <a-form-item label="Username"><a-input v-model="outbound.stream.masque.user"></a-input></a-form-item>
+          <a-form-item label="Password"><a-input-password v-model="outbound.stream.masque.pass"></a-input-password></a-form-item>
+        </template>
       </template>
       <!-- tuic settings -->
       <template v-if="outbound.protocol === Protocols.Tuic">

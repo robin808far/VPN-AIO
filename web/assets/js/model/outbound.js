@@ -1096,11 +1096,29 @@ class StreamSettings extends CommonClass {
         this.finalmask = finalmask;
         this.sockopt = sockopt;
         this.xdrive = Object.assign({service: 'local', remoteFolder: '', secrets: [], s3: {endpoint: '', region: '', bucket: '', pathStyle: true}}, xdriveSettings);
-        this.masque = Object.assign({path:'',user:'',pass:'',headers:{},warp:undefined,xmux:{}},masqueSettings);
+        this.masque = Object.assign({host: '', path: '', user: '', pass: '', headers: {}, warp: undefined, xmux: {}}, masqueSettings);
     }
 
     addTcpMask(type = 'fragment') {
         this.finalmask.tcp.push(new TcpMask(type));
+    }
+
+    setMasqueWarp(enabled) {
+        if (enabled) {
+            this.masque.warp = {privateKey: '', publicKey: '', address: []};
+        } else {
+            this.masque.warp = undefined;
+        }
+    }
+
+    masqueToJson() {
+        const settings = {...this.masque};
+        // The core rejects Basic credentials when WARP is enabled.
+        if (settings.warp) {
+            delete settings.user;
+            delete settings.pass;
+        }
+        return settings;
     }
 
     delTcpMask(index) {
@@ -1177,7 +1195,7 @@ class StreamSettings extends CommonClass {
             xhttpSettings: network === 'xhttp' ? this.xhttp.toJson() : undefined,
             hysteriaSettings: network === 'hysteria' ? this.hysteria.toJson() : undefined,
             xdriveSettings: network === 'xdrive' ? {...this.xdrive} : undefined,
-            masqueSettings: network === 'masque' ? {...this.masque} : undefined,
+            masqueSettings: network === 'masque' ? this.masqueToJson() : undefined,
             finalmask: this.hasFinalMask ? this.finalmask.toJson() : undefined,
             sockopt: this.sockopt != undefined ? this.sockopt.toJson() : undefined,
         };
@@ -1480,9 +1498,6 @@ class Outbound extends CommonClass {
         if (out.protocol === Protocols.Naive && !json.streamSettings) {
             out.setNaiveNetwork(out.settings.network);
         }
-        if (out.protocol === Protocols.Masque && out.stream.network !== 'masque') {
-            out.stream = Outbound.defaultStreamFor(Protocols.Masque);
-        }
         return out;
     }
 
@@ -1602,8 +1617,6 @@ class Outbound extends CommonClass {
                 return this.fromParamLink(link);
             case Protocols.Tuic:
                 return this.fromTuicLink(link);
-            case Protocols.Masque:
-                return this.fromParamLink(link);
             // naive has no scheme of its own: naiveproxy's own --proxy flag takes
             // the transport's scheme directly (https:// for h2, quic:// for h3),
             // and the panels that do emit a link prefix that with "naive+". Both
