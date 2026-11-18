@@ -93,6 +93,7 @@ const PROTOCOL_LABELS = {
     [Protocols.AnyTLS]: 'AnyTLS',
     [Protocols.Tuic]: 'TUIC',
     [Protocols.Naive]: 'NaiveProxy',
+    [Protocols.Masque]: 'MASQUE',
 };
 
 // What the Add Outbound picker shows for one protocol. The KEY of the Protocols
@@ -1095,7 +1096,7 @@ class StreamSettings extends CommonClass {
         this.finalmask = finalmask;
         this.sockopt = sockopt;
         this.xdrive = Object.assign({service: 'local', remoteFolder: '', secrets: [], s3: {endpoint: '', region: '', bucket: '', pathStyle: true}}, xdriveSettings);
-        this.masque = Object.assign({host:'',path:'',user:'',pass:'',headers:{},xmux:{}},masqueSettings);
+        this.masque = Object.assign({path:'',user:'',pass:'',headers:{},warp:undefined,xmux:{}},masqueSettings);
     }
 
     addTcpMask(type = 'fragment') {
@@ -1413,6 +1414,10 @@ class Outbound extends CommonClass {
             this.mux.enabled = false;
             return false;
         }
+		if (this.protocol === Protocols.Masque) {
+			this.mux.enabled = false;
+			return false;
+		}
 
         // Allow Mux only for these protocols
         //
@@ -1474,6 +1479,9 @@ class Outbound extends CommonClass {
         // what is really on disk.
         if (out.protocol === Protocols.Naive && !json.streamSettings) {
             out.setNaiveNetwork(out.settings.network);
+        }
+        if (out.protocol === Protocols.Masque && out.stream.network !== 'masque') {
+            out.stream = Outbound.defaultStreamFor(Protocols.Masque);
         }
         return out;
     }
@@ -1594,6 +1602,8 @@ class Outbound extends CommonClass {
                 return this.fromParamLink(link);
             case Protocols.Tuic:
                 return this.fromTuicLink(link);
+            case Protocols.Masque:
+                return this.fromParamLink(link);
             // naive has no scheme of its own: naiveproxy's own --proxy flag takes
             // the transport's scheme directly (https:// for h2, quic:// for h3),
             // and the panels that do emit a link prefix that with "naive+". Both

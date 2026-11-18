@@ -38,3 +38,19 @@ with tempfile.TemporaryDirectory(prefix="vpn-aio-xdrive-") as tmp:
                                 capture_output=True, text=True, timeout=30)
         assert result.returncode == 0, result.stdout + result.stderr
         print(f"PASS XDRIVE {service} inbound/outbound configuration")
+
+    # MASQUE is a standalone outbound protocol with transport settings on the
+    # stream. Ensure the complete hand-authored form parses without network IO.
+    for alpn in ("h2", "h3"):
+        config = {"inbounds": [], "outbounds": [{
+            "protocol": "masque",
+            "settings": {"address": "proxy.example", "port": 443, "remoteDNS": ["1.1.1.1"]},
+            "streamSettings": {"network": "masque", "security": "tls",
+                               "tlsSettings": {"serverName": "proxy.example", "alpn": [alpn]},
+                               "masqueSettings": {"host": "proxy.example", "path": "/.well-known/masque/udp/*/*", "user": "alice", "pass": "secret"}},
+        }]}
+        filename = pathlib.Path(tmp) / "masque.json"
+        filename.write_text(json.dumps(config))
+        result = subprocess.run([binary, "run", "-test", "-c", str(filename)], capture_output=True, text=True, timeout=30)
+        assert result.returncode == 0, result.stdout + result.stderr
+        print(f"PASS MASQUE outbound {alpn} with TLS, auth, path and remote DNS")
