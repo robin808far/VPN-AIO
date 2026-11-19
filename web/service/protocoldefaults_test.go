@@ -274,6 +274,12 @@ var uiSettingsBlobs = map[model.Protocol]string{
     "string": ""
   }
 }`,
+
+	model.MASQUE: `{
+  "clients": [],
+  "address": [],
+  "mtu": 1280
+}`,
 }
 
 // randomSettingKeys lists the fields minted per inbound, which can only be compared by
@@ -289,7 +295,7 @@ var randomSettingKeys = map[model.Protocol]map[string]int{
 var vpnDefaultProtocols = []model.Protocol{
 	model.L2TP, model.PPTP, model.OPENVPN, model.OPENCONNECT, model.SSTP, model.IKEV2,
 	model.WGC, model.AWG, model.GRE, model.MTPROTO, model.SSH,
-	model.ANYTLS, model.TUIC, model.NAIVE,
+	model.ANYTLS, model.TUIC, model.NAIVE, model.MASQUE,
 }
 
 func TestDefaultSettingsForMatchesTheBrowserModel(t *testing.T) {
@@ -828,6 +834,22 @@ func TestValidateProtocolSettingsAcceptsTheExistingApiClientsBodies(t *testing.T
 				t.Fatalf("rejected a body an existing API client sends today: %v", err)
 			}
 		})
+	}
+}
+
+func TestMasqueSettingsValidationRejectsInvalidPoolAndCredentials(t *testing.T) {
+	valid := `{"address":["198.18.70.0/24"],"mtu":1280,"clients":[{"email":"alice","password":"secret"}]}`
+	if err := ValidateProtocolSettings(model.MASQUE, valid); err != nil {
+		t.Fatal(err)
+	}
+	for _, bad := range []string{
+		`{"address":[],"clients":[]}`,
+		`{"address":["198.18.70.0/24","198.19.0.0/24"],"clients":[]}`,
+		`{"address":["198.18.70.0/24"],"clients":[{"email":"alice","password":""}]}`,
+	} {
+		if err := ValidateProtocolSettings(model.MASQUE, bad); err == nil {
+			t.Errorf("accepted invalid MASQUE settings: %s", bad)
+		}
 	}
 }
 

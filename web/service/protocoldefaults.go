@@ -431,6 +431,13 @@ func protocolSettingDefaults(protocol model.Protocol) []settingDefault {
 				"string": "",
 			}),
 		}
+
+	case model.MASQUE:
+		return []settingDefault{
+			def("clients", noClients()),
+			def("address", emptyList()),
+			def("mtu", 1280),
+		}
 	}
 	return nil
 }

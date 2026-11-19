@@ -93,6 +93,8 @@ func inboundPortClaims(inbound *model.Inbound) []portClaim {
 
 	case model.OPENCONNECT, model.SSTP, model.MTPROTO, model.SSH, model.ANYTLS, model.NAIVE:
 		return []portClaim{{port: inbound.Port, network: "tcp"}}
+	case model.MASQUE:
+		return []portClaim{{port: inbound.Port, network: "tcp"}, {port: inbound.Port, network: "udp"}}
 	}
 
 	// Xray-native. The transport decides the socket family: mKCP and QUIC are

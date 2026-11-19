@@ -93,7 +93,7 @@
         <a-input v-model.trim="client.secret"></a-input>
     </a-form-item>
     <a-form-item
-        v-if="inbound.protocol === Protocols.TROJAN || inbound.protocol === Protocols.SHADOWSOCKS || inbound.protocol === Protocols.ANYTLS || inbound.protocol === Protocols.TUIC || inbound.protocol === Protocols.NAIVE || inbound.protocol === Protocols.L2TP || inbound.protocol === Protocols.PPTP || inbound.protocol === Protocols.OPENVPN || inbound.protocol === Protocols.OPENCONNECT || inbound.protocol === Protocols.SSTP || inbound.protocol === Protocols.SSH || (inbound.protocol === Protocols.IKEV2 && inbound.settings.authMode !== 'eap-tls' && inbound.settings.authMode !== 'psk')"
+         v-if="inbound.protocol === Protocols.TROJAN || inbound.protocol === Protocols.SHADOWSOCKS || inbound.protocol === Protocols.ANYTLS || inbound.protocol === Protocols.TUIC || inbound.protocol === Protocols.NAIVE || inbound.protocol === Protocols.MASQUE || inbound.protocol === Protocols.L2TP || inbound.protocol === Protocols.PPTP || inbound.protocol === Protocols.OPENVPN || inbound.protocol === Protocols.OPENCONNECT || inbound.protocol === Protocols.SSTP || inbound.protocol === Protocols.SSH || (inbound.protocol === Protocols.IKEV2 && inbound.settings.authMode !== 'eap-tls' && inbound.settings.authMode !== 'psk')"
     >
         <template slot="label">
             <a-tooltip>

@@ -320,8 +320,15 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 				// authenticating as its email no matter what the panel showed. Only
 				// naive clients carry the key (model.Client tags it omitempty), and
 				// the core ignores unknown client fields for everything else.
+				if inbound.Protocol == model.MASQUE {
+					// The panel stores the shared credential as password; Xray's
+					// MasqueUserConfig calls that field pass.
+					c["pass"] = c["password"]
+					delete(c, "password")
+					delete(c, "id")
+				}
 				for key := range c {
-					if key != "email" && key != "id" && key != "password" && key != "flow" && key != "method" && key != "auth" && key != "username" {
+					if key != "email" && key != "id" && key != "password" && key != "pass" && key != "flow" && key != "method" && key != "auth" && key != "username" {
 						delete(c, key)
 					}
 					if flow, ok := c["flow"].(string); ok && flow == "xtls-rprx-vision-udp443" {

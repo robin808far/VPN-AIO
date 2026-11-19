@@ -8,6 +8,7 @@ const Protocols = {
     ANYTLS: 'anytls',
     TUIC: 'tuic',
     NAIVE: 'naive',
+    MASQUE: 'masque',
     MIXED: 'mixed',
     HTTP: 'http',
     TUNNEL: 'tunnel',
@@ -64,6 +65,8 @@ function getClientIdentity(protocol, client) {
         case Protocols.ANYTLS:
         case Protocols.NAIVE:
             return client.password;
+        case Protocols.MASQUE:
+            return client.email;
         case Protocols.SHADOWSOCKS:
             return client.email;
         case Protocols.HYSTERIA:
@@ -99,6 +102,7 @@ const ProtocolLabels = {
     anytls: 'AnyTLS',
     tuic: 'TUIC',
     naive: 'NaiveProxy',
+    masque: 'MASQUE',
     mixed: 'Mixed',
     http: 'HTTP',
     tunnel: 'Tunnel',
@@ -1827,6 +1831,7 @@ class StreamSettings extends XrayCommonClass {
         finalmask = new FinalMaskStreamSettings(),
         sockopt = undefined,
         xdriveSettings = {},
+        masqueSettings = {},
     ) {
         super();
         this.network = network;
@@ -1844,6 +1849,7 @@ class StreamSettings extends XrayCommonClass {
         this.finalmask = finalmask;
         this.sockopt = sockopt;
         this.xdrive = Object.assign({service: 'local', remoteFolder: '', secrets: [], s3: {endpoint: '', region: '', bucket: '', pathStyle: true}}, xdriveSettings);
+        this.masque = Object.assign({path: ''}, masqueSettings);
     }
 
     addTcpMask(type = 'fragment') {
@@ -1923,6 +1929,7 @@ class StreamSettings extends XrayCommonClass {
             FinalMaskStreamSettings.fromJson(json.finalmask),
             SockoptStreamSettings.fromJson(json.sockopt),
             json.xdriveSettings,
+            json.masqueSettings,
         );
     }
 
@@ -1942,6 +1949,7 @@ class StreamSettings extends XrayCommonClass {
             xhttpSettings: network === 'xhttp' ? this.xhttp.toJson() : undefined,
             hysteriaSettings: network === 'hysteria' ? this.hysteria.toJson() : undefined,
             xdriveSettings: network === 'xdrive' ? {...this.xdrive} : undefined,
+            masqueSettings: network === 'masque' ? {...this.masque} : undefined,
             finalmask: this.hasFinalMask ? this.finalmask.toJson() : undefined,
             sockopt: this.sockopt != undefined ? this.sockopt.toJson() : undefined,
         };
@@ -2228,6 +2236,7 @@ class Inbound extends XrayCommonClass {
             case Protocols.ANYTLS: return this.settings.anytlses;
             case Protocols.TUIC: return this.settings.tuics;
             case Protocols.NAIVE: return this.settings.naives;
+            case Protocols.MASQUE: return this.settings.masques;
             case Protocols.L2TP: return this.settings.l2tpUsers;
             case Protocols.PPTP: return this.settings.pptpUsers;
             case Protocols.OPENVPN: return this.settings.openvpnUsers;
@@ -2273,6 +2282,11 @@ class Inbound extends XrayCommonClass {
             // because the server forces it, and a client that negotiates anything
             // else is refused with an opaque "no application protocol" TLS alert.
             this.stream.network = 'tuic';
+            this.stream.security = 'tls';
+            this.stream.tls.alpn = [ALPN_OPTION.H3];
+        }
+        if (protocol === Protocols.MASQUE) {
+            this.stream.network = 'masque';
             this.stream.security = 'tls';
             this.stream.tls.alpn = [ALPN_OPTION.H3];
         }
@@ -2384,6 +2398,7 @@ class Inbound extends XrayCommonClass {
     }
 
     canEnableTls() {
+        if (this.protocol === Protocols.MASQUE) return true;
         if (this.protocol === Protocols.HYSTERIA) return true;
         // TUIC's TLS lives under its own transport, not under one of the stream
         // networks listed below, so it is always available (and mandatory).
@@ -2391,7 +2406,7 @@ class Inbound extends XrayCommonClass {
         // AnyTLS and naive ride the standard stream TLS, so they fall through to
         // the transport check: both are stream protocols and both need it.
         if (![Protocols.VMESS, Protocols.VLESS, Protocols.TROJAN, Protocols.SHADOWSOCKS,
-            Protocols.ANYTLS, Protocols.NAIVE].includes(this.protocol)) return false;
+            Protocols.ANYTLS, Protocols.NAIVE, Protocols.MASQUE].includes(this.protocol)) return false;
         return ["tcp", "ws", "http", "grpc", "httpupgrade", "xhttp"].includes(this.network);
     }
 
@@ -2405,7 +2420,7 @@ class Inbound extends XrayCommonClass {
     // over TCP, where 'none' is a real TLS-offload deployment (a terminator in front
     // forwarding plaintext to a local port), so they keep the choice and warn instead.
     static protocolRequiresTls(protocol) {
-        return [Protocols.HYSTERIA, Protocols.TUIC].includes(protocol);
+        return [Protocols.HYSTERIA, Protocols.TUIC, Protocols.MASQUE].includes(protocol);
     }
 
     requiresTls() {
@@ -2447,7 +2462,7 @@ class Inbound extends XrayCommonClass {
     // TLS-only protocol means a listener nothing can ever connect to.
     canEnableStream() {
         return [Protocols.VMESS, Protocols.VLESS, Protocols.TROJAN, Protocols.SHADOWSOCKS, Protocols.HYSTERIA,
-            Protocols.ANYTLS, Protocols.TUIC, Protocols.NAIVE].includes(this.protocol);
+            Protocols.ANYTLS, Protocols.TUIC, Protocols.NAIVE, Protocols.MASQUE].includes(this.protocol);
     }
 
     reset() {
@@ -3232,6 +3247,7 @@ Inbound.Settings = class extends XrayCommonClass {
             case Protocols.ANYTLS: return new Inbound.AnytlsSettings(protocol);
             case Protocols.TUIC: return new Inbound.TuicSettings(protocol);
             case Protocols.NAIVE: return new Inbound.NaiveSettings(protocol);
+            case Protocols.MASQUE: return new Inbound.MasqueSettings(protocol);
             case Protocols.L2TP: return new Inbound.L2tpSettings(protocol);
             case Protocols.PPTP: return new Inbound.PptpSettings(protocol);
             case Protocols.OPENVPN: return new Inbound.OpenvpnSettings(protocol);
@@ -3262,6 +3278,7 @@ Inbound.Settings = class extends XrayCommonClass {
             case Protocols.ANYTLS: return Inbound.AnytlsSettings.fromJson(json);
             case Protocols.TUIC: return Inbound.TuicSettings.fromJson(json);
             case Protocols.NAIVE: return Inbound.NaiveSettings.fromJson(json);
+            case Protocols.MASQUE: return Inbound.MasqueSettings.fromJson(json);
             case Protocols.L2TP: return Inbound.L2tpSettings.fromJson(json);
             case Protocols.PPTP: return Inbound.PptpSettings.fromJson(json);
             case Protocols.OPENVPN: return Inbound.OpenvpnSettings.fromJson(json);
@@ -3879,6 +3896,26 @@ Inbound.AnytlsSettings = class extends Inbound.Settings {
             paddingScheme: paddingScheme.length > 0 ? paddingScheme : undefined,
         };
     }
+};
+
+Inbound.MasqueSettings = class extends Inbound.Settings {
+    constructor(protocol, masques=[new Inbound.MasqueSettings.Masque()], address=[], mtu=1280) {
+        super(protocol); this.masques=masques; this.address=address; this.mtu=mtu;
+    }
+    static fromJson(json={}) {
+        return new Inbound.MasqueSettings(Protocols.MASQUE,
+            (json.clients||[]).map(client=>Inbound.MasqueSettings.Masque.fromJson(client)),
+            Array.isArray(json.address)?json.address.slice():[], json.mtu??1280);
+    }
+    toJson() { return {clients:Inbound.MasqueSettings.toJsonArray(this.masques),address:this.address,mtu:this.mtu}; }
+};
+
+Inbound.MasqueSettings.Masque = class extends Inbound.ClientBase {
+    constructor(password=RandomUtil.randomSeq(10), email, limitIp, totalGB, expiryTime, enable, tgId, subId, comment, reset, created_at, updated_at) {
+        super(email,limitIp,totalGB,expiryTime,enable,tgId,subId,comment,reset,created_at,updated_at); this.password=password;
+    }
+    toJson() { return {password:this.password,...this._clientBaseToJson()}; }
+    static fromJson(json={}) { return new Inbound.MasqueSettings.Masque(json.password,...Inbound.ClientBase.commonArgsFromJson(json)); }
 };
 
 // AnyTLS's upstream default scheme, spelled out rather than left empty so the form

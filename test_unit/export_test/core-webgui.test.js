@@ -52,6 +52,10 @@ for (const model of ["inbound", "outbound"]) {
         awg.awg31.randomTrailers=true; awg.awg31.headerProtectionKey='abc';
         assert.equal(awg.toJson().awg31.randomTrailers, true);
         assert.equal(awg.toJson().awg31.headerProtectionKey, 'abc');
+        vm.runInContext("globalThis.Masque = Inbound.MasqueSettings;", context);
+        const masque = context.Masque.fromJson({address:['198.18.70.0/24'], mtu:1280, clients:[{email:'alice',password:'secret',enable:true}]});
+        assert.deepEqual(JSON.parse(JSON.stringify(masque.toJson().address)), ['198.18.70.0/24']);
+        assert.equal(masque.toJson().clients[0].password, 'secret');
     }
     if (model === "outbound") {
         vm.runInContext("globalThis.Out = Outbound; globalThis.P = Protocols;", context);

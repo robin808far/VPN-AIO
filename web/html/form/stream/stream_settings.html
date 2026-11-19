@@ -14,7 +14,7 @@
   :colon="false"
   :label-col="{ md: {span:8} }"
   :wrapper-col="{ md: {span:14} }"
-  v-if="inbound.protocol != Protocols.HYSTERIA && inbound.protocol != Protocols.TUIC"
+  v-if="inbound.protocol != Protocols.HYSTERIA && inbound.protocol != Protocols.TUIC && inbound.protocol != Protocols.MASQUE"
 >
   <a-form-item label='{{ i18n "transmission" }}'>
     <a-select
@@ -133,6 +133,12 @@
   </template>
   <a-form-item v-for="key in ['segmentBytes','flushIntervalMs','pollIntervalMs','maxPollIntervalMs','sessionTtlSeconds','concurrency','eagerWindowMs','holeTimeoutMs']" :key="'xd-'+key" :label="key">
     <a-input-number :value="inbound.stream.xdrive[key]" @change="$set(inbound.stream.xdrive, key, $event)" :min="0" :max="4294967295" :precision="0" placeholder="Core default"></a-input-number>
+  </a-form-item>
+</template>
+
+<template v-if="inbound.stream.network === 'masque'">
+  <a-form-item label="MASQUE path">
+    <a-input v-model.trim="inbound.stream.masque.path" placeholder="Core default"></a-input>
   </a-form-item>
 </template>
 <template> {{template "form/streamSockopt"}} </template>

@@ -70,6 +70,7 @@ var protocolSettingValidators = map[model.Protocol]func(map[string]any) error{
 	model.ANYTLS:      validateAnytlsSettings,
 	model.TUIC:        validateTuicSettings,
 	model.NAIVE:       validateNaiveSettings,
+	model.MASQUE:      validateMasqueSettings,
 }
 
 // --- per-protocol validators -------------------------------------------------------
@@ -499,6 +500,78 @@ func validateNaiveSettings(m map[string]any) error {
 		if v, _, _ := optString(masq, "string"); strings.TrimSpace(v) == "" {
 			return common.NewError(`"masquerade.string" is required when "masquerade.type" is "string"`)
 		}
+	}
+	return nil
+}
+
+func validateMasqueSettings(m map[string]any) error {
+	addresses, ok := m["address"]
+	if !ok {
+		return common.NewError(`"address" is required`)
+	}
+	list, ok := addresses.([]any)
+	if !ok || len(list) == 0 {
+		return common.NewError(`"address" must contain an IPv4 and/or IPv6 prefix`)
+	}
+	var v4, v6 bool
+	for _, raw := range list {
+		s, ok := raw.(string)
+		if !ok {
+			return common.NewError(`"address" entries must be strings`)
+		}
+		prefix, err := netip.ParsePrefix(s)
+		if err != nil {
+			return common.NewErrorf(`invalid "address": %v`, err)
+		}
+		if prefix.Addr().Is4() {
+			if v4 {
+				return common.NewError(`only one IPv4 address pool is allowed`)
+			}
+			v4 = true
+		}
+		if prefix.Addr().Is6() {
+			if v6 {
+				return common.NewError(`only one IPv6 address pool is allowed`)
+			}
+			v6 = true
+		}
+	}
+	mtu, present, err := optInt(m, "mtu")
+	if err != nil {
+		return err
+	}
+	if present && (mtu < 1280 || mtu > 65535) {
+		return common.NewError(`"mtu" must be between 1280 and 65535`)
+	}
+	clients, ok := m["clients"].([]any)
+	if !ok {
+		return common.NewError(`"clients" must be an array`)
+	}
+	seen := map[string]bool{}
+	for i, raw := range clients {
+		client, ok := raw.(map[string]any)
+		if !ok {
+			return common.NewErrorf(`"clients[%d]" must be an object`, i)
+		}
+		email, _, err := optString(client, "email")
+		if err != nil {
+			return err
+		}
+		pass, _, err := optString(client, "password")
+		if err != nil {
+			return err
+		}
+		if strings.TrimSpace(email) == "" || strings.Contains(email, ":") {
+			return common.NewErrorf(`"clients[%d].email" is required and cannot contain a colon`, i)
+		}
+		if strings.TrimSpace(pass) == "" {
+			return common.NewErrorf(`"clients[%d].password" is required`, i)
+		}
+		key := strings.ToLower(email)
+		if seen[key] {
+			return common.NewErrorf("duplicate MASQUE email %q", email)
+		}
+		seen[key] = true
 	}
 	return nil
 }

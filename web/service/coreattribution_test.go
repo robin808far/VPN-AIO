@@ -416,7 +416,7 @@ func TestPerInboundUsageRendersForEveryProtocol(t *testing.T) {
 	// writes.
 	protocols := []model.Protocol{
 		model.VMESS, model.VLESS, model.Trojan, model.Shadowsocks, model.HTTP,
-		model.Mixed, model.WireGuard, model.ANYTLS, model.TUIC, model.NAIVE,
+		model.Mixed, model.WireGuard, model.ANYTLS, model.TUIC, model.NAIVE, model.MASQUE,
 		model.Hysteria,
 		model.L2TP, model.PPTP, model.OPENVPN, model.OPENCONNECT, model.SSTP,
 		model.IKEV2, model.WGC, model.AWG, model.GRE,

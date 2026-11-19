@@ -322,6 +322,7 @@
       <template v-if="inbound.protocol === Protocols.ANYTLS">{{template "form/anytls"}}</template>
       <template v-if="inbound.protocol === Protocols.TUIC">{{template "form/tuic"}}</template>
       <template v-if="inbound.protocol === Protocols.NAIVE">{{template "form/naive"}}</template>
+      <template v-if="inbound.protocol === Protocols.MASQUE">{{template "form/masque"}}</template>
     </div>
 
     <!-- =========================== Transport ============================ -->

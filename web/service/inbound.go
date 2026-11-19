@@ -2179,6 +2179,8 @@ func clientIdentityKey(protocol model.Protocol) string {
 	// renames, which is the rule the block above already states.
 	case model.ANYTLS, model.NAIVE:
 		return "password"
+	case model.MASQUE:
+		return "email"
 	case model.Shadowsocks:
 		return "email"
 	case model.Hysteria, model.Hysteria2:
@@ -2274,6 +2276,8 @@ func (s *InboundService) buildTargetClientFromSource(source model.Client, target
 	case model.ANYTLS, model.NAIVE:
 		// Password-only accounts. naive's Basic-auth username is the email, which
 		// was already set above, so nothing else has to be minted.
+		target.Password = s.generateRandomCredential(targetProtocol)
+	case model.MASQUE:
 		target.Password = s.generateRandomCredential(targetProtocol)
 	case model.TUIC:
 		// TUIC authenticates with a uuid AND a password and is keyed on the uuid, so

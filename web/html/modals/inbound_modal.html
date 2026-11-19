@@ -488,7 +488,7 @@
             hasNativeIpLimit() {
                 const p = inModal.inbound ? inModal.inbound.protocol : "";
                 return [Protocols.VMESS, Protocols.VLESS, Protocols.TROJAN, Protocols.SHADOWSOCKS,
-                    Protocols.ANYTLS, Protocols.TUIC, Protocols.NAIVE].includes(p);
+                    Protocols.ANYTLS, Protocols.TUIC, Protocols.NAIVE, Protocols.MASQUE].includes(p);
             },
             // Every reason the form cannot be submitted, each tagged with the section
             // holding it. This is the ONE place that decides: modalFormValid, the rail
