@@ -73,6 +73,13 @@ for (const model of ["inbound", "outbound"]) {
         assert.equal(maskJson.udp[0].settings.value, 'legacy-key');
         assert.deepEqual(maskJson.udp[1].settings.domains[0].types, [1]);
         assert.deepEqual(maskJson.udp[1].settings.resolvers[0].addrs, ['udp://1.1.1.1:53']);
+        const custom = context.MasqueInbound.fromJson({protocol:'vmess',settings:{clients:[]},streamSettings:{network:'tcp',finalmask:{tcp:[{type:'header-custom',settings:{clients:[[{capture:'head',type:'str',packet:'GET '}]],servers:[],errors:[]}}]}}});
+        const item = custom.stream.finalmask.tcp[0].settings.clients[0][0];
+        item.kind='transform';
+        item.transformText=JSON.stringify({op:'concat',args:[{type:'str',bytes:'OK '},{reuse:'head'}]});
+        const customJson = JSON.parse(JSON.stringify(custom.toJson().streamSettings.finalmask.tcp[0].settings.clients[0][0]));
+        assert.deepEqual(customJson.transform, {op:'concat',args:[{type:'str',bytes:'OK '},{reuse:'head'}]});
+        assert.equal(customJson.transformText, undefined);
     }
     if (model === "outbound") {
         vm.runInContext("globalThis.Out = Outbound; globalThis.P = Protocols;", context);
@@ -103,6 +110,13 @@ for (const model of ["inbound", "outbound"]) {
         const warpRestored = context.Out.fromJson(warpJson);
         assert.equal(warpRestored.stream.masque.warp.privateKey, 'warp-private');
         assert.equal(warpRestored.stream.masque.user, '');
+        const custom = context.Stream.fromJson({network:'tcp',finalmask:{tcp:[{type:'header-custom',settings:{clients:[[{capture:'head',type:'str',packet:'GET '}]],servers:[],errors:[]}}]}});
+        const item = custom.finalmask.tcp[0].settings.clients[0][0];
+        item.kind='transform';
+        item.transformText=JSON.stringify({op:'concat',args:[{type:'str',bytes:'OK '},{reuse:'head'}]});
+        const customJson = JSON.parse(JSON.stringify(custom.toJson().finalmask.tcp[0].settings.clients[0][0]));
+        assert.deepEqual(customJson.transform, {op:'concat',args:[{type:'str',bytes:'OK '},{reuse:'head'}]});
+        assert.equal(customJson.transformText, undefined);
         const badLegacyMux = {...serialized, mux: {enabled:true, concurrency:8}};
         assert.equal(context.Out.fromJson(badLegacyMux).toJson().mux, undefined);
         const masks = context.Stream.fromJson({network:'hysteria',finalmask:{tcp:[{type:'xmc',settings:{hostname:'mc.example',profiles:[{username:'Alex',uuid:'069a79f4-44e9-4726-a5be-fca90e38aaf5',texturesValue:'v',texturesSignature:'s'}],password:'secret'}},{type:'header-custom',settings:{clients:[],servers:[],errors:[[{type:'str',packet:'fallback'}]]}}],udp:[{type:'mkcp-original'},{type:'realm',settings:{url:'realm://token@host:443/id',stunServers:['stun.example:3478']}},{type:'udphop',settings:{mode:'intervalRemote',interval:'5-10',remoteIPs:['192.0.2.1'],remotePorts:'20000-30000'}}]}});
