@@ -1150,6 +1150,11 @@ func ikev2AuthMode(inbound *model.Inbound) string {
 
 func (s *InboundService) validateInboundConfig(inbound *model.Inbound) error {
 	validPort := func(p int) bool { return p >= 1 && p <= 65535 }
+	if inbound.Protocol == model.MASQUE {
+		if err := validateMasqueStream(inbound.StreamSettings); err != nil {
+			return err
+		}
+	}
 
 	// Traffic multiplier. Rejected here so a poisoned value never reaches the DB:
 	// the form binder parses "NaN"/"Inf" happily, and a NaN multiplier drives a
@@ -1465,11 +1470,9 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 
 	needRestart := false
 	if inbound.Enable {
-		if hasDerivedXrayInbound(inbound.Protocol) {
-			// Its dokodemo (VPN) or socks inbound (relay) is added by the full restart
-			// the caller triggers. Neither can be built from this inbound's own
-			// protocol, so the API path below would only log a failure and set this
-			// same flag.
+		if hasDerivedXrayInbound(inbound.Protocol) || inbound.Protocol == model.MASQUE {
+			// The managed core builds derived listeners and understands MASQUE.
+			// The panel's linked config parser cannot build these inbounds.
 			needRestart = true
 		} else {
 			s.xrayApi.Init(p.GetAPIPort())
@@ -1587,6 +1590,11 @@ func (s *InboundService) UpdateInbound(inbound *model.Inbound) (*model.Inbound, 
 	// Before anything parses the settings, so the emails checked below and the ones
 	// persisted are the same strings.
 	inbound.Settings = normalizeClientEmails(inbound.Settings)
+	if inbound.Protocol == model.MASQUE {
+		if err := NormalizeInboundSettings(inbound); err != nil {
+			return inbound, false, err
+		}
+	}
 
 	if err := s.validateInboundConfig(inbound); err != nil {
 		return inbound, false, err
@@ -1784,6 +1792,7 @@ func (s *InboundService) UpdateInbound(inbound *model.Inbound) (*model.Inbound, 
 	oldInbound.IPLimitStrategy = inbound.IPLimitStrategy
 	oldInbound.Listen = inbound.Listen
 	oldInbound.Port = inbound.Port
+	previousProtocol := oldInbound.Protocol
 	oldInbound.Protocol = inbound.Protocol
 	oldInbound.Settings = inbound.Settings
 	oldInbound.StreamSettings = inbound.StreamSettings
@@ -1795,7 +1804,10 @@ func (s *InboundService) UpdateInbound(inbound *model.Inbound) (*model.Inbound, 
 	}
 
 	needRestart := false
-	if hasDerivedXrayInbound(oldInbound.Protocol) {
+	if oldInbound.Protocol == model.MASQUE || previousProtocol == model.MASQUE {
+		// Keep the current listener until the managed core loads the saved config.
+		needRestart = true
+	} else if hasDerivedXrayInbound(oldInbound.Protocol) {
 		// Leave the running dokodemo (VPN) or socks inbound (relay) in place. The live
 		// del/add API would drop it and be unable to recreate it, cutting the clients'
 		// internet until a full restart that an unchanged config will not trigger. The

@@ -289,9 +289,17 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 		}
 
 		clients, ok := settings["clients"].([]any)
+		if inbound.Protocol == model.MASQUE {
+			// Xray also accepts a users alias. Only panel-managed clients may authenticate.
+			delete(settings, "users")
+			ok = true
+		}
 		if ok {
 			// filter and clean clients
 			var final_clients []any
+			if inbound.Protocol == model.MASQUE {
+				final_clients = make([]any, 0, len(clients))
+			}
 			for _, client := range clients {
 				c, ok := client.(map[string]any)
 				if !ok {

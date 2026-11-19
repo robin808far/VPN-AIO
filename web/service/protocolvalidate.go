@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"net/netip"
+	"slices"
 	"strings"
 
 	"github.com/Jipok/wgctrl-go/wgtypes"
@@ -504,6 +505,44 @@ func validateNaiveSettings(m map[string]any) error {
 	return nil
 }
 
+type masqueStream struct {
+	Network  string `json:"network"`
+	Security string `json:"security"`
+	TLS      struct {
+		ALPN         []string `json:"alpn"`
+		Certificates []struct {
+			Usage           string   `json:"usage"`
+			CertificateFile string   `json:"certificateFile"`
+			KeyFile         string   `json:"keyFile"`
+			Certificate     []string `json:"certificate"`
+			Key             []string `json:"key"`
+		} `json:"certificates"`
+	} `json:"tlsSettings"`
+}
+
+func (s masqueStream) versions() (h2, h3 bool) {
+	h2 = slices.Contains(s.TLS.ALPN, "h2")
+	return h2, slices.Contains(s.TLS.ALPN, "h3") || !h2
+}
+
+func validateMasqueStream(raw string) error {
+	var stream masqueStream
+	if err := json.Unmarshal([]byte(raw), &stream); err != nil {
+		return common.NewErrorf("invalid MASQUE stream settings: %v", err)
+	}
+	if stream.Network != "masque" || stream.Security != "tls" {
+		return common.NewError("MASQUE requires the masque transport and TLS")
+	}
+	for _, cert := range stream.TLS.Certificates {
+		hasCert := cert.CertificateFile != "" || strings.TrimSpace(strings.Join(cert.Certificate, "")) != ""
+		hasKey := cert.KeyFile != "" || strings.TrimSpace(strings.Join(cert.Key, "")) != ""
+		if (cert.Usage == "" || cert.Usage == "encipherment") && hasCert && hasKey {
+			return nil
+		}
+	}
+	return common.NewError("MASQUE requires a TLS server certificate and private key")
+}
+
 func validateMasqueSettings(m map[string]any) error {
 	addresses, ok := m["address"]
 	if !ok {
@@ -522,6 +561,12 @@ func validateMasqueSettings(m map[string]any) error {
 		prefix, err := netip.ParsePrefix(s)
 		if err != nil {
 			return common.NewErrorf(`invalid "address": %v`, err)
+		}
+		addr := prefix.Addr()
+		if addr.Is4In6() || addr == prefix.Masked().Addr() ||
+			(addr.Is4() && (prefix.Bits() > 30 || !prefix.Contains(addr.Next()))) ||
+			(addr.Is6() && prefix.Bits() > 126) {
+			return common.NewErrorf(`"address" %q must be a usable server address with room for clients`, s)
 		}
 		if prefix.Addr().Is4() {
 			if v4 {

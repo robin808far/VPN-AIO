@@ -203,7 +203,7 @@ func (s *SubService) getInboundsBySubId(subId string) ([]*model.Inbound, error) 
 			JSON_EACH(CASE WHEN JSON_VALID(inbounds.settings)
 				THEN JSON_EXTRACT(inbounds.settings, '$.clients') ELSE '[]' END) AS client
 		WHERE
-			protocol in ('vmess','vless','trojan','shadowsocks','hysteria','hysteria2','anytls','tuic','naive','mtproto','ssh','wg-c','awg','gre','openvpn','l2tp','pptp','openconnect','sstp','ikev2')
+			protocol in ('vmess','vless','trojan','shadowsocks','hysteria','hysteria2','anytls','tuic','masque','naive','mtproto','ssh','wg-c','awg','gre','openvpn','l2tp','pptp','openconnect','sstp','ikev2')
 			AND JSON_EXTRACT(client.value, '$.subId') = ? AND enable = ?
 	)`, subId, true).Order("id ASC").Find(&inbounds).Error
 	if err != nil {

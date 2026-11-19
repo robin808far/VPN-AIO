@@ -838,17 +838,40 @@ func TestValidateProtocolSettingsAcceptsTheExistingApiClientsBodies(t *testing.T
 }
 
 func TestMasqueSettingsValidationRejectsInvalidPoolAndCredentials(t *testing.T) {
-	valid := `{"address":["198.18.70.0/24"],"mtu":1280,"clients":[{"email":"alice","password":"secret"}]}`
+	valid := `{"address":["198.18.70.1/24","fd00::1/64"],"mtu":1280,"clients":[{"email":"alice","password":"secret"}]}`
 	if err := ValidateProtocolSettings(model.MASQUE, valid); err != nil {
 		t.Fatal(err)
 	}
 	for _, bad := range []string{
 		`{"address":[],"clients":[]}`,
-		`{"address":["198.18.70.0/24","198.19.0.0/24"],"clients":[]}`,
-		`{"address":["198.18.70.0/24"],"clients":[{"email":"alice","password":""}]}`,
+		`{"address":["198.18.70.1/24","198.19.0.1/24"],"clients":[]}`,
+		`{"address":["198.18.70.0/24"],"clients":[]}`,
+		`{"address":["198.18.70.255/24"],"clients":[]}`,
+		`{"address":["198.18.70.1/24"],"clients":[{"email":"alice","password":""}]}`,
 	} {
 		if err := ValidateProtocolSettings(model.MASQUE, bad); err == nil {
 			t.Errorf("accepted invalid MASQUE settings: %s", bad)
+		}
+	}
+}
+
+func TestMasquePortClaimsMatchALPN(t *testing.T) {
+	for _, tc := range []struct {
+		alpn string
+		want string
+	}{
+		{`[]`, "udp"},
+		{`["h2","http/1.1"]`, "tcp"},
+		{`["h3"]`, "udp"},
+		{`["h2","h3"]`, "tcpudp"},
+	} {
+		inbound := &model.Inbound{Protocol: model.MASQUE, Port: 443, StreamSettings: `{"network":"masque","security":"tls","tlsSettings":{"alpn":` + tc.alpn + `}}`}
+		var got string
+		for _, claim := range inboundPortClaims(inbound) {
+			got += claim.network
+		}
+		if got != tc.want {
+			t.Errorf("ALPN %s claims %q, want %q", tc.alpn, got, tc.want)
 		}
 	}
 }

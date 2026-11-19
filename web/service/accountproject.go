@@ -1430,7 +1430,7 @@ func (s *AccountService) ensureCredentialsFor(tx *gorm.DB, accountId int, inboun
 		need(&account.Security, func() string { return "auto" })
 	case model.VLESS:
 		need(&account.UUID, dashed)
-	case model.Trojan, model.ANYTLS, model.NAIVE:
+	case model.Trojan, model.ANYTLS, model.NAIVE, model.MASQUE:
 		need(&account.Password, dashless)
 	case model.Shadowsocks:
 		// A 2022-blake3 cipher does not take an arbitrary string: the user PSK must
@@ -1526,6 +1526,11 @@ func (s *AccountService) ProjectAccount(tx *gorm.DB, accountId int) ([]int, erro
 			settings, err := projectAccountOntoInbound(inbound, &account, m)
 			if err != nil {
 				return nil, err
+			}
+			if inbound.Protocol == model.MASQUE {
+				if err := ValidateProtocolSettings(inbound.Protocol, settings); err != nil {
+					return nil, err
+				}
 			}
 			if settings == inbound.Settings {
 				continue
