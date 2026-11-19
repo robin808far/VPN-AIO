@@ -53,9 +53,17 @@ for (const model of ["inbound", "outbound"]) {
         assert.equal(awg.toJson().awg31.randomTrailers, true);
         assert.equal(awg.toJson().awg31.headerProtectionKey, 'abc');
         vm.runInContext("globalThis.Masque = Inbound.MasqueSettings;", context);
-        const masque = context.Masque.fromJson({address:['198.18.70.0/24'], mtu:1280, clients:[{email:'alice',password:'secret',enable:true}]});
-        assert.deepEqual(JSON.parse(JSON.stringify(masque.toJson().address)), ['198.18.70.0/24']);
+        const masque = context.Masque.fromJson({address:['198.18.70.1/24'], mtu:1280, clients:[{email:'alice',password:'secret',enable:true}]});
+        assert.deepEqual(JSON.parse(JSON.stringify(masque.toJson().address)), ['198.18.70.1/24']);
         assert.equal(masque.toJson().clients[0].password, 'secret');
+        const newMasque = new context.Masque('masque');
+        assert.deepEqual(JSON.parse(JSON.stringify(newMasque.toJson().address)), ['10.14.0.1/24', 'fd14::1/64']);
+        vm.runInContext('globalThis.MasqueInbound = Inbound;', context);
+        const inbound = context.MasqueInbound.fromJson({protocol:'masque', settings:{address:['10.14.0.1/24'],clients:[]}, streamSettings:{network:'masque',security:'tls',masqueSettings:{path:'/connect'},tlsSettings:{alpn:['h2']}}});
+        const restored = JSON.parse(JSON.stringify(inbound.toJson()));
+        assert.equal(restored.streamSettings.network, 'masque');
+        assert.equal(restored.streamSettings.masqueSettings.path, '/connect');
+        assert.deepEqual(restored.streamSettings.tlsSettings.alpn, ['h2']);
     }
     if (model === "outbound") {
         vm.runInContext("globalThis.Out = Outbound; globalThis.P = Protocols;", context);
