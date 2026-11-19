@@ -58,10 +58,14 @@ References:
 - [x] Controlled authenticated upgrade/rollback on `sweden`: full-geo build,
       live authenticated API checks (34/34), test-fixture cleanup and exact pre-test
       binary/systemd unit/SQLite restoration with hash and integrity verification.
-- [ ] Verify packet traffic through an existing customer's tunnel after upgrade;
-      the live API suite passed but did not route an existing profile.
-- [ ] Verify AWG exports against real supported client implementations and record
-      compatibility limits in release notes.
+- [x] Install the full-geo 2.1.0 candidate on `sweden` and route certificate-
+      verified HTTPS through an existing VLESS/XHTTP account; Xray uplink and
+      downlink counters both increased. Restore and verify the exact pre-test
+      binary, service unit and SQLite files; service/Xray/AWG healthy afterward.
+- [x] Verify AWG 3.1 exports with upstream Linux `amneziawg-tools` and the 3.1
+      kernel module: a live panel-generated profile imports and round-trips, while
+      a full-option config completes a real handshake and bidirectional tunnel ping.
+      Export booleans now use the `on`/`off` syntax required by the client parser.
 
 Do not copy React components into the Vue application. Use upstream schemas as
 reference while checking every option against the pinned executable's actual API.

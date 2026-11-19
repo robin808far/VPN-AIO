@@ -869,10 +869,18 @@ func (s *AwgService) RenderClientConfigs(inbound *model.Inbound, email, endpoint
 					}
 				}
 				if obfs.RandomTrailers != nil {
-					b.WriteString(fmt.Sprintf("RandomTrailers = %t\n", *obfs.RandomTrailers))
+					value := "off"
+					if *obfs.RandomTrailers {
+						value = "on"
+					}
+					b.WriteString("RandomTrailers = " + value + "\n")
 				}
 				if obfs.DisableCookies != nil {
-					b.WriteString(fmt.Sprintf("DisableCookies = %t\n", *obfs.DisableCookies))
+					value := "off"
+					if *obfs.DisableCookies {
+						value = "on"
+					}
+					b.WriteString("DisableCookies = " + value + "\n")
 				}
 				b.WriteString("\n[Peer]\n")
 				b.WriteString("PublicKey = " + settings.ServerPubKey + "\n")

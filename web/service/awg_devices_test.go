@@ -43,7 +43,7 @@ func TestAwgClientConfigIncludesAll31Options(t *testing.T) {
 		"S3 = 12", "S4 = 24", "I1 = <r 32>", "I2 = <r 16>", "I3 = <r 8>", "I4 = <r 4>", "I5 = <r 2>",
 		"HeaderProtectionKey = " + key, "ContentPaddingAddition = 8-16", "RekeyAfterTime = 100-120",
 		"RekeyTimeout = 3-6", "RejectAfterTime = 160-200", "KeepaliveTimeout = 8-16", "MaxHandshakeAttempts = 15-25",
-		"RandomTrailers = true", "DisableCookies = true",
+		"RandomTrailers = on", "DisableCookies = on",
 	} {
 		if !strings.Contains(configs[0].Config, want) {
 			t.Errorf("export missing %q\n%s", want, configs[0].Config)
@@ -58,6 +58,18 @@ func TestAwgClientConfigIncludesAll31Options(t *testing.T) {
 		params[0].RejectAfterTime != "160-200" || params[0].KeepaliveTimeout != "8-16" ||
 		params[0].MaxHandshakeAttempts != "15-25" || !params[0].RandomTrailers || !params[0].DisableCookies {
 		t.Fatalf("structured AWG export lost 3.1 settings: %+v", params)
+	}
+	// Upstream Linux awg parses booleans as on/off or 0/1, not true/false.
+	inbound.Settings = strings.ReplaceAll(inbound.Settings, `"randomTrailers":true`, `"randomTrailers":false`)
+	inbound.Settings = strings.ReplaceAll(inbound.Settings, `"disableCookies":true`, `"disableCookies":false`)
+	falseConfigs, err := s.RenderClientConfigs(inbound, "export31@t", "example.test")
+	if err != nil || len(falseConfigs) != 1 {
+		t.Fatalf("RenderClientConfigs with false AWG booleans: configs=%d err=%v", len(falseConfigs), err)
+	}
+	for _, want := range []string{"RandomTrailers = off", "DisableCookies = off"} {
+		if !strings.Contains(falseConfigs[0].Config, want) {
+			t.Errorf("export missing client-compatible false value %q", want)
+		}
 	}
 }
 

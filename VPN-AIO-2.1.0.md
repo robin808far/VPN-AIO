@@ -25,10 +25,10 @@ Target: fresh installation and upgrade from 2.0.0 on Ubuntu 24.04 amd64.
 - GitHub Actions run `44600039700` passed for commit `82505b3`, including the
   complete Go suite, GUI model tests, pinned-core build, native-protocol smoke
   tests, XDRIVE checks and FinalMask configuration matrix.
-- Ubuntu `sweden`: a clean full-source/full-geo build produced the 2.1.0
-  `VPN-AIO-amd64` test binary (338 MB), SHA-256
-  `f5ec91184c49a8fe4a2894a74925c2727b13fb4bc7db177846e68de131f63696`;
-  the active system service was not replaced.
+- Ubuntu `sweden`: the full-asset 2.1.0 candidate is 354,323,144 bytes
+  (338 MiB), SHA-256
+  `912ecc7c14f76fbf9e3528cafe201902eb5fed76e7bb58d6347e955816843c95`.
+  It was built with the complete pinned Xray/geodata and daemon bundles.
 - Pinned Xray 26.11.9: native MASQUE h2/h3, AnyTLS, TUIC, Naive and all FinalMask
   TCP/UDP configuration variants parsed or passed live traffic/authentication checks.
 - MASQUE live account add, removal, re-enable, traffic accounting, generated Xray
@@ -41,14 +41,26 @@ Target: fresh installation and upgrade from 2.0.0 on Ubuntu 24.04 amd64.
 - Ubuntu 24.04 test host: AmneziaWG 3.1 DKMS build/load, AWG 3.1 netlink
   capability check, real handshake, bidirectional traffic and peer removal. Tests
   now assert every 3.1 field in `.conf`, structured export and Clash output.
+- Linux client compatibility: upstream `amneziawg-tools` v3.1.20260812 imported
+  a profile rendered from the live panel and round-tripped its available settings
+  through the AWG 3.1 kernel. A separate full-option profile (including all new
+  3.1 fields) completed a real handshake and bidirectional tunnel ping. The client
+  accepts boolean values as `on`/`off`, not `true`/`false`; the `.conf` exporter and
+  regression test now use the accepted syntax. Desktop/mobile AWG clients were not
+  tested.
+- Controlled full-candidate upgrade on `sweden`: the candidate above started the
+  panel and Xray 26.11.9; a certificate-verified HTTPS request traversed an existing
+  enabled VLESS/XHTTP profile and increased both Xray traffic counters. The live
+  panel also rendered an existing AWG profile that imported and round-tripped with
+  upstream AWG tools/kernel.
+- Rollback restored and verified the exact pre-test binary, systemd unit, SQLite
+  database and WAL/SHM snapshot. The service is active again with the original
+  binary (SHA-256 `e0865aa6d1884b5b95a484e6974d1ef35171d05fa5328a0fbcb4b256439e3695`),
+  SQLite integrity is `ok`, four enabled inbounds remain, and no test inbounds remain.
+  Recovery snapshot: `/var/lib/vpn-aio-tests/upgrade-fullprofile-awgfix-20261120`.
 
 ## Remaining before public release
 
-- Verify packet traffic through an existing customer's tunnel after upgrade. The
-  authenticated API suite and rollback passed, but it did not send traffic through
-  an existing customer's profile.
-- Verify AWG 3.1 exports against supported real client implementations and document
-  client/kernel compatibility limits.
 - Complete cross-distribution protocol-matrix validation and destructive uninstall.
 - Publish the final release asset/checksum after the remaining host/client checks.
 
