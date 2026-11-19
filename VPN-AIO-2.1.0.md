@@ -58,10 +58,17 @@ Target: fresh installation and upgrade from 2.0.0 on Ubuntu 24.04 amd64.
   binary (SHA-256 `e0865aa6d1884b5b95a484e6974d1ef35171d05fa5328a0fbcb4b256439e3695`),
   SQLite integrity is `ok`, four enabled inbounds remain, and no test inbounds remain.
   Recovery snapshot: `/var/lib/vpn-aio-tests/upgrade-fullprofile-awgfix-20261120`.
+- Disposable-container lifecycle smoke with the same full candidate: authenticated
+  startup and Xray native/XDRIVE/FinalMask checks passed; uninstall removed the
+  binary, SQLite DB, extracted bundles, firewall table, policy rule and route, while
+  preserving unrelated sentinel files. Container has no systemd boot, so this does
+  not close the VM/systemd uninstall gate.
 
 ## Remaining before public release
 
-- Complete cross-distribution protocol-matrix validation and destructive uninstall.
+- Complete the cross-distribution VPN protocol/kernel matrix and systemd uninstall
+  checks in disposable Incus/KVM VMs. The Docker check covers userland startup and
+  teardown only, not distro kernel modules or a booted systemd service.
 - Publish the final release asset/checksum after the remaining host/client checks.
 
 Internal daemon paths retain upstream compatibility names. Public installation,

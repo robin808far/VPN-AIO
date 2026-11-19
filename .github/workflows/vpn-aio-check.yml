@@ -56,5 +56,11 @@ jobs:
         env:
           CGO_ENABLED: '1'
         run: go build -o build/out/VPN-AIO-check .
+      - name: Build disposable lifecycle test image
+        run: docker build -f test_unit/Containerfile -t vpn-aio-lifecycle-test .
+      - name: Exercise startup, native protocols and uninstall in isolation
+        env:
+          VPN_AIO_CONTAINER_LIFECYCLE_ACK: 'yes'
+        run: docker run --rm --network none --cap-add=NET_ADMIN -e VPN_AIO_CONTAINER_LIFECYCLE_ACK vpn-aio-lifecycle-test
       # This is not a release build: the full static VPN daemon and geo bundles
       # are built by build.sh before an installable artifact is published.

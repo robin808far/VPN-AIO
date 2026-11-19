@@ -135,6 +135,37 @@ Output per run: `results/<timestamp>/`
   per-subtest drilldown with full logs
 - `<distro>.log` — per-job log file (phase-tagged, ANSI-stripped)
 
+### CI container lifecycle smoke
+
+The CI workflow also builds `Containerfile` and runs `container-lifecycle.py` in
+an isolated Ubuntu 24.04 Docker container with no host mounts and no network.
+It checks fresh panel startup/authentication, the native Xray protocol and
+configuration smoke suites, then invokes the actual uninstall command and
+asserts that app-owned artifacts, its port, a disposable nft table and policy
+routes are removed while sentinel operator files survive. The script refuses to
+run without `VPN_AIO_CONTAINER_LIFECYCLE_ACK=yes` and rejects bind mounts over
+system paths.
+
+This is deliberately narrower than the Incus matrix: the container has no
+systemd boot and shares the host kernel, so it does not validate unit stop/disable,
+DKMS, kernel modules, or VPN tunnel behavior across distro kernels. Those remain
+covered by the disposable VM harness, not by this smoke test.
+
+To exercise the same lifecycle against all 13 distribution **userlands** using a
+previously built full binary, run on a Linux host with Docker access:
+
+```bash
+sudo python3 test_unit/container-matrix.py --binary build/out/VPN-AIO-amd64
+# Or select a subset:
+sudo python3 test_unit/container-matrix.py --binary build/out/VPN-AIO-amd64 --only ubuntu-24,debian-13
+```
+
+Each distribution gets a disposable container with its own writable root and network
+namespace. The runner installs the test tools, disconnects network access, and
+copies the binary and checks in without host bind mounts. Results, image IDs and
+logs are saved under `test_unit/results/containers-<timestamp>/`. Missing images
+or test prerequisites are recorded as infrastructure errors, never passing tests.
+
 ## Config (`config.toml`)
 
 | key | meaning |
