@@ -22,8 +22,9 @@ Target: fresh installation and upgrade from 2.0.0 on Ubuntu 24.04 amd64.
 
 ## Verified
 
-- GitHub Actions run `44591844243` passed for commit `38f1d3f`, including the
-  complete Go suite, GUI model tests, pinned-core builds and protocol smoke tests.
+- GitHub Actions run `44600039700` passed for commit `82505b3`, including the
+  complete Go suite, GUI model tests, pinned-core build, native-protocol smoke
+  tests, XDRIVE checks and FinalMask configuration matrix.
 - Ubuntu `sweden`: a clean full-source/full-geo build produced the 2.1.0
   `VPN-AIO-amd64` test binary (338 MB), SHA-256
   `f5ec91184c49a8fe4a2894a74925c2727b13fb4bc7db177846e68de131f63696`;
@@ -32,15 +33,20 @@ Target: fresh installation and upgrade from 2.0.0 on Ubuntu 24.04 amd64.
   TCP/UDP configuration variants parsed or passed live traffic/authentication checks.
 - MASQUE live account add, removal, re-enable, traffic accounting, generated Xray
   `pass` mapping and JSON subscription output passed targeted Linux tests.
+- Controlled upgrade test on `sweden`: the full 2.1.0 binary passed the authenticated
+  live API suite (34/34 checks); test objects were removed, then the exact pre-test
+  binary, systemd unit and SQLite database were restored. The old binary SHA-256 and
+  database bytes/integrity were verified; the restored service, Xray 26.11.9 and AWG
+  3.1 report healthy. Recovery snapshot: `/var/lib/vpn-aio-tests/upgrade-20261119-200458`.
 - Ubuntu 24.04 test host: AmneziaWG 3.1 DKMS build/load, AWG 3.1 netlink
   capability check, real handshake, bidirectional traffic and peer removal. Tests
   now assert every 3.1 field in `.conf`, structured export and Clash output.
 
 ## Remaining before public release
 
-- Authenticated GUI/API and existing-user traffic checks after installing the
-  latest binary on the host. The full build has not been installed over the running
-  service; root access is required for this controlled upgrade/rollback.
+- Verify packet traffic through an existing customer's tunnel after upgrade. The
+  authenticated API suite and rollback passed, but it did not send traffic through
+  an existing customer's profile.
 - Verify AWG 3.1 exports against supported real client implementations and document
   client/kernel compatibility limits.
 - Complete cross-distribution protocol-matrix validation and destructive uninstall.

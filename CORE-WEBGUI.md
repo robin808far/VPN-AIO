@@ -55,10 +55,11 @@ References:
       MASQUE outbound, FinalMask and AWG model paths.
 - [x] Linux core-config checks and live native-protocol smoke tests for MASQUE
       (h2/h3), FinalMask, AnyTLS, TUIC and Naive.
-- [ ] Authenticated upgrade/rollback and existing-user traffic checks on `sweden`;
-      this needs root service access and has not been run against the latest build.
-      The full 338 MB binary is built and hashed, but the active service still uses
-      the previously installed image.
+- [x] Controlled authenticated upgrade/rollback on `sweden`: full-geo build,
+      live authenticated API checks (34/34), test-fixture cleanup and exact pre-test
+      binary/systemd unit/SQLite restoration with hash and integrity verification.
+- [ ] Verify packet traffic through an existing customer's tunnel after upgrade;
+      the live API suite passed but did not route an existing profile.
 - [ ] Verify AWG exports against real supported client implementations and record
       compatibility limits in release notes.
 
