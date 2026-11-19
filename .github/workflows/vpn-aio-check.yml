@@ -57,7 +57,15 @@ jobs:
           CGO_ENABLED: '1'
         run: go build -o build/out/VPN-AIO-check .
       - name: Build disposable lifecycle test image
-        run: docker build -f test_unit/Containerfile -t vpn-aio-lifecycle-test .
+        run: |
+          context="$RUNNER_TEMP/vpn-aio-lifecycle-context"
+          mkdir -p "$context/build/out" "$context/test_unit"
+          cp build/out/VPN-AIO-check "$context/build/out/"
+          cp test_unit/Containerfile test_unit/container-lifecycle.py \
+             test_unit/native-core-smoke.py test_unit/xdrive-config-check.py \
+             test_unit/finalmask-config-check.py "$context/test_unit/"
+          docker build -f "$context/test_unit/Containerfile" \
+            -t vpn-aio-lifecycle-test "$context"
       - name: Exercise startup, native protocols and uninstall in isolation
         env:
           VPN_AIO_CONTAINER_LIFECYCLE_ACK: 'yes'

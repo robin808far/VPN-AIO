@@ -22,9 +22,10 @@ Target: fresh installation and upgrade from 2.0.0 on Ubuntu 24.04 amd64.
 
 ## Verified
 
-- GitHub Actions run `44600039700` passed for commit `82505b3`, including the
+- GitHub Actions run `44630111298` passed for commit `9e023a4`, including the
   complete Go suite, GUI model tests, pinned-core build, native-protocol smoke
-  tests, XDRIVE checks and FinalMask configuration matrix.
+  tests, XDRIVE checks, FinalMask configuration matrix and isolated Ubuntu
+  startup/authentication/native-core/uninstall lifecycle check.
 - Ubuntu `sweden`: the full-asset 2.1.0 candidate is 354,323,144 bytes
   (338 MiB), SHA-256
   `912ecc7c14f76fbf9e3528cafe201902eb5fed76e7bb58d6347e955816843c95`.
@@ -63,12 +64,26 @@ Target: fresh installation and upgrade from 2.0.0 on Ubuntu 24.04 amd64.
   binary, SQLite DB, extracted bundles, firewall table, policy rule and route, while
   preserving unrelated sentinel files. Container has no systemd boot, so this does
   not close the VM/systemd uninstall gate.
+- Distribution **userland** matrix: 13/13 passed using the full candidate above:
+  Ubuntu 24.04/26.04, Debian 12/13, Fedora 43/44, AlmaLinux 9/10, Rocky Linux 9/10,
+  CentOS Stream 9/10 and Arch. Every image passed authenticated startup, the native
+  Xray protocol smoke suite, XDRIVE/FinalMask configuration validation and isolated
+  uninstall. Runtime tests ran offline in separate Docker network/filesystem/PID
+  namespaces; all images shared the Ubuntu host kernel. The tests verified binary,
+  DB, bin/cert/backups/socket/menu/unit-file removal, private nft/policy-route
+  cleanup and preservation of unrelated sentinel files. This does not establish
+  VPN daemon/tunnel, distro-kernel/DKMS or systemd service-stop compatibility.
+  Logs, image IDs and machine-readable checks are archived on the host under
+  `/home/ubuntu/vpn-aio-validation-containers-20261120/`.
 
 ## Remaining before public release
 
 - Complete the cross-distribution VPN protocol/kernel matrix and systemd uninstall
   checks in disposable Incus/KVM VMs. The Docker check covers userland startup and
   teardown only, not distro kernel modules or a booted systemd service.
+  The current `sweden` host has no `/dev/kvm` or Incus; this gate requires a
+  separate VM-capable test host. Do not run the destructive VM uninstall on the
+  live `sweden` install.
 - Publish the final release asset/checksum after the remaining host/client checks.
 
 Internal daemon paths retain upstream compatibility names. Public installation,

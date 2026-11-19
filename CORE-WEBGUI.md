@@ -66,6 +66,11 @@ References:
       kernel module: a live panel-generated profile imports and round-trips, while
       a full-option config completes a real handshake and bidirectional tunnel ping.
       Export booleans now use the `on`/`off` syntax required by the client parser.
+- [x] Full-candidate container userland lifecycle matrix: 13/13 distributions
+      passed authenticated startup, native Xray smoke, XDRIVE/FinalMask config
+      checks and isolated uninstall/file/firewall/policy-route cleanup.
+- [ ] Complete VPN tunnel/kernel/DKMS and booted-systemd uninstall tests in
+      disposable VMs. Containers share the host kernel; `sweden` lacks KVM/Incus.
 
 Do not copy React components into the Vue application. Use upstream schemas as
 reference while checking every option against the pinned executable's actual API.
