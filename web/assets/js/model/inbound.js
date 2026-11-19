@@ -1623,6 +1623,10 @@ function inboundMaskItemToJson(item) {
     return out;
 }
 
+function invalidInboundExprArgs(args) {
+    return !Array.isArray(args) || args.length === 0 || args.some(arg => !arg || [arg.bytes !== undefined, arg.u64 !== undefined, !!arg.reuse, !!arg.metadata, !!arg.transform].filter(Boolean).length !== 1);
+}
+
 class UdpMask extends XrayCommonClass {
     constructor(type = 'salamander', settings = {}) {
         super();
@@ -1779,7 +1783,6 @@ class TcpMask extends XrayCommonClass {
             delete settings.maxSplit;
         }
         if (this.type === 'header-custom' && settings) {
-            const cleanGroup = group => Array.isArray(group) ? group.map(cleanItem) : group;
             settings = {
                 ...settings,
                 clients: Array.isArray(settings.clients) ? settings.clients.map(group => group.map(cleanItem)) : settings.clients,
@@ -1987,16 +1990,21 @@ class StreamSettings extends XrayCommonClass {
                 ? (mask instanceof TcpMask ? [...(settings.clients || []), ...(settings.servers || []), ...(settings.errors || [])] : [settings.client || [], settings.server || []])
                 : [];
             for (const group of groups) for (const item of (Array.isArray(group) ? group : [])) {
+                if (item.capture && !/^[A-Za-z_][A-Za-z0-9_]*$/.test(String(item.capture))) return true;
                 if (item.kind === 'reuse' && !/^[A-Za-z_][A-Za-z0-9_]*$/.test(String(item.reuse || ''))) return true;
                 if (item.kind !== 'transform') continue;
                 try {
                     const value = JSON.parse(String(item.transformText || ''));
                     if (!value || typeof value !== 'object' || Array.isArray(value) || typeof value.op !== 'string' || !value.op || !Array.isArray(value.args) || !value.args.length) return true;
-                    if (value.args.some(arg => !arg || [arg.bytes !== undefined, arg.u64 !== undefined, !!arg.reuse, !!arg.metadata, !!arg.transform].filter(Boolean).length !== 1)) return true;
+                    if (invalidInboundExprArgs(value.args)) return true;
                 } catch (_) { return true; }
             }
         }
         return false;
+    }
+
+    hasInvalidFinalMaskItem() {
+        return this.hasInvalidFinalMaskTransform();
     }
 
     delUdpMask(index) {

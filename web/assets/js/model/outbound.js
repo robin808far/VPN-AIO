@@ -954,12 +954,11 @@ class TcpMask extends CommonClass {
             delete settings.maxSplit;
         }
         if (this.type === 'header-custom' && settings) {
-            const cleanGroup = group => Array.isArray(group) ? group.map(cleanItem) : group;
             settings = {
                 ...settings,
-                clients: Array.isArray(settings.clients) ? settings.clients.map(cleanGroup) : settings.clients,
-                servers: Array.isArray(settings.servers) ? settings.servers.map(cleanGroup) : settings.servers,
-                errors: Array.isArray(settings.errors) ? settings.errors.map(cleanGroup) : settings.errors,
+                clients: Array.isArray(settings.clients) ? settings.clients.map(group => group.map(cleanItem)) : settings.clients,
+                servers: Array.isArray(settings.servers) ? settings.servers.map(group => group.map(cleanItem)) : settings.servers,
+                errors: Array.isArray(settings.errors) ? settings.errors.map(group => group.map(cleanItem)) : settings.errors,
             };
         }
 
@@ -1049,6 +1048,10 @@ function outboundMaskItemToJson(item) {
     delete out.reuse; delete out.transform;
     if(out.type==='array') delete out.packet; else { delete out.rand; delete out.randRange; }
     return out;
+}
+
+function invalidOutboundExprArgs(args) {
+    return !Array.isArray(args) || args.length === 0 || args.some(arg => !arg || [arg.bytes !== undefined, arg.u64 !== undefined, !!arg.reuse, !!arg.metadata, !!arg.transform].filter(Boolean).length !== 1);
 }
 
 function setOutboundMaskItemKind(item, kind) {
@@ -1520,8 +1523,29 @@ class Outbound extends CommonClass {
                 try {
                     const value = JSON.parse(String(item.transformText || ''));
                     if (!value || typeof value !== 'object' || Array.isArray(value) || typeof value.op !== 'string' || !value.op || !Array.isArray(value.args) || !value.args.length) return true;
-                    if (value.args.some(arg => !arg || [arg.bytes !== undefined, arg.u64 !== undefined, !!arg.reuse, !!arg.metadata, !!arg.transform].filter(Boolean).length !== 1)) return true;
+                    if (invalidOutboundExprArgs(value.args)) return true;
                 } catch (_) { return true; }
+            }
+        }
+        return false;
+    }
+
+    hasInvalidFinalMaskItem() {
+        const masks = [...(this.stream?.finalmask?.tcp || []), ...(this.stream?.finalmask?.udp || [])];
+        for (const mask of masks) {
+            const settings = mask.settings || {};
+            const groups = mask.type === 'header-custom'
+                ? (mask instanceof TcpMask ? [...(settings.clients || []), ...(settings.servers || []), ...(settings.errors || [])] : [settings.client || [], settings.server || []])
+                : [];
+            for (const group of groups) for (const item of (Array.isArray(group) ? group : [])) {
+                if (item.capture && !/^[A-Za-z_][A-Za-z0-9_]*$/.test(String(item.capture))) return true;
+                if (item.kind === 'reuse' && !/^[A-Za-z_][A-Za-z0-9_]*$/.test(String(item.reuse || ''))) return true;
+                if (item.kind === 'transform') {
+                    try {
+                        const value = JSON.parse(String(item.transformText || ''));
+                        if (!value || typeof value !== 'object' || Array.isArray(value) || !value.op || !Array.isArray(value.args) || !value.args.length || invalidOutboundExprArgs(value.args)) return true;
+                    } catch (_) { return true; }
+                }
             }
         }
         return false;

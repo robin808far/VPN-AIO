@@ -213,7 +213,7 @@
         },
         check(){
             this.duplicateTag = outModal.outbound.tag == '' || outModal.tags.includes(outModal.outbound.tag);
-            this.invalidFinalMask = outModal.outbound.hasInvalidFinalMaskTransform();
+            this.invalidFinalMask = outModal.outbound.hasInvalidFinalMaskItem();
             this.isValid = !this.duplicateTag && !this.invalidFinalMask;
         },
         toggleJson(jsonTab) {
