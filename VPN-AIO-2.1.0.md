@@ -25,7 +25,9 @@ Target: fresh installation and upgrade from 2.0.0 on Ubuntu 24.04 amd64.
 - GitHub Actions run `44591844243` passed for commit `38f1d3f`, including the
   complete Go suite, GUI model tests, pinned-core builds and protocol smoke tests.
 - Ubuntu `sweden`: a clean full-source/full-geo build produced the 2.1.0
-  `VPN-AIO-amd64` test binary (338 MB); the active system service was not replaced.
+  `VPN-AIO-amd64` test binary (338 MB), SHA-256
+  `f5ec91184c49a8fe4a2894a74925c2727b13fb4bc7db177846e68de131f63696`;
+  the active system service was not replaced.
 - Pinned Xray 26.11.9: native MASQUE h2/h3, AnyTLS, TUIC, Naive and all FinalMask
   TCP/UDP configuration variants parsed or passed live traffic/authentication checks.
 - MASQUE live account add, removal, re-enable, traffic accounting, generated Xray
@@ -42,7 +44,7 @@ Target: fresh installation and upgrade from 2.0.0 on Ubuntu 24.04 amd64.
 - Verify AWG 3.1 exports against supported real client implementations and document
   client/kernel compatibility limits.
 - Complete cross-distribution protocol-matrix validation and destructive uninstall.
-- Final release asset and checksum generation after the remaining host/client checks.
+- Publish the final release asset/checksum after the remaining host/client checks.
 
 Internal daemon paths retain upstream compatibility names. Public installation,
 service, application and primary UI branding use VPN-AIO. Original GPL-3.0 and

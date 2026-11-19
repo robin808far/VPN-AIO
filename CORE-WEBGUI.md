@@ -57,6 +57,8 @@ References:
       (h2/h3), FinalMask, AnyTLS, TUIC and Naive.
 - [ ] Authenticated upgrade/rollback and existing-user traffic checks on `sweden`;
       this needs root service access and has not been run against the latest build.
+      The full 338 MB binary is built and hashed, but the active service still uses
+      the previously installed image.
 - [ ] Verify AWG exports against real supported client implementations and record
       compatibility limits in release notes.
 
