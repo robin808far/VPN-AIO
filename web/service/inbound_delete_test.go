@@ -22,7 +22,12 @@ import (
 // the whole multi-inbound case.
 func seedTaggedInbound(t *testing.T, protocol model.Protocol, port int, clients []map[string]any) *model.Inbound {
 	t.Helper()
-	settings, err := json.Marshal(map[string]any{"clients": clients})
+	settingsMap := map[string]any{"clients": clients}
+	if protocol == model.MASQUE {
+		settingsMap["address"] = []string{"198.18.71.1/24"}
+		settingsMap["mtu"] = 1280
+	}
+	settings, err := json.Marshal(settingsMap)
 	if err != nil {
 		t.Fatalf("marshal settings: %v", err)
 	}
