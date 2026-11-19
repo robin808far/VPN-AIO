@@ -435,7 +435,7 @@ func protocolSettingDefaults(protocol model.Protocol) []settingDefault {
 	case model.MASQUE:
 		return []settingDefault{
 			def("clients", noClients()),
-			def("address", emptyList()),
+			def("address", []string{"10.14.0.1/24", "fd14::1/64"}),
 			def("mtu", 1280),
 		}
 	}

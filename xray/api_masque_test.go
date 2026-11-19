@@ -2,8 +2,13 @@ package xray
 
 import (
 	"bufio"
+	"bytes"
+	"crypto/sha256"
+	"crypto/x509"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"io"
 	"net"
@@ -26,6 +31,16 @@ func TestMasqueLiveAccountAddRemoveAndReenable(t *testing.T) {
 	if out, err := exec.Command("openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "1", "-subj", "/CN=localhost", "-keyout", key, "-out", cert).CombinedOutput(); err != nil {
 		t.Fatalf("certificate: %v: %s", err, out)
 	}
+	pemBytes, err := os.ReadFile(cert)
+	if err != nil {
+		t.Fatal(err)
+	}
+	block, _ := pem.Decode(pemBytes)
+	parsedCert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	certPin := sha256.Sum256(parsedCert.Raw)
 	httpServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { _, _ = io.WriteString(w, "live-masque-ok") }))
 	defer httpServer.Close()
 	_, destPort, err := net.SplitHostPort(httpServer.Listener.Addr().String())
@@ -69,18 +84,19 @@ func TestMasqueLiveAccountAddRemoveAndReenable(t *testing.T) {
 		clientConfig := map[string]any{
 			"log":       map[string]any{"loglevel": "warning"},
 			"inbounds":  []any{map[string]any{"listen": "127.0.0.1", "port": proxyPort, "protocol": "socks", "settings": map[string]any{"auth": "noauth"}}},
-			"outbounds": []any{map[string]any{"tag": "proxy", "protocol": "masque", "settings": map[string]any{"address": "127.0.0.1", "port": serverPort}, "streamSettings": map[string]any{"network": "masque", "security": "tls", "masqueSettings": map[string]any{"user": "live@masque", "pass": password}, "tlsSettings": map[string]any{"serverName": "localhost", "allowInsecure": true, "alpn": []string{"h2"}}}}},
+			"outbounds": []any{map[string]any{"tag": "proxy", "protocol": "masque", "settings": map[string]any{"address": "127.0.0.1", "port": serverPort}, "streamSettings": map[string]any{"network": "masque", "security": "tls", "masqueSettings": map[string]any{"user": "live@masque", "pass": password}, "tlsSettings": map[string]any{"serverName": "localhost", "pinnedPeerCertSha256": hex.EncodeToString(certPin[:]), "alpn": []string{"h2"}}}}},
 		}
 		path := filepath.Join(dir, "client.json")
 		writeConfig(t, path, clientConfig)
 		client := exec.Command(binaryPath, "run", "-c", path)
-		client.Stdout, client.Stderr = io.Discard, io.Discard
+		var clientLogs bytes.Buffer
+		client.Stdout, client.Stderr = &clientLogs, &clientLogs
 		if err := client.Start(); err != nil {
 			return "", err
 		}
 		defer func() { _ = client.Process.Kill(); _ = client.Wait() }()
 		if err := waitTCPResult(fmt.Sprintf("127.0.0.1:%d", proxyPort)); err != nil {
-			return "", err
+			return "", fmt.Errorf("%w: %s", err, clientLogs.String())
 		}
 		conn, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", proxyPort), time.Second)
 		if err != nil {

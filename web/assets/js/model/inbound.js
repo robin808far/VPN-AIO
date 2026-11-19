@@ -3899,7 +3899,7 @@ Inbound.AnytlsSettings = class extends Inbound.Settings {
 };
 
 Inbound.MasqueSettings = class extends Inbound.Settings {
-    constructor(protocol, masques=[new Inbound.MasqueSettings.Masque()], address=[], mtu=1280) {
+    constructor(protocol, masques=[new Inbound.MasqueSettings.Masque()], address=['10.14.0.1/24', 'fd14::1/64'], mtu=1280) {
         super(protocol); this.masques=masques; this.address=address; this.mtu=mtu;
     }
     static fromJson(json={}) {

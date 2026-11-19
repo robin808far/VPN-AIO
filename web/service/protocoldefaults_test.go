@@ -277,7 +277,10 @@ var uiSettingsBlobs = map[model.Protocol]string{
 
 	model.MASQUE: `{
   "clients": [],
-  "address": [],
+  "address": [
+    "10.14.0.1/24",
+    "fd14::1/64"
+  ],
   "mtu": 1280
 }`,
 }
