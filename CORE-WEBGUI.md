@@ -53,7 +53,12 @@ References:
 - [x] Round-trip tests ensuring edits do not discard existing settings.
 - [x] Actual pinned-core configuration validation and UI tests for XDRIVE,
       MASQUE outbound, FinalMask and AWG model paths.
-- [ ] Linux runtime checks and release notes with client compatibility limits.
+- [x] Linux core-config checks and live native-protocol smoke tests for MASQUE
+      (h2/h3), FinalMask, AnyTLS, TUIC and Naive.
+- [ ] Authenticated upgrade/rollback and existing-user traffic checks on `sweden`;
+      this needs root service access and has not been run against the latest build.
+- [ ] Verify AWG exports against real supported client implementations and record
+      compatibility limits in release notes.
 
 Do not copy React components into the Vue application. Use upstream schemas as
 reference while checking every option against the pinned executable's actual API.

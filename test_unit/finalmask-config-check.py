@@ -19,7 +19,8 @@ with tempfile.TemporaryDirectory(prefix="vpn-aio-finalmask-") as tmp:
     noise_script.write_text('return "noise"')
     tcp_masks = [
         {"type": "fragment", "settings": {"packets": "tlshello", "lengths": ["100-200"], "delays": ["1-2"]}},
-        {"type": "header-custom", "settings": {"clients": [[{"type": "array", "rand": 3, "capture": "client"}]], "servers": [], "errors": [[
+        {"type": "header-custom", "settings": {"clients": [[{"type": "array", "rand": 3, "capture": "client"},
+            {"capture": "combined", "transform": {"op": "concat", "args": [{"type": "str", "bytes": "OK "}, {"reuse": "client"}]}}]], "servers": [], "errors": [[
             {"type": "str", "packet": "HTTP/1.1 400 Bad Request\\r\\n\\r\\n", "delay": 0}]]}},
         {"type": "sudoku", "settings": {"customTables": []}},
         {"type": "xmc", "settings": {"hostname": "mc.example", "password": "mask-password", "profiles": [{

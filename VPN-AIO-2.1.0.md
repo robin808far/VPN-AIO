@@ -22,20 +22,27 @@ Target: fresh installation and upgrade from 2.0.0 on Ubuntu 24.04 amd64.
 
 ## Verified
 
-- GitHub Actions: complete Go tests, GUI model round trips, Xray native protocol
-  smoke tests, XDRIVE core configuration checks and SQLite build.
+- GitHub Actions run `44591844243` passed for commit `38f1d3f`, including the
+  complete Go suite, GUI model tests, pinned-core builds and protocol smoke tests.
+- Ubuntu `sweden`: a clean full-source/full-geo build produced the 2.1.0
+  `VPN-AIO-amd64` test binary (338 MB); the active system service was not replaced.
+- Pinned Xray 26.11.9: native MASQUE h2/h3, AnyTLS, TUIC, Naive and all FinalMask
+  TCP/UDP configuration variants parsed or passed live traffic/authentication checks.
+- MASQUE live account add, removal, re-enable, traffic accounting, generated Xray
+  `pass` mapping and JSON subscription output passed targeted Linux tests.
 - Ubuntu 24.04 test host: AmneziaWG 3.1 DKMS build/load, AWG 3.1 netlink
-  capability check, real handshake, bidirectional traffic and peer removal.
+  capability check, real handshake, bidirectional traffic and peer removal. Tests
+  now assert every 3.1 field in `.conf`, structured export and Clash output.
 
 ## Remaining before public release
 
-- Complete full cross-distribution and protocol-matrix validation for the final release.
-- Audit AWG export formats against actual client support and test editing/clearing
-  advanced parameters, beyond the successful kernel handshake tests.
-
-- Complete quota/device-limit tests with AWG 3.1 enabled.
-- Authenticated GUI/API and existing-user traffic checks after upgrade.
-- Destructive uninstall and final release asset build.
+- Authenticated GUI/API and existing-user traffic checks after installing the
+  latest binary on the host. The full build has not been installed over the running
+  service; root access is required for this controlled upgrade/rollback.
+- Verify AWG 3.1 exports against supported real client implementations and document
+  client/kernel compatibility limits.
+- Complete cross-distribution protocol-matrix validation and destructive uninstall.
+- Final release asset and checksum generation after the remaining host/client checks.
 
 Internal daemon paths retain upstream compatibility names. Public installation,
 service, application and primary UI branding use VPN-AIO. Original GPL-3.0 and
