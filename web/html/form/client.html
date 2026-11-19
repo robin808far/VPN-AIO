@@ -107,7 +107,7 @@
                     type="sync"
                 ></a-icon>
                 <a-icon
-                    v-if="inbound.protocol === Protocols.TROJAN || inbound.protocol === Protocols.ANYTLS || inbound.protocol === Protocols.TUIC || inbound.protocol === Protocols.NAIVE || inbound.protocol === Protocols.L2TP || inbound.protocol === Protocols.PPTP || inbound.protocol === Protocols.OPENVPN || inbound.protocol === Protocols.OPENCONNECT || inbound.protocol === Protocols.SSTP || inbound.protocol === Protocols.IKEV2 || inbound.protocol === Protocols.SSH"
+                    v-if="inbound.protocol === Protocols.TROJAN || inbound.protocol === Protocols.ANYTLS || inbound.protocol === Protocols.TUIC || inbound.protocol === Protocols.NAIVE || inbound.protocol === Protocols.MASQUE || inbound.protocol === Protocols.L2TP || inbound.protocol === Protocols.PPTP || inbound.protocol === Protocols.OPENVPN || inbound.protocol === Protocols.OPENCONNECT || inbound.protocol === Protocols.SSTP || inbound.protocol === Protocols.IKEV2 || inbound.protocol === Protocols.SSH"
                     @click="client.password = RandomUtil.randomSeq(10)"
                     type="sync"
                 >
