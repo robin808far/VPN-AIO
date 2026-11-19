@@ -114,6 +114,7 @@ func TestForkAccountTypeURLs(t *testing.T) {
 		anytlsAccountType: "xray.proxy.anytls.Account",
 		tuicAccountType:   "xray.proxy.tuic.Account",
 		naiveAccountType:  "xray.proxy.naive.Account",
+		masqueAccountType: "xray.proxy.masque.Account",
 	} {
 		if got != want {
 			t.Errorf("account type URL = %q, want %q", got, want)
