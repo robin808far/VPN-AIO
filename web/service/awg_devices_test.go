@@ -49,6 +49,16 @@ func TestAwgClientConfigIncludesAll31Options(t *testing.T) {
 			t.Errorf("export missing %q\n%s", want, configs[0].Config)
 		}
 	}
+	params, err := s.RenderClientParams(inbound, "export31@t", "example.test")
+	if err != nil {
+		t.Fatalf("RenderClientParams: %v", err)
+	}
+	if len(params) != 1 || params[0].HeaderProtectionKey != key || params[0].ContentPaddingAddition != "8-16" ||
+		params[0].RekeyAfterTime != "100-120" || params[0].RekeyTimeout != "3-6" ||
+		params[0].RejectAfterTime != "160-200" || params[0].KeepaliveTimeout != "8-16" ||
+		params[0].MaxHandshakeAttempts != "15-25" || !params[0].RandomTrailers || !params[0].DisableCookies {
+		t.Fatalf("structured AWG export lost 3.1 settings: %+v", params)
+	}
 }
 
 // User Limit K must yield K SEPARATE configs: K keypairs and K distinct tunnel IPs.
