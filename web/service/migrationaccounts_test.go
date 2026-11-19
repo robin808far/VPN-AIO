@@ -490,7 +490,7 @@ func TestMigrationAccountsProjectionRoundTripsPerProtocol(t *testing.T) {
 		{model.Shadowsocks, map[string]any{"password": "pw", "email": "d@x.com", "enable": true}},
 		{model.ANYTLS, map[string]any{"password": "pw", "email": "e@x.com", "enable": true}},
 		{model.NAIVE, map[string]any{"password": "pw", "username": "naive-user", "email": "f@x.com", "enable": true}},
-		{model.MASQUE, map[string]any{"password": "pw", "email": "f@x.com", "enable": true}},
+		{model.MASQUE, map[string]any{"password": "pw", "email": "masque@x.com", "enable": true}},
 		{model.TUIC, map[string]any{"id": "3fa85f64-5717-4562-b3fc-2c963f66afa6", "password": "pw", "email": "g@x.com", "enable": true}},
 		{model.Hysteria, map[string]any{"auth": "authpw", "email": "h@x.com", "enable": true}},
 		{model.L2TP, map[string]any{"id": "login", "password": "pw", "email": "i@x.com", "enable": true, "slot": float64(0)}},
