@@ -518,6 +518,9 @@
                 // service would never come up. hasCoreConfigProblem() is the
                 // single gate; the form itself says which rule was hit.
                 const stream = ib.stream;
+                if (stream && stream.finalmask && stream.finalmask.hasInvalidFinalMaskTransform()) {
+                    at("transport", "Transport", "every custom-header transform must be a JSON object");
+                }
                 if (stream && stream.network === "xhttp" && stream.xhttp
                     && stream.xhttp.hasCoreConfigProblem()) {
                     at("transport", "Transport", "this XHTTP combination is one the core refuses outright");
@@ -575,6 +578,16 @@
                         : (trim(s.certificate) !== "" && trim(s.key) !== "");
                     if (!hasCert) at("security", "Security", "this protocol will not start without a server certificate and key");
                     return out;
+                }
+
+                if (ib.protocol === Protocols.MASQUE) {
+                    const stream = ib.stream || {};
+                    const tls = stream.tls || {};
+                    const certs = Array.isArray(tls.certs) ? tls.certs : [];
+                    const hasCert = certs.some(c => (c.certFile || c.certificateFile || c.cert || (c.certificate && c.certificate.length)) && (c.keyFile || c.key || (c.key && c.key.length)));
+                    if (stream.network !== "masque" || stream.security !== "tls") at("transport", "Transport", "MASQUE requires its MASQUE transport over TLS");
+                    if (!hasCert) at("security", "Security", "MASQUE requires a TLS server certificate and private key");
+                    if (!ib.settings || !Array.isArray(ib.settings.address) || ib.settings.address.length === 0) at("identity", "Identity", "at least one MASQUE tunnel address is required");
                 }
 
                 if (!okPort(ib.port)) at("identity", "Identity", "the port must be 1 to 65535");

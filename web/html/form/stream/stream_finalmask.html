@@ -3,12 +3,12 @@
   :colon="false"
   :label-col="{ md: {span:8} }"
   :wrapper-col="{ md: {span:14} }"
-  v-if="inbound.protocol == Protocols.HYSTERIA || ['kcp', 'xhttp', 'raw', 'tcp', 'httpupgrade', 'ws', 'grpc'].includes(inbound.stream.network)"
+  v-if="inbound.protocol == Protocols.HYSTERIA || inbound.protocol == Protocols.MASQUE || ['kcp', 'xhttp', 'xdrive', 'raw', 'tcp', 'httpupgrade', 'ws', 'grpc'].includes(inbound.stream.network)"
 >
   <a-divider :style="{ margin: '5px 0 0' }"></a-divider>
 
   <!-- TCP Masks – for raw/tcp/httpupgrade/ws/grpc/xhttp -->
-  <template v-if="['raw', 'tcp', 'httpupgrade', 'ws', 'grpc', 'xhttp'].includes(inbound.stream.network)">
+  <template v-if="['raw', 'tcp', 'httpupgrade', 'ws', 'grpc', 'xhttp', 'xdrive'].includes(inbound.stream.network) || (inbound.protocol === Protocols.MASQUE && inbound.stream.tls.alpn.includes('h2'))">
   <a-form-item label="TCP Masks">
     <a-button
       icon="plus"
@@ -41,27 +41,22 @@
         >
           <a-select-option value="fragment">Fragment</a-select-option>
           <a-select-option value="header-custom">Header Custom</a-select-option>
-          <a-select-option value="sudoku">Sudoku</a-select-option>
+           <a-select-option value="sudoku">Sudoku</a-select-option>
+           <a-select-option value="xmc">XMC (Minecraft)</a-select-option>
+           <a-select-option value="filter">Filter (source IPs)</a-select-option>
         </a-select>
       </a-form-item>
 
       <!-- Fragment settings -->
       <template v-if="mask.type === 'fragment'">
         <a-form-item label="Packets">
-          <a-select
-            v-model="mask.settings.packets"
-            :dropdown-class-name="themeSwitcher.currentTheme"
-          >
-            <a-select-option value="tlshello">tlshello</a-select-option>
-            <a-select-option value="1-3">1-3</a-select-option>
-            <a-select-option value="1-5">1-5</a-select-option>
-          </a-select>
+          <a-input v-model.trim="mask.settings.packets" placeholder="tlshello or packet range (e.g. 1-3)" />
         </a-form-item>
-        <a-form-item label="Length">
-          <a-input v-model.trim="mask.settings.length" placeholder="e.g. 100-200" />
+        <a-form-item label="Segment Lengths">
+          <a-select mode="tags" v-model="mask.settings.lengths" :token-separators="[',']" placeholder="100-200"></a-select>
         </a-form-item>
-        <a-form-item label="Delay">
-          <a-input v-model.trim="mask.settings.delay" placeholder="e.g. 10-20" />
+        <a-form-item label="Segment Delays">
+          <a-select mode="tags" v-model="mask.settings.delays" :token-separators="[',']" placeholder="10-20"></a-select>
         </a-form-item>
         <a-form-item label="Max Split">
           <a-input v-model.trim="mask.settings.maxSplit" placeholder="e.g. 3-6" />
@@ -80,7 +75,7 @@
           <a-input v-model.trim="mask.settings.customTable" placeholder="Custom Table" />
         </a-form-item>
         <a-form-item label="Custom Tables">
-          <a-input v-model.trim="mask.settings.customTables" placeholder="Custom Tables" />
+          <a-select mode="tags" v-model="mask.settings.customTables" :token-separators="[',']"></a-select>
         </a-form-item>
         <a-form-item label="Padding Min">
           <a-input-number v-model.number="mask.settings.paddingMin" :min="0" />
@@ -88,6 +83,24 @@
         <a-form-item label="Padding Max">
           <a-input-number v-model.number="mask.settings.paddingMax" :min="0" />
         </a-form-item>
+      </template>
+
+      <template v-if="mask.type === 'filter'">
+        <a-form-item label="Allowed Source IPs"><a-select mode="tags" v-model="mask.settings.allowedSourceIPs" :token-separators="[',',' ']" placeholder="10.0.0.0/8, geoip:ir"></a-select></a-form-item>
+        <a-form-item label="Blocked Source IPs"><a-select mode="tags" v-model="mask.settings.blockedSourceIPs" :token-separators="[',',' ']" placeholder="203.0.113.7, geoip:cn"></a-select></a-form-item>
+      </template>
+
+      <template v-if="mask.type === 'xmc'">
+        <a-form-item label="Hostname"><a-input v-model.trim="mask.settings.hostname" placeholder="Server address in the handshake"></a-input></a-form-item>
+        <a-form-item label="Password"><a-input v-model.trim="mask.settings.password"></a-input></a-form-item>
+        <a-form-item label="Profiles"><a-button icon="plus" type="primary" size="small" @click="mask.settings.profiles.push({username:'',uuid:'',texturesValue:'',texturesSignature:''})"></a-button></a-form-item>
+        <template v-for="(profile, pi) in mask.settings.profiles" :key="'xmc-'+pi">
+          <a-divider>Profile [[ pi + 1 ]] <a-icon type="delete" @click="mask.settings.profiles.splice(pi,1)" :style="{color:'rgb(255,77,79)',cursor:'pointer'}"></a-icon></a-divider>
+          <a-form-item label="Username"><a-input v-model.trim="profile.username"></a-input></a-form-item>
+          <a-form-item label="UUID"><a-input v-model.trim="profile.uuid"></a-input></a-form-item>
+          <a-form-item label="Textures Value"><a-input v-model.trim="profile.texturesValue"></a-input></a-form-item>
+          <a-form-item label="Textures Signature"><a-input v-model.trim="profile.texturesSignature"></a-input></a-form-item>
+        </template>
       </template>
 
       <!-- Header Custom (TCP) – clients/servers/errors are 2D arrays of groups -->
@@ -98,7 +111,7 @@
             icon="plus"
             type="primary"
             size="small"
-            @click="mask.settings.clients.push([{delay: 0, rand: 0, randRange: '0-255', type: 'array', packet: []}])"
+            @click="mask.settings.clients.push([{kind:'bytes',capture:'',delay:0,rand:0,randRange:'0-255',type:'array',packet:[]}])"
           ></a-button>
         </a-form-item>
         <template v-for="(group, gi) in mask.settings.clients" :key="'cg'+gi">
@@ -111,6 +124,12 @@
             ></a-icon>
           </a-divider>
           <template v-for="(item, ii) in group" :key="'ci'+ii">
+            <a-divider :style="{margin:'0'}">Item [[ii+1]] <a-icon type="delete" @click="group.splice(ii,1)" :style="{color:'rgb(255,77,79)',cursor:'pointer'}"></a-icon></a-divider>
+            <a-form-item label="Capture variable"><a-input v-model.trim="item.capture" placeholder="optional variable name"></a-input></a-form-item>
+            <a-form-item label="Item kind"><a-select :value="item.kind || 'bytes'" @change="Inbound.setFinalMaskItemKind(item,$event)"><a-select-option value="bytes">Bytes</a-select-option><a-select-option value="reuse">Reuse variable</a-select-option><a-select-option value="transform">Transform expression</a-select-option></a-select></a-form-item>
+            <template v-if="(item.kind || 'bytes') === 'reuse'"><a-form-item label="Reuse"><a-input v-model.trim="item.reuse" placeholder="captured variable"></a-input></a-form-item></template>
+            <template v-else-if="(item.kind || 'bytes') === 'transform'"><a-form-item label="Transform JSON"><a-textarea v-model.trim="item.transformText" :rows="3" placeholder='{"op":"concat","args":[]}'></a-textarea></a-form-item></template>
+            <template v-else>
             <a-form-item label='{{ i18n "pages.xray.outbound.type" }}'>
               <a-select v-model="item.type" :dropdown-class-name="themeSwitcher.currentTheme"
                 @change="t => { if(t === 'base64') item.packet = RandomUtil.randomBase64(); else if(t === 'array') { item.rand = 0; item.packet = []; } else { item.packet = ''; } }">
@@ -138,6 +157,7 @@
               </a-input-group>
               <a-input v-else v-model.trim="item.packet" placeholder="binary data" />
             </a-form-item>
+            </template>
           </template>
         </template>
 
@@ -147,7 +167,7 @@
             icon="plus"
             type="primary"
             size="small"
-            @click="mask.settings.servers.push([{delay: 0, rand: 0, randRange: '0-255', type: 'array', packet: []}])"
+            @click="mask.settings.servers.push([{kind:'bytes',capture:'',delay:0,rand:0,randRange:'0-255',type:'array',packet:[]}])"
           ></a-button>
         </a-form-item>
         <template v-for="(group, gi) in mask.settings.servers" :key="'sg'+gi">
@@ -160,6 +180,12 @@
             ></a-icon>
           </a-divider>
           <template v-for="(item, ii) in group" :key="'si'+ii">
+            <a-divider :style="{margin:'0'}">Item [[ii+1]] <a-icon type="delete" @click="group.splice(ii,1)" :style="{color:'rgb(255,77,79)',cursor:'pointer'}"></a-icon></a-divider>
+            <a-form-item label="Capture variable"><a-input v-model.trim="item.capture" placeholder="optional variable name"></a-input></a-form-item>
+            <a-form-item label="Item kind"><a-select :value="item.kind || 'bytes'" @change="Inbound.setFinalMaskItemKind(item,$event)"><a-select-option value="bytes">Bytes</a-select-option><a-select-option value="reuse">Reuse variable</a-select-option><a-select-option value="transform">Transform expression</a-select-option></a-select></a-form-item>
+            <template v-if="(item.kind || 'bytes') === 'reuse'"><a-form-item label="Reuse"><a-input v-model.trim="item.reuse"></a-input></a-form-item></template>
+            <template v-else-if="(item.kind || 'bytes') === 'transform'"><a-form-item label="Transform JSON"><a-textarea v-model.trim="item.transformText" :rows="3"></a-textarea></a-form-item></template>
+            <template v-else>
             <a-form-item label='{{ i18n "pages.xray.outbound.type" }}'>
               <a-select v-model="item.type" :dropdown-class-name="themeSwitcher.currentTheme"
                 @change="t => { if(t === 'base64') item.packet = RandomUtil.randomBase64(); else if(t === 'array') { item.rand = 0; item.packet = []; } else { item.packet = ''; } }">
@@ -187,6 +213,17 @@
               </a-input-group>
               <a-input v-else v-model.trim="item.packet" placeholder="binary data" />
             </a-form-item>
+            </template>
+          </template>
+        </template>
+        <a-form-item label="Errors" extra="Sent when the matching client group does not match"><a-button icon="plus" type="primary" size="small" @click="mask.settings.errors.push([{delay:0,rand:0,randRange:'0-255',type:'array',packet:[]}])"></a-button></a-form-item>
+        <template v-for="(group, gi) in mask.settings.errors" :key="'eg'+gi">
+          <a-divider>Errors Group [[gi+1]] <a-icon type="delete" @click="mask.settings.errors.splice(gi,1)" :style="{color:'rgb(255,77,79)',cursor:'pointer'}"></a-icon></a-divider>
+          <template v-for="(item, ii) in group" :key="'ei'+ii">
+            <a-form-item label="Type"><a-select v-model="item.type" @change="t=>{if(t==='array'){item.rand=0;item.packet=[]}else item.packet=''}"><a-select-option value="array">Array</a-select-option><a-select-option value="str">String</a-select-option><a-select-option value="hex">Hex</a-select-option><a-select-option value="base64">Base64</a-select-option></a-select></a-form-item>
+            <a-form-item label="Delay (ms)"><a-input-number v-model.number="item.delay" :min="0"></a-input-number></a-form-item>
+            <template v-if="item.type==='array'"><a-form-item label="Rand"><a-input-number v-model.number="item.rand" :min="0"></a-input-number></a-form-item><a-form-item label="Rand Range"><a-input v-model.trim="item.randRange" placeholder="0-255"></a-input></a-form-item></template>
+            <a-form-item v-else label="Packet"><a-input v-model.trim="item.packet" placeholder="binary data"></a-input></a-form-item>
           </template>
         </template>
       </template>
@@ -195,13 +232,13 @@
   </template>
   </template>
 
-  <template v-if="inbound.protocol == Protocols.HYSTERIA || inbound.stream.network == 'kcp'">
+  <template v-if="inbound.protocol == Protocols.HYSTERIA || inbound.stream.network == 'kcp' || (inbound.protocol === Protocols.MASQUE && inbound.stream.tls.alpn.includes('h3'))">
   <a-form-item label="UDP Masks">
     <a-button
       icon="plus"
       type="primary"
       size="small"
-      @click="inbound.stream.addUdpMask(inbound.protocol === Protocols.HYSTERIA ? 'salamander' : 'mkcp-aes128gcm')"
+      @click="inbound.stream.addUdpMask(inbound.protocol === Protocols.HYSTERIA ? 'salamander' : 'mkcp-legacy')"
     ></a-button>
   </a-form-item>
   <template
@@ -232,64 +269,119 @@
             <a-select-option value="salamander"
               >Salamander (Hysteria2)</a-select-option
             >
+            <a-select-option value="filter">Filter (source IPs)</a-select-option>
           </template>
           <template v-else>
-            <a-select-option value="mkcp-aes128gcm"
-              >mKCP AES-128-GCM</a-select-option
-            >
-            <a-select-option value="header-dns">Header DNS</a-select-option>
-            <a-select-option value="header-dtls"
-              >Header DTLS 1.2</a-select-option
-            >
-            <a-select-option value="header-srtp">Header SRTP</a-select-option>
-            <a-select-option value="header-utp">Header uTP</a-select-option>
-            <a-select-option value="header-wechat"
-              >Header WeChat Video</a-select-option
-            >
-            <a-select-option value="header-wireguard"
-              >Header WireGuard</a-select-option
-            >
-            <a-select-option value="mkcp-original"
-              >mKCP Original</a-select-option
-            >
+            <a-select-option value="mkcp-legacy">mKCP Legacy</a-select-option>
             <a-select-option value="xdns">xDNS</a-select-option>
             <a-select-option value="xicmp">xICMP</a-select-option>
+            <a-select-option value="realm">Realm</a-select-option>
             <a-select-option value="header-custom">Header Custom</a-select-option>
             <a-select-option value="noise">Noise</a-select-option>
+            <a-select-option value="sudoku">Sudoku</a-select-option>
+            <a-select-option value="filter">Filter (source IPs)</a-select-option>
           </template>
         </a-select>
       </a-form-item>
       <a-form-item
         label="Password"
-        v-if="['mkcp-aes128gcm', 'salamander'].includes(mask.type)"
+        v-if="mask.type === 'salamander'"
       >
         <a-input
           v-model.trim="mask.settings.password"
           placeholder="Obfuscation password"
         ></a-input>
       </a-form-item>
-      <a-form-item label="Domain" v-if="mask.type === 'header-dns'">
-        <a-input
-          v-model.trim="mask.settings.domain"
-          placeholder="e.g., www.example.com"
-        ></a-input>
+      <a-form-item label="Packet Size (bytes)" v-if="mask.type === 'salamander'">
+        <a-input v-model.trim="mask.settings.packetSize" placeholder="512-1200 (optional gecko mode)"></a-input>
       </a-form-item>
-      <template v-if="mask.type === 'xdns'">
-        <a-form-item label="Domains">
-          <a-select
-            mode="tags"
-            v-model="mask.settings.domains"
-            :style="{ width: '100%' }"
-            :token-separators="[',']"
-            placeholder="e.g., www.example.com"
-          ></a-select>
+      <template v-if="mask.type === 'mkcp-legacy'">
+        <a-form-item label="Header">
+          <a-select v-model="mask.settings.header">
+            <a-select-option value="">Original / AES-128-GCM</a-select-option>
+            <a-select-option value="dns">DNS</a-select-option>
+            <a-select-option value="dtls">DTLS 1.2</a-select-option>
+            <a-select-option value="srtp">SRTP</a-select-option>
+            <a-select-option value="utp">uTP</a-select-option>
+            <a-select-option value="wechat">WeChat Video</a-select-option>
+            <a-select-option value="wireguard">WireGuard</a-select-option>
+          </a-select>
         </a-form-item>
+        <a-form-item label="Value"><a-input v-model.trim="mask.settings.value" placeholder="Password or DNS domain"></a-input></a-form-item>
+      </template>
+      <template v-if="mask.type === 'header-custom'">
+        <a-form-item label="UDP mode"><a-select v-model="mask.settings.mode"><a-select-option value="prefix">Prefix</a-select-option><a-select-option value="standalone">Standalone</a-select-option></a-select></a-form-item>
+      </template>
+      <template v-if="mask.type === 'filter'">
+        <a-form-item label="Allowed Source IPs"><a-select mode="tags" v-model="mask.settings.allowedSourceIPs" :token-separators="[',',' ']" placeholder="10.0.0.0/8, geoip:ir"></a-select></a-form-item>
+        <a-form-item label="Blocked Source IPs"><a-select mode="tags" v-model="mask.settings.blockedSourceIPs" :token-separators="[',',' ']" placeholder="203.0.113.7, geoip:cn"></a-select></a-form-item>
+      </template>
+      <template v-if="mask.type === 'sudoku'">
+        <a-form-item label="Password"><a-input v-model.trim="mask.settings.password"></a-input></a-form-item>
+        <a-form-item label="ASCII"><a-input v-model.trim="mask.settings.ascii"></a-input></a-form-item>
+        <a-form-item label="Custom Table"><a-input v-model.trim="mask.settings.customTable"></a-input></a-form-item>
+        <a-form-item label="Custom Tables"><a-select mode="tags" v-model="mask.settings.customTables" :token-separators="[',']"></a-select></a-form-item>
+        <a-form-item label="Padding Min"><a-input-number v-model.number="mask.settings.paddingMin" :min="0"></a-input-number></a-form-item>
+        <a-form-item label="Padding Max"><a-input-number v-model.number="mask.settings.paddingMax" :min="0"></a-input-number></a-form-item>
+      </template>
+      <template v-if="mask.type === 'xdns'">
+        <a-form-item label="Extra Poll"><a-input-number v-model.number="mask.settings.extraPoll" :min="0" :max="3"></a-input-number></a-form-item>
+        <a-form-item label="Domains"><a-button icon="plus" @click="mask.settings.domains.push({names:[],lenLimit:255,labelLimit:63,types:[16],edns0:1232})"></a-button></a-form-item>
+        <template v-for="(domain, di) in mask.settings.domains" :key="'xd-'+di">
+          <a-divider>Domain [[di+1]] <a-icon type="delete" @click="mask.settings.domains.splice(di,1)"></a-icon></a-divider>
+          <a-form-item label="Names"><a-select mode="tags" v-model="domain.names" :token-separators="[',']"></a-select></a-form-item>
+          <a-form-item label="Record Types"><a-select mode="multiple" v-model="domain.types"><a-select-option :value="1">A</a-select-option><a-select-option :value="5">CNAME</a-select-option><a-select-option :value="16">TXT</a-select-option><a-select-option :value="28">AAAA</a-select-option></a-select></a-form-item>
+          <a-form-item label="EDNS0"><a-input-number v-model.number="domain.edns0" :min="0"></a-input-number></a-form-item>
+          <a-form-item label="Name Length Limit"><a-input-number v-model.number="domain.lenLimit" :min="1" :max="255"></a-input-number></a-form-item>
+          <a-form-item label="Label Length Limit"><a-input-number v-model.number="domain.labelLimit" :min="1" :max="63"></a-input-number></a-form-item>
+        </template>
+        <a-form-item label="Resolvers"><a-button icon="plus" @click="mask.settings.resolvers.push({addrs:[],worker:32})"></a-button></a-form-item>
+        <template v-for="(resolver, ri) in mask.settings.resolvers" :key="'xr-'+ri">
+          <a-divider>Resolver [[ri+1]] <a-icon type="delete" @click="mask.settings.resolvers.splice(ri,1)"></a-icon></a-divider>
+          <a-form-item label="Addresses"><a-select mode="tags" v-model="resolver.addrs" :token-separators="[',']" placeholder="udp://1.1.1.1:53"></a-select></a-form-item>
+          <a-form-item label="Workers"><a-input-number v-model.number="resolver.worker" :min="1"></a-input-number></a-form-item>
+          <a-form-item label="TLS for HTTPS resolvers"><a-switch :checked="!!resolver.tlsConfig" @change="$set(resolver,'tlsConfig',$event?{}:undefined)"></a-switch></a-form-item>
+          <template v-if="resolver.tlsConfig">
+            <a-form-item label="TLS Server Name"><a-input v-model.trim="resolver.tlsConfig.serverName"></a-input></a-form-item>
+            <a-form-item label="TLS ALPN"><a-select mode="multiple" v-model="resolver.tlsConfig.alpn"><a-select-option value="h3">h3</a-select-option><a-select-option value="h2">h2</a-select-option><a-select-option value="http/1.1">http/1.1</a-select-option></a-select></a-form-item>
+            <a-form-item label="TLS Fingerprint"><a-input v-model.trim="resolver.tlsConfig.fingerprint" placeholder="chrome"></a-input></a-form-item>
+            <a-form-item label="Pinned Peer SHA256"><a-input v-model.trim="resolver.tlsConfig.pinnedPeerCertSha256"></a-input></a-form-item>
+            <a-form-item label="Verify Peer Certificate By Name"><a-input v-model.trim="resolver.tlsConfig.verifyPeerCertByName"></a-input></a-form-item>
+          </template>
+          <a-form-item label="QUIC for HTTPS/3"><a-switch :checked="!!resolver.quicConfig" @change="$set(resolver,'quicConfig',$event?{}:undefined)"></a-switch></a-form-item>
+          <template v-if="resolver.quicConfig">
+            <a-form-item label="QUIC Congestion"><a-select v-model="resolver.quicConfig.congestion"><a-select-option value="reno">Reno</a-select-option><a-select-option value="bbr">BBR</a-select-option><a-select-option value="brutal">Brutal</a-select-option></a-select></a-form-item>
+            <a-form-item v-for="key in ['maxIdleTimeout','keepAlivePeriod','maxIncomingStreams','initStreamReceiveWindow','maxStreamReceiveWindow','initConnectionReceiveWindow','maxConnectionReceiveWindow']" :key="'xq-'+key" :label="key"><a-input-number v-model.number="resolver.quicConfig[key]" :min="0"></a-input-number></a-form-item>
+          </template>
+        </template>
+      </template>
+      <template v-if="mask.type === 'xicmp'">
+        <a-form-item label="Datagram"><a-switch v-model="mask.settings.dgram"></a-switch></a-form-item>
+        <a-form-item label="IPs"><a-select mode="tags" v-model="mask.settings.ips" :token-separators="[',']"></a-select></a-form-item>
+      </template>
+      <template v-if="mask.type === 'realm'">
+        <a-form-item label="Realm URL"><a-input v-model.trim="mask.settings.url" placeholder="realm://token@host:port/id"></a-input></a-form-item>
+        <a-form-item label="STUN Servers"><a-select mode="tags" v-model="mask.settings.stunServers" :token-separators="[',']" placeholder="host:port"></a-select></a-form-item>
+        <a-form-item label="IP Mode"><a-select v-model="mask.settings.ipMode" allow-clear><a-select-option value="dual">Dual</a-select-option><a-select-option value="v4">IPv4</a-select-option><a-select-option value="v6">IPv6</a-select-option></a-select></a-form-item>
+        <a-form-item label="Port Mapping"><a-switch :checked="!!mask.settings.portMapping" @change="$set(mask.settings,'portMapping',$event?{enabled:true}:undefined)"></a-switch></a-form-item>
+        <template v-if="mask.settings.portMapping">
+          <a-form-item label="Mapping Enabled"><a-switch v-model="mask.settings.portMapping.enabled"></a-switch></a-form-item>
+          <a-form-item label="Mapping Timeout (s)"><a-input-number v-model.number="mask.settings.portMapping.timeout" :min="0"></a-input-number></a-form-item>
+          <a-form-item label="Mapping Lifetime (s)"><a-input-number v-model.number="mask.settings.portMapping.lifetime" :min="0"></a-input-number></a-form-item>
+        </template>
+        <a-form-item label="TLS"><a-switch :checked="!!mask.settings.tlsConfig" @change="$set(mask.settings,'tlsConfig',$event?{}:undefined)"></a-switch></a-form-item>
+        <template v-if="mask.settings.tlsConfig">
+          <a-form-item label="TLS Server Name"><a-input v-model.trim="mask.settings.tlsConfig.serverName" placeholder="Optional"></a-input></a-form-item>
+          <a-form-item label="TLS ALPN"><a-select mode="multiple" v-model="mask.settings.tlsConfig.alpn"><a-select-option value="h3">h3</a-select-option><a-select-option value="h2">h2</a-select-option><a-select-option value="http/1.1">http/1.1</a-select-option></a-select></a-form-item>
+          <a-form-item label="TLS Fingerprint"><a-input v-model.trim="mask.settings.tlsConfig.fingerprint"></a-input></a-form-item>
+        </template>
       </template>
       <template v-if="mask.type === 'noise'">
+        <a-form-item label="Lua Script"><a-input v-model="mask.settings.script" placeholder="Optional script; replaces noise entries"></a-input></a-form-item>
         <a-form-item label="Reset">
           <a-input-number v-model.number="mask.settings.reset" :min="0" />
         </a-form-item>
-        <a-form-item label="Noise">
+        <a-form-item label="Noise" v-if="!mask.settings.script">
           <a-button
             icon="plus"
             type="primary"
@@ -297,7 +389,7 @@
             @click="mask.settings.noise.push({rand: '1-8192', randRange: '0-255', type: 'array', packet: [], delay: '10-20'})"
           ></a-button>
         </a-form-item>
-        <template v-for="(n, index) in mask.settings.noise" :key="index">
+        <template v-for="(n, index) in mask.settings.noise" :key="index" v-if="!mask.settings.script">
           <a-divider :style="{ margin: '0' }">
             Noise [[ index + 1 ]]
             <a-icon
@@ -315,7 +407,8 @@
               <a-select-option value="array">Array</a-select-option>
               <a-select-option value="str">String</a-select-option>
               <a-select-option value="hex">Hex</a-select-option>
-              <a-select-option value="base64">Base64</a-select-option>
+            <a-select-option value="base64">Base64</a-select-option>
+            <a-select-option value="exp">Noise expression</a-select-option>
             </a-select>
           </a-form-item>
           <template v-if="n.type === 'array'">
@@ -344,10 +437,15 @@
             icon="plus"
             type="primary"
             size="small"
-            @click="mask.settings.client.push({rand: 0, randRange: '0-255', type: 'array', packet: []})"
+            @click="mask.settings.client.push({kind:'bytes',capture:'',rand:0,randRange:'0-255',type:'array',packet:[]})"
           ></a-button>
         </a-form-item>
         <template v-for="(c, index) in mask.settings.client" :key="index">
+          <a-form-item label="Capture variable"><a-input v-model.trim="c.capture"></a-input></a-form-item>
+          <a-form-item label="Item kind"><a-select :value="c.kind || 'bytes'" @change="Inbound.setFinalMaskItemKind(c,$event)"><a-select-option value="bytes">Bytes</a-select-option><a-select-option value="reuse">Reuse variable</a-select-option><a-select-option value="transform">Transform expression</a-select-option></a-select></a-form-item>
+          <template v-if="(c.kind || 'bytes')==='reuse'"><a-form-item label="Reuse"><a-input v-model.trim="c.reuse"></a-input></a-form-item></template>
+          <template v-else-if="(c.kind || 'bytes')==='transform'"><a-form-item label="Transform JSON"><a-textarea v-model.trim="c.transformText" :rows="3"></a-textarea></a-form-item></template>
+          <template v-else>
           <a-divider :style="{ margin: '0' }">
             Client [[ index + 1 ]]
             <a-icon
@@ -366,6 +464,7 @@
               <a-select-option value="str">String</a-select-option>
               <a-select-option value="hex">Hex</a-select-option>
               <a-select-option value="base64">Base64</a-select-option>
+              <a-select-option value="exp">Noise expression</a-select-option>
             </a-select>
           </a-form-item>
           <template v-if="c.type === 'array'">
@@ -383,6 +482,7 @@
             </a-input-group>
             <a-input v-else v-model.trim="c.packet" placeholder="binary data" />
           </a-form-item>
+          </template>
         </template>
         <a-divider :style="{ margin: '0' }"></a-divider>
         <a-form-item label="Server">
@@ -390,10 +490,15 @@
             icon="plus"
             type="primary"
             size="small"
-            @click="mask.settings.server.push({rand: 0, randRange: '0-255', type: 'array', packet: []})"
+            @click="mask.settings.server.push({kind:'bytes',capture:'',rand:0,randRange:'0-255',type:'array',packet:[]})"
           ></a-button>
         </a-form-item>
         <template v-for="(s, index) in mask.settings.server" :key="index">
+          <a-form-item label="Capture variable"><a-input v-model.trim="s.capture"></a-input></a-form-item>
+          <a-form-item label="Item kind"><a-select :value="s.kind || 'bytes'" @change="Inbound.setFinalMaskItemKind(s,$event)"><a-select-option value="bytes">Bytes</a-select-option><a-select-option value="reuse">Reuse variable</a-select-option><a-select-option value="transform">Transform expression</a-select-option></a-select></a-form-item>
+          <template v-if="(s.kind || 'bytes') === 'reuse'"><a-form-item label="Reuse"><a-input v-model.trim="s.reuse"></a-input></a-form-item></template>
+          <template v-else-if="(s.kind || 'bytes') === 'transform'"><a-form-item label="Transform JSON"><a-textarea v-model.trim="s.transformText" :rows="3"></a-textarea></a-form-item></template>
+          <template v-else>
           <a-divider :style="{ margin: '0' }">
             Server [[ index + 1 ]]
             <a-icon
@@ -429,6 +534,7 @@
             </a-input-group>
             <a-input v-else v-model.trim="s.packet" placeholder="binary data" />
           </a-form-item>
+          </template>
         </template>
       </template>
       <template v-if="mask.type === 'xicmp'">
@@ -444,7 +550,7 @@
   </template>
 
   <!-- quicParams – only for xhttp H3 and hysteria -->
-  <template v-if="inbound.protocol == Protocols.HYSTERIA || inbound.stream.network == 'xhttp'">
+  <template v-if="inbound.protocol == Protocols.HYSTERIA || inbound.stream.network == 'xhttp' || (inbound.protocol === Protocols.MASQUE && inbound.stream.tls.alpn.includes('h3'))">
     <a-form-item label="QUIC Params">
       <a-switch v-model="inbound.stream.finalmask.enableQuicParams"></a-switch>
     </a-form-item>

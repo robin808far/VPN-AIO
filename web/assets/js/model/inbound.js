@@ -1534,6 +1534,95 @@ class SockoptStreamSettings extends XrayCommonClass {
     }
 }
 
+function upgradeFinalMaskXdns(settings) {
+    const types = {'': 16, txt: 16, a: 1, aaaa: 28};
+    const domains = [];
+    const addLegacyDomain = raw => {
+        let name = String(raw || '').trim();
+        const colon = name.lastIndexOf(':');
+        const recordType = colon < 0 ? 16 : types[name.slice(colon + 1).toLowerCase()];
+        if (colon >= 0) name = name.slice(0, colon);
+        name = name.replace(/^\.+|\.+$/g, '');
+        if (name && recordType !== undefined) domains.push({names:[name],types:[recordType],edns0:1232});
+    };
+    for (const entry of (Array.isArray(settings.domains) ? settings.domains : [])) {
+        if (typeof entry === 'string') addLegacyDomain(entry);
+        else if (entry && typeof entry === 'object') {
+            if (typeof entry.name === 'string') {
+                const {name, ...rest} = entry;
+                domains.push({...rest,names:[name,...(Array.isArray(rest.names)?rest.names.filter(v=>v!==name):[])]});
+            } else domains.push(entry);
+        }
+    }
+    const resolvers = (Array.isArray(settings.resolvers) ? settings.resolvers : []).map(entry => {
+        if (typeof entry === 'string') {
+            const split = entry.indexOf('+udp://');
+            if (split >= 0) {
+                addLegacyDomain(entry.slice(0, split));
+                return {addrs:[`udp://${entry.slice(split + 7).trim()}`]};
+            }
+            return {addrs:[entry.includes('://') ? entry : `udp://${entry}`]};
+        }
+        if (entry && typeof entry === 'object' && !Array.isArray(entry) && !Array.isArray(entry.addrs)) {
+            const addr = entry.settings?.addr;
+            if (typeof addr === 'string' && ['udp','tcp'].includes(entry.type)) return {addrs:[`${entry.type}://${addr}`]};
+        }
+        return entry;
+    });
+    return {...settings,domains,resolvers};
+}
+
+function inboundMaskItemFromJson(item = {}) {
+    return {...item, kind: inboundMaskItemKind(item), transformText: item.transform ? JSON.stringify(item.transform, null, 2) : ''};
+}
+
+function inboundMaskItemKind(item) {
+    return item?.reuse ? 'reuse' : (item?.transformText || item?.transform ? 'transform' : 'bytes');
+}
+
+function setInboundMaskItemKind(item, kind) {
+    delete item.packet; delete item.rand; delete item.randRange; delete item.reuse; delete item.transform;
+    item.transformText = '';
+    item.kind = kind;
+    if (kind === 'bytes') { item.type = 'array'; item.rand = 0; }
+    if (kind === 'transform') item.transformText = '{"op":"concat","args":[]}';
+}
+
+function inboundMaskItemsFromJson(items) {
+    return Array.isArray(items) ? items.map(inboundMaskItemFromJson) : [];
+}
+
+function inboundMaskGroupsFromJson(groups) {
+    return Array.isArray(groups) ? groups.map(inboundMaskItemsFromJson) : [];
+}
+
+function inboundMaskItemToJson(item) {
+    const out = {...item};
+    const kind = out.kind || inboundMaskItemKind(out);
+    delete out.kind;
+    if ('transformText' in out) {
+        const text = String(out.transformText || '').trim();
+        delete out.transformText;
+        delete out.transform;
+        if (text) {
+            try {
+                const parsed = JSON.parse(text);
+                if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) out.transform = parsed;
+                else out.transform = {};
+            } catch (_) {
+                out.transform = {};
+            }
+        }
+    }
+    if (kind === 'reuse') { delete out.packet; delete out.rand; delete out.randRange; delete out.transform; return out; }
+    if (kind === 'transform') { delete out.packet; delete out.rand; delete out.randRange; delete out.reuse; return out; }
+    delete out.reuse;
+    delete out.transform;
+    if (out.type === 'array') delete out.packet;
+    else { delete out.rand; delete out.randRange; }
+    return out;
+}
+
 class UdpMask extends XrayCommonClass {
     constructor(type = 'salamander', settings = {}) {
         super();
@@ -1544,14 +1633,23 @@ class UdpMask extends XrayCommonClass {
     _getDefaultSettings(type, settings = {}) {
         switch (type) {
             case 'salamander':
-            case 'mkcp-aes128gcm':
-                return { password: settings.password || '' };
+                return { ...settings, password: settings.password || '', packetSize: settings.packetSize || '' };
             case 'header-dns':
                 return { domain: settings.domain || '' };
             case 'xdns':
-                return { domains: Array.isArray(settings.domains) ? settings.domains : [] };
+                return upgradeFinalMaskXdns(settings);
             case 'xicmp':
-                return { ip: settings.ip || '', id: settings.id ?? 0 };
+                return { ...settings, dgram: settings.dgram ?? false, ips: Array.isArray(settings.ips) ? settings.ips : (settings.ip ? [settings.ip] : []) };
+            case 'mkcp-legacy':
+                return { ...settings, header: settings.header || '', value: settings.value || '' };
+            case 'filter':
+                return { ...settings, blockedSourceIPs: settings.blockedSourceIPs || [], allowedSourceIPs: settings.allowedSourceIPs || [] };
+            case 'realm':
+                return { ...settings, url: settings.url || '', stunServers: settings.stunServers || [], ipMode: settings.ipMode || '' };
+            case 'udphop':
+                return { ...settings, mode: settings.mode || 'intervalRemote', interval: settings.interval || '5-10', remoteIPs: settings.remoteIPs || [], remotePorts: settings.remotePorts || '' };
+            case 'sudoku':
+                return { ...settings, password: settings.password || '', ascii: settings.ascii || '', customTable: settings.customTable || '', customTables: Array.isArray(settings.customTables) ? settings.customTables : [], paddingMin: settings.paddingMin ?? 0, paddingMax: settings.paddingMax ?? 0 };
             case 'mkcp-original':
             case 'header-dtls':
             case 'header-srtp':
@@ -1561,11 +1659,14 @@ class UdpMask extends XrayCommonClass {
                 return {};
             case 'header-custom':
                 return {
-                    client: Array.isArray(settings.client) ? settings.client : [],
-                    server: Array.isArray(settings.server) ? settings.server : [],
+                    ...settings,
+                    mode: settings.mode || 'prefix',
+                    client: inboundMaskItemsFromJson(settings.client),
+                    server: inboundMaskItemsFromJson(settings.server),
                 };
             case 'noise':
                 return {
+                    ...settings,
                     reset: settings.reset ?? 0,
                     noise: Array.isArray(settings.noise) ? settings.noise : [],
                 };
@@ -1575,30 +1676,29 @@ class UdpMask extends XrayCommonClass {
     }
 
     static fromJson(json = {}) {
+        const legacy = normalizeInboundUdpMask(json.type || 'salamander', json.settings || {});
         return new UdpMask(
-            json.type || 'salamander',
-            json.settings || {}
+            legacy.type,
+            legacy.settings
         );
     }
 
     toJson() {
-        const cleanItem = item => {
-            const out = { ...item };
-            if (out.type === 'array') {
-                delete out.packet;
-            } else {
-                delete out.rand;
-                delete out.randRange;
-            }
-            return out;
-        };
+        const cleanItem = inboundMaskItemToJson;
 
         let settings = this.settings;
-        if (this.type === 'noise' && settings && Array.isArray(settings.noise)) {
+        if (this.type === 'salamander' && settings && !settings.packetSize) {
+            const {packetSize, ...rest} = settings;
+            settings = rest;
+        } else if (this.type === 'noise' && settings && settings.script) {
+            settings = { ...settings };
+            delete settings.noise;
+        } else if (this.type === 'noise' && settings && Array.isArray(settings.noise)) {
             settings = { ...settings, noise: settings.noise.map(cleanItem) };
         } else if (this.type === 'header-custom' && settings) {
             settings = {
                 ...settings,
+                mode: settings.mode || 'prefix',
                 client: Array.isArray(settings.client) ? settings.client.map(cleanItem) : settings.client,
                 server: Array.isArray(settings.server) ? settings.server.map(cleanItem) : settings.server,
             };
@@ -1611,6 +1711,13 @@ class UdpMask extends XrayCommonClass {
     }
 }
 
+function normalizeInboundUdpMask(type, settings) {
+    const legacyHeaders={'mkcp-aes128gcm':'','mkcp-original':'','header-dns':'dns','header-dtls':'dtls','header-srtp':'srtp','header-utp':'utp','header-wechat':'wechat','header-wireguard':'wireguard'};
+    if(!(type in legacyHeaders))return {type,settings};
+    const header=legacyHeaders[type];
+    return {type:'mkcp-legacy',settings:{...settings,header,value:header==='dns'?(settings.domain||''):(settings.value||settings.password||'')}};
+}
+
 class TcpMask extends XrayCommonClass {
     constructor(type = 'fragment', settings = {}) {
         super();
@@ -1621,14 +1728,18 @@ class TcpMask extends XrayCommonClass {
     _getDefaultSettings(type, settings = {}) {
         switch (type) {
             case 'fragment':
-                return {
+                const fragment = {...settings,
                     packets: settings.packets ?? 'tlshello',
-                    length: settings.length ?? '',
-                    delay: settings.delay ?? '',
+                    lengths: Array.isArray(settings.lengths) ? settings.lengths : (settings.length ? [settings.length] : ['100-200']),
+                    delays: Array.isArray(settings.delays) ? settings.delays : (settings.delay ? [settings.delay] : []),
                     maxSplit: settings.maxSplit ?? '',
                 };
+                delete fragment.length;
+                delete fragment.delay;
+                return fragment;
             case 'sudoku':
                 return {
+                    ...settings,
                     password: settings.password ?? '',
                     ascii: settings.ascii ?? '',
                     customTable: settings.customTable ?? '',
@@ -1638,9 +1749,15 @@ class TcpMask extends XrayCommonClass {
                 };
             case 'header-custom':
                 return {
-                    clients: Array.isArray(settings.clients) ? settings.clients : [],
-                    servers: Array.isArray(settings.servers) ? settings.servers : [],
+                    ...settings,
+                    clients: inboundMaskGroupsFromJson(settings.clients),
+                    servers: inboundMaskGroupsFromJson(settings.servers),
+                    errors: inboundMaskGroupsFromJson(settings.errors),
                 };
+            case 'filter':
+                return {...settings,blockedSourceIPs: settings.blockedSourceIPs || [],allowedSourceIPs: settings.allowedSourceIPs || []};
+            case 'xmc':
+                return {...settings,hostname: settings.hostname || '',profiles: Array.isArray(settings.profiles) ? settings.profiles : [{username:'',uuid:'',texturesValue:'',texturesSignature:''}],password:settings.password || RandomUtil.randomLowerAndNum(16)};
             default:
                 return settings;
         }
@@ -1654,24 +1771,20 @@ class TcpMask extends XrayCommonClass {
     }
 
     toJson() {
-        const cleanItem = item => {
-            const out = { ...item };
-            if (out.type === 'array') {
-                delete out.packet;
-            } else {
-                delete out.rand;
-                delete out.randRange;
-            }
-            return out;
-        };
+        const cleanItem = inboundMaskItemToJson;
 
         let settings = this.settings;
+        if (this.type === 'fragment' && settings && !String(settings.maxSplit || '').trim()) {
+            settings = { ...settings };
+            delete settings.maxSplit;
+        }
         if (this.type === 'header-custom' && settings) {
             const cleanGroup = group => Array.isArray(group) ? group.map(cleanItem) : group;
             settings = {
                 ...settings,
-                clients: Array.isArray(settings.clients) ? settings.clients.map(cleanGroup) : settings.clients,
-                servers: Array.isArray(settings.servers) ? settings.servers.map(cleanGroup) : settings.servers,
+                clients: Array.isArray(settings.clients) ? settings.clients.map(group => group.map(cleanItem)) : settings.clients,
+                servers: Array.isArray(settings.servers) ? settings.servers.map(group => group.map(cleanItem)) : settings.servers,
+                errors: Array.isArray(settings.errors) ? settings.errors.map(group => group.map(cleanItem)) : settings.errors,
             };
         }
 
@@ -1780,7 +1893,7 @@ class FinalMaskStreamSettings extends XrayCommonClass {
     constructor(tcp = [], udp = [], quicParams = undefined) {
         super();
         this.tcp = Array.isArray(tcp) ? tcp.map(t => t instanceof TcpMask ? t : new TcpMask(t.type, t.settings)) : [];
-        this.udp = Array.isArray(udp) ? udp.map(u => new UdpMask(u.type, u.settings)) : [new UdpMask(udp.type, udp.settings)];
+        this.udp = Array.isArray(udp) ? udp.map(u => u instanceof UdpMask ? u : UdpMask.fromJson(u)) : [UdpMask.fromJson(udp)];
         this.quicParams = quicParams instanceof QuicParams ? quicParams : (quicParams ? QuicParams.fromJson(quicParams) : undefined);
     }
 
@@ -1864,6 +1977,26 @@ class StreamSettings extends XrayCommonClass {
 
     addUdpMask(type = 'salamander') {
         this.finalmask.udp.push(new UdpMask(type));
+    }
+
+    hasInvalidFinalMaskTransform() {
+        const masks = [...(this.finalmask.tcp || []), ...(this.finalmask.udp || [])];
+        for (const mask of masks) {
+            const settings = mask.settings || {};
+            const groups = mask.type === 'header-custom'
+                ? (mask instanceof TcpMask ? [...(settings.clients || []), ...(settings.servers || []), ...(settings.errors || [])] : [settings.client || [], settings.server || []])
+                : [];
+            for (const group of groups) for (const item of (Array.isArray(group) ? group : [])) {
+                if (item.kind === 'reuse' && !/^[A-Za-z_][A-Za-z0-9_]*$/.test(String(item.reuse || ''))) return true;
+                if (item.kind !== 'transform') continue;
+                try {
+                    const value = JSON.parse(String(item.transformText || ''));
+                    if (!value || typeof value !== 'object' || Array.isArray(value) || typeof value.op !== 'string' || !value.op || !Array.isArray(value.args) || !value.args.length) return true;
+                    if (value.args.some(arg => !arg || [arg.bytes !== undefined, arg.u64 !== undefined, !!arg.reuse, !!arg.metadata, !!arg.transform].filter(Boolean).length !== 1)) return true;
+                } catch (_) { return true; }
+            }
+        }
+        return false;
     }
 
     delUdpMask(index) {
@@ -2001,6 +2134,7 @@ class Sniffing extends XrayCommonClass {
 }
 
 class Inbound extends XrayCommonClass {
+    static setFinalMaskItemKind(item, kind) { setInboundMaskItemKind(item, kind); }
     constructor(
         port = RandomUtil.randomInteger(10000, 60000),
         listen = '',

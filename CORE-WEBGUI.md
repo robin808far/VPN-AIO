@@ -28,18 +28,23 @@ References:
 
 ## Work items
 
-- [ ] Audit upstream fields against current models and serializers.
+- [x] Audit upstream fields against current models and serializers for the delivered XDRIVE,
+      MASQUE and FinalMask paths; remaining unrelated upstream fields stay out of scope.
 - [x] XDRIVE transport: initial local/Google Drive/S3 forms, defaults and
       inbound/outbound serialization. Core config validation covers all three.
 - [x] MASQUE outbound: model, TLS/auth/WARP form controls, h2/h3 core config
       validation and live TCP/UDP/accounting/authentication smoke tests.
-- [ ] MASQUE inbound: account management, address pool, inbound form and
-      supported subscription output remain a separate integration task.
+- [x] MASQUE inbound: account management, usable address pools, TLS/ALPN inbound form,
+      generated `pass` credentials, live add/remove/re-enable, accounting and JSON
+      subscription output are covered. No raw URI is emitted because MASQUE has no
+      standardized share-link format.
 - [x] FinalMask current QUIC parameters: BBR profile, Brutal compensation,
       receive windows, timeouts, GSO, Chrome parrot, stateless reset and UDP hop
       round-trip through the Vue model and form.
-- [ ] Full TCP/UDP FinalMask mask-variant inventory/UI audit against the pinned
-      core; the current form covers the existing subset but needs a systematic diff.
+- [x] FinalMask TCP/UDP inventory/UI audit against the pinned core: legacy mKCP aliases,
+      filter, XMC, xDNS structured domains/resolvers, Realm, UDP hop, Sudoku, custom
+      headers, Noise expressions/scripts and Gecko packet sizing are represented with
+      legacy migrations preserved.
 - [ ] Audit updated XHTTP, TLS/REALITY, socket, DNS and routing settings.
 - [x] AWG S3/S4, I1-I5, header protection, padding/timing ranges,
       random trailers and cookie control: inbound form/model, outbound parser,

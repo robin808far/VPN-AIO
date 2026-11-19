@@ -64,6 +64,15 @@ for (const model of ["inbound", "outbound"]) {
         assert.equal(restored.streamSettings.network, 'masque');
         assert.equal(restored.streamSettings.masqueSettings.path, '/connect');
         assert.deepEqual(restored.streamSettings.tlsSettings.alpn, ['h2']);
+        const maskInbound = context.MasqueInbound.fromJson({protocol:'hysteria',settings:{clients:[]},streamSettings:{network:'hysteria',security:'tls',hysteriaSettings:{version:2},tlsSettings:{alpn:['h3']},finalmask:{tcp:[{type:'fragment',settings:{length:'100-200',delay:'5-10'}},{type:'header-custom',settings:{clients:[],servers:[],errors:[[{type:'str',packet:'fallback'}]]}}],udp:[{type:'mkcp-aes128gcm',settings:{password:'legacy-key'}},{type:'xdns',settings:{domains:['example.test:a'],resolvers:['example.test:a+udp://1.1.1.1:53']}}]}}});
+        const maskJson = JSON.parse(JSON.stringify(maskInbound.toJson().streamSettings.finalmask));
+        assert.deepEqual(maskJson.tcp[0].settings.lengths, ['100-200']);
+        assert.deepEqual(maskJson.tcp[0].settings.delays, ['5-10']);
+        assert.equal(maskJson.tcp[1].settings.errors[0][0].packet, 'fallback');
+        assert.equal(maskJson.udp[0].type, 'mkcp-legacy');
+        assert.equal(maskJson.udp[0].settings.value, 'legacy-key');
+        assert.deepEqual(maskJson.udp[1].settings.domains[0].types, [1]);
+        assert.deepEqual(maskJson.udp[1].settings.resolvers[0].addrs, ['udp://1.1.1.1:53']);
     }
     if (model === "outbound") {
         vm.runInContext("globalThis.Out = Outbound; globalThis.P = Protocols;", context);
@@ -96,6 +105,15 @@ for (const model of ["inbound", "outbound"]) {
         assert.equal(warpRestored.stream.masque.user, '');
         const badLegacyMux = {...serialized, mux: {enabled:true, concurrency:8}};
         assert.equal(context.Out.fromJson(badLegacyMux).toJson().mux, undefined);
+        const masks = context.Stream.fromJson({network:'hysteria',finalmask:{tcp:[{type:'xmc',settings:{hostname:'mc.example',profiles:[{username:'Alex',uuid:'069a79f4-44e9-4726-a5be-fca90e38aaf5',texturesValue:'v',texturesSignature:'s'}],password:'secret'}},{type:'header-custom',settings:{clients:[],servers:[],errors:[[{type:'str',packet:'fallback'}]]}}],udp:[{type:'mkcp-original'},{type:'realm',settings:{url:'realm://token@host:443/id',stunServers:['stun.example:3478']}},{type:'udphop',settings:{mode:'intervalRemote',interval:'5-10',remoteIPs:['192.0.2.1'],remotePorts:'20000-30000'}}]}});
+        const maskJson = JSON.parse(JSON.stringify(masks.toJson().finalmask));
+        assert.equal(maskJson.tcp[0].settings.profiles[0].texturesSignature, 's');
+        assert.equal(maskJson.tcp[1].settings.errors[0][0].packet, 'fallback');
+        assert.equal(maskJson.udp[0].type, 'mkcp-legacy');
+        assert.equal(maskJson.udp[1].settings.portMapping, undefined);
+        assert.equal(maskJson.udp[2].settings.remotePorts, '20000-30000');
+        const scripted = context.Stream.fromJson({network:'hysteria',finalmask:{udp:[{type:'noise',settings:{script:'return "noise"',noise:[{rand:'1-3',type:'array',packet:[1]}]}}]}});
+        assert.equal(JSON.parse(JSON.stringify(scripted.toJson().finalmask.udp[0].settings)).noise, undefined);
     }
     console.log(`PASS ${model}: XDRIVE settings survive edits without losing S3/XMUX`);
 }

@@ -14,6 +14,11 @@ Target: fresh installation and upgrade from 2.0.0 on Ubuntu 24.04 amd64.
   inbound/outbound forms and validated against the pinned Xray core.
 - Specific release selection is supported by `VPN_AIO_VERSION=2.0.0` or another
   published semantic version; a newer database must not be rolled back blindly.
+- MASQUE inbound and outbound support covers TLS h2/h3, Basic authentication, address
+  pools, account lifecycle, accounting and JSON subscriptions. Raw share links are not
+  emitted because MASQUE has no standardized URI format.
+- FinalMask forms now cover the pinned core's TCP/UDP mask variants and migrate legacy
+  fragment, mKCP and xDNS shapes without silently discarding settings.
 
 ## Verified
 
@@ -24,13 +29,10 @@ Target: fresh installation and upgrade from 2.0.0 on Ubuntu 24.04 amd64.
 
 ## Remaining before public release
 
-- Finish MASQUE protocol/transport forms and runtime integration. The current
-  outbound model is only a scaffold, not complete usable MASQUE support.
-- Finish FinalMask controls, inbound/outbound parity and compatibility validation.
+- Complete full cross-distribution and protocol-matrix validation for the final release.
 - Audit AWG export formats against actual client support and test editing/clearing
   advanced parameters, beyond the successful kernel handshake tests.
 
-- Full cross-distribution and complete protocol matrix.
 - Complete quota/device-limit tests with AWG 3.1 enabled.
 - Authenticated GUI/API and existing-user traffic checks after upgrade.
 - Destructive uninstall and final release asset build.
