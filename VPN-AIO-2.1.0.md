@@ -26,9 +26,9 @@ Target: fresh installation and upgrade from 2.0.0 on Ubuntu 24.04 amd64.
   complete Go suite, GUI model tests, pinned-core build, native-protocol smoke
   tests, XDRIVE checks, FinalMask configuration matrix and isolated Ubuntu
   startup/authentication/native-core/uninstall lifecycle check.
-- Ubuntu `sweden`: the full-asset 2.1.0 candidate is 354,323,144 bytes
+- Ubuntu `sweden`: the final full-asset 2.1.0 candidate is 354,324,200 bytes
   (338 MiB), SHA-256
-  `912ecc7c14f76fbf9e3528cafe201902eb5fed76e7bb58d6347e955816843c95`.
+  `ab6c062e8f25c6acae877124f0a5d7dbc80fb96e8be2c8ae735cbcd2b20918eb`.
   It was built with the complete pinned Xray/geodata and daemon bundles.
 - Pinned Xray 26.11.9: native MASQUE h2/h3, AnyTLS, TUIC, Naive and all FinalMask
   TCP/UDP configuration variants parsed or passed live traffic/authentication checks.
@@ -64,7 +64,8 @@ Target: fresh installation and upgrade from 2.0.0 on Ubuntu 24.04 amd64.
   binary, SQLite DB, extracted bundles, firewall table, policy rule and route, while
   preserving unrelated sentinel files. Container has no systemd boot, so this does
   not close the VM/systemd uninstall gate.
-- Distribution **userland** matrix: 13/13 passed using the full candidate above:
+- Distribution **userland** matrix: 13/13 passed using full-asset candidate
+  `912ecc7c…16843c95`, built before the uninstall-only kernel-interface cleanup:
   Ubuntu 24.04/26.04, Debian 12/13, Fedora 43/44, AlmaLinux 9/10, Rocky Linux 9/10,
   CentOS Stream 9/10 and Arch. Every image passed authenticated startup, the native
   Xray protocol smoke suite, XDRIVE/FinalMask configuration validation and isolated
@@ -75,22 +76,13 @@ Target: fresh installation and upgrade from 2.0.0 on Ubuntu 24.04 amd64.
   VPN daemon/tunnel, distro-kernel/DKMS or systemd service-stop compatibility.
   Logs, image IDs and machine-readable checks are archived on the host under
   `/home/ubuntu/vpn-aio-validation-containers-20261120/`.
-- Full-host uninstall on `sweden` passed 37/37 assertions after the new candidate
-  fix: systemd stopped/disabled; panel binary, DB, configs, bundles, firewall table,
-  policy rule/route, listeners and AWG interface/DKMS registration removed. This
-  test first revealed that a kernel AWG interface survived uninstall; full cleanup
-  now uses each kernel core's ownership-aware StopServices path. The exact original
-  binary, SQLite DB, systemd unit, `/etc`, DKMS/source/module snapshot were restored;
-  the original service/Xray/AWG are healthy again. Recovery snapshot:
-  `/var/lib/vpn-aio-tests/host-uninstall-awgfix-20261120/`.
 - Added a regression test that verifies full uninstall attempts cleanup of every
   daemon-less kernel core interface and records failures without skipping later
   cleanups.
-- Repeated the destructive `sweden` cycle using the rebuilt uninstall-fix candidate
-  (354,324,200 bytes; SHA-256
-  `ab6c062e8f25c6acae877124f0a5d7dbc80fb96e8be2c8ae735cbcd2b20918eb`). All 39/39
-  host checks passed, including systemd stop/disable, removal of `awg1`, release of
-  TCP/UDP listeners, DKMS cleanup and an existing-account HTTPS request. The exact
+- Final destructive `sweden` cycle using the candidate above passed 39/39 host
+  assertions, including systemd stop/disable, removal of `awg1`, release of TCP/UDP
+  listeners, DKMS cleanup and an existing-account HTTPS request. This first exposed
+  and then verified the fix for an AWG interface surviving uninstall. The exact
   original binary, service unit and SQLite bytes were restored; SQLite is healthy,
   four enabled inbounds remain and Xray/AWG are running. Recovery snapshot:
   `/var/lib/vpn-aio-tests/host-uninstall-final-20261120/`.
@@ -99,9 +91,11 @@ Target: fresh installation and upgrade from 2.0.0 on Ubuntu 24.04 amd64.
 
 - Complete the cross-distribution VPN tunnel/kernel/DKMS matrix in disposable
   Incus/KVM VMs. The Docker userland matrix shares one host kernel and cannot prove
-  different-kernel modules or real VPN paths. `sweden` itself has no `/dev/kvm` or
-  Incus; enabling nested virtualization or using a VM-capable host is needed for
-  that remaining matrix.
+  different-kernel modules or real VPN paths. `sweden` is currently AWS `t3.small`
+  and has no `/dev/kvm` or Incus. AWS lists M7i-family instances as supporting nested
+  virtualization; an `m7i.2xlarge` (8 vCPU/32 GiB) with nested virtualization enabled
+  is a suitable target, subject to availability in the instance's region. AWS requires
+  stopping the instance before enabling nested virtualization on it.
 - Publish the final release asset/checksum after the remaining host/client checks.
 
 Internal daemon paths retain upstream compatibility names. Public installation,
