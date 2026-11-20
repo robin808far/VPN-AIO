@@ -1,6 +1,6 @@
-# VPN-AIO 3.0.0 — development, not published
+# VPN-AIO 3.0.0
 
-Managed Hosts are implemented and locally validated on `feature/hosts-v3.0.0`.
+Managed Hosts add reusable, per-inbound endpoint policies to the existing Vue panel.
 
 - Dedicated Vue Hosts page, group editor, bulk enable/delete and ordering.
 - Per-Host address/port, TLS/Reality, SNI pools, transport and client overrides.
@@ -14,9 +14,27 @@ Managed Hosts are implemented and locally validated on `feature/hosts-v3.0.0`.
 See `HOSTS.md` for semantics, API, compatibility and rollback behavior, and
 `hosts-plan.md` for the implementation and validation record.
 
-No v3.0.0 tag or public release has been created. The published v2.0.0 and v2.1.0
-releases are unchanged. A final release asset, checksum and publication decision
-follow validation; this document does not identify a released binary.
+### Upgrade and rollback
+
+Back up the application directory and SQLite database before upgrading. Hosts
+migration retains the legacy inline endpoint lists; an older binary does not
+understand Hosts-only changes. Restore the matching pre-upgrade database when an
+exact rollback is required. Published v2.0.0 and v2.1.0 assets are retained.
+
+### Compatibility
+
+- MASQUE continues to use supported JSON subscriptions; no raw share URI is added.
+- Mux/Sockopt apply to supported JSON clients; advanced fields are not fabricated
+  for unsupported subscription formats.
+- The pinned Xray core removed `allowInsecure`. That switch is offered only for
+  compatible RAW/Clash clients. JSON uses supported certificate pins and
+  verification names, with pins serialized as the required string.
+- Existing account credentials, per-device keys, quota and traffic identity are
+  preserved. Group edits and imports retain/remap account Host bindings.
+
+Release assets include `VPN-AIO-amd64`, `SHA256SUMS`, `BUILD-MANIFEST.json` and the
+embedded-input checksum inventory. Verify the downloaded binary with SHA-256
+before installation. See `VPN-AIO-3.0.0.md` for build provenance and release gates.
 
 Validation passed: the complete Linux Go suite, pinned-core Host JSON acceptance,
 three Node regression scripts, browser form/link checks and 30/30 isolated
