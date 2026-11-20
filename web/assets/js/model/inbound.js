@@ -969,8 +969,8 @@ class xHTTPStreamSettings extends XrayCommonClass {
             json.xPaddingPlacement,
             json.xPaddingMethod,
             json.uplinkHTTPMethod,
-            json.sessionPlacement,
-            json.sessionKey,
+            json.sessionIDPlacement ?? json.sessionPlacement,
+            json.sessionIDKey ?? json.sessionKey,
             json.seqPlacement,
             json.seqKey,
             json.uplinkDataPlacement,
@@ -1006,8 +1006,8 @@ class xHTTPStreamSettings extends XrayCommonClass {
             xPaddingPlacement: this.xPaddingPlacement,
             xPaddingMethod: this.xPaddingMethod,
             uplinkHTTPMethod: this.uplinkHTTPMethod,
-            sessionPlacement: this.sessionPlacement,
-            sessionKey: this.sessionKey,
+            sessionIDPlacement: this.sessionPlacement,
+            sessionIDKey: this.sessionKey,
             seqPlacement: this.seqPlacement,
             seqKey: this.seqKey,
             uplinkDataPlacement: this.uplinkDataPlacement,
@@ -1055,6 +1055,7 @@ xHTTPStreamSettings.STRUCTURED_KEYS = new Set([
     'scStreamUpServerSecs', 'noSSEHeader', 'xPaddingBytes', 'mode',
     'xPaddingObfsMode', 'xPaddingKey', 'xPaddingHeader', 'xPaddingPlacement',
     'xPaddingMethod', 'uplinkHTTPMethod', 'sessionPlacement', 'sessionKey',
+    'sessionIDPlacement', 'sessionIDKey',
     'seqPlacement', 'seqKey', 'uplinkDataPlacement', 'uplinkDataKey',
     'uplinkChunkSize', 'noGRPCHeader', 'scMinPostsIntervalMs',
     'serverMaxHeaderBytes', 'xmux', 'downloadSettings',
@@ -1403,7 +1404,7 @@ class RealityStreamSettings extends XrayCommonClass {
             json.privateKey,
             json.minClientVer,
             json.maxClientVer,
-            json.maxTimediff,
+            json.maxTimeDiff ?? json.maxTimediff,
             json.shortIds,
             json.mldsa65Seed,
             settings,
@@ -1429,7 +1430,7 @@ class RealityStreamSettings extends XrayCommonClass {
 }
 RealityStreamSettings.STRUCTURED_KEYS = new Set([
     'show', 'xver', 'target', 'dest', 'serverNames', 'privateKey', 'minClientVer',
-    'maxClientVer', 'maxTimediff', 'shortIds', 'mldsa65Seed', 'settings',
+    'maxClientVer', 'maxTimediff', 'maxTimeDiff', 'shortIds', 'mldsa65Seed', 'settings',
 ]);
 
 RealityStreamSettings.Settings = class extends XrayCommonClass {
@@ -1531,7 +1532,7 @@ class SockoptStreamSettings extends XrayCommonClass {
             json.tcpKeepAliveIdle,
             json.tcpUserTimeout,
             json.tcpcongestion ?? json.tcpCongestion,
-            json.V6Only,
+            json.v6only ?? json.V6Only,
             json.tcpWindowClamp,
             json.interface,
             json.trustedXForwardedFor || [],
@@ -1616,7 +1617,7 @@ function inboundUnmodeledFields(json, modeledKeys) {
     const extra = {};
     if (!json || typeof json !== 'object' || Array.isArray(json)) return extra;
     for (const [key, value] of Object.entries(json)) {
-        if (!modeledKeys.has(key)) {
+        if (key !== '__proto__' && !modeledKeys.has(key)) {
             Object.defineProperty(extra, key, {value, enumerable: true, writable: true, configurable: true});
         }
     }
@@ -2300,7 +2301,8 @@ class Inbound extends XrayCommonClass {
             const value = xhttp[k];
             if (value === undefined || value === null || value === '') return;
             if (value === XHTTP_SHARE_DEFAULTS[k]) return;
-            out[k] = value;
+            const wireKey = {sessionPlacement: 'sessionIDPlacement', sessionKey: 'sessionIDKey'}[k] || k;
+            out[wireKey] = value;
         });
 
         // xmux and downloadSettings are objects, so they cannot ride in the

@@ -1049,7 +1049,7 @@ function outboundUnmodeledFields(json, modeledKeys) {
     const extra = {};
     if (!json || typeof json !== 'object' || Array.isArray(json)) return extra;
     for (const [key, value] of Object.entries(json)) {
-        if (!modeledKeys.has(key)) {
+        if (key !== '__proto__' && !modeledKeys.has(key)) {
             Object.defineProperty(extra, key, {value, enumerable: true, writable: true, configurable: true});
         }
     }

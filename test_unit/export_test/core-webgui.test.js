@@ -82,19 +82,41 @@ for (const model of ["inbound", "outbound"]) {
     assert.deepEqual(JSON.parse(JSON.stringify(transportJson.sockopt.happyEyeballs)), transportInput.sockopt.happyEyeballs);
     assert.equal(transportJson.sockopt[model === 'inbound' ? 'tcpcongestion' : 'tcpCongestion'], 'cubic');
     if (model === 'inbound') {
-        const canonicalSocket = context.Stream.fromJson({network:'tcp',sockopt:{tcpCongestion:'reno'}}).toJson().sockopt;
+        const canonicalSocket = context.Stream.fromJson({network:'tcp',sockopt:{tcpCongestion:'reno',v6only:true}}).toJson().sockopt;
         assert.equal(canonicalSocket.tcpcongestion, 'reno');
         assert.equal(canonicalSocket.tcpCongestion, undefined);
+        assert.equal(canonicalSocket.V6Only, true);
+        assert.equal(canonicalSocket.v6only, undefined);
+        for (const sessions of [
+            {sessionPlacement: 'header', sessionKey: 'X-Session'},
+            {sessionIDPlacement: 'header', sessionIDKey: 'X-Session'},
+        ]) {
+            const sessionStream = context.Stream.fromJson({network:'xhttp',xhttpSettings:sessions});
+            assert.equal(sessionStream.xhttp.sessionPlacement, 'header');
+            sessionStream.xhttp.sessionKey = 'X-Edited-Session';
+            const saved = sessionStream.toJson().xhttpSettings;
+            assert.equal(saved.sessionIDPlacement, 'header');
+            assert.equal(saved.sessionIDKey, 'X-Edited-Session');
+            assert.equal(saved.sessionPlacement, undefined);
+            assert.equal(saved.sessionKey, undefined);
+        }
     }
+    const protoInput = JSON.parse('{"network":"xhttp","__proto__":{"polluted":true},"tlsSettings":{"__proto__":{"polluted":true}}}');
+    const safeStream = context.Stream.fromJson(protoInput);
+    assert.equal(safeStream.extra.polluted, undefined);
+    assert.equal(safeStream.toJson().polluted, undefined);
+    assert.equal(safeStream.tls.toJson().polluted, undefined);
 
     const realityInput = model === 'inbound'
-        ? {network:'xhttp', security:'reality', realitySettings:{dest:'127.0.0.1:443', serverNames:['localhost'], privateKey:'test-key', shortIds:['aabbccdd'], masterKeyLog:'/tmp/reality.keys', limitFallbackUpload:{afterBytes:1024,bytesPerSec:20}, settings:{publicKey:'test-pub',fingerprint:'chrome',serverName:'localhost',futureRealitySetting:'keep'}}}
+        ? {network:'xhttp', security:'reality', realitySettings:{dest:'127.0.0.1:443', serverNames:['localhost'], privateKey:'test-key', shortIds:['aabbccdd'],maxTimeDiff:30000, masterKeyLog:'/tmp/reality.keys', limitFallbackUpload:{afterBytes:1024,bytesPerSec:20}, settings:{publicKey:'test-pub',fingerprint:'chrome',serverName:'localhost',futureRealitySetting:'keep'}}}
         : {network:'xhttp', security:'reality', realitySettings:{publicKey:'test-pub',fingerprint:'chrome',serverName:'localhost',shortId:'aabbccdd',spiderX:'/',mldsa65Verify:'verify-data',futureRealitySetting:'keep'}};
     const realityModel = context.Stream.fromJson(realityInput);
     const realityJson = JSON.parse(JSON.stringify(realityModel.toJson())).realitySettings;
     if (model === 'inbound') {
         assert.equal(realityJson.target, '127.0.0.1:443', 'inbound REALITY dest alias was lost');
         assert.equal(realityJson.masterKeyLog, '/tmp/reality.keys');
+        assert.equal(realityJson.maxTimediff, 30000);
+        assert.equal(realityJson.maxTimeDiff, undefined);
         assert.equal(realityJson.limitFallbackUpload.bytesPerSec, 20);
         assert.equal(realityJson.settings.futureRealitySetting, 'keep');
     } else {
@@ -137,6 +159,12 @@ for (const model of ["inbound", "outbound"]) {
         assert.deepEqual(customJson.transform, {op:'concat',args:[{type:'str',bytes:'OK '},{reuse:'head'}]});
         assert.equal(customJson.transformText, undefined);
         vm.runInContext('globalThis.In = Inbound;', context);
+        const sessionShare = context.In.collectXhttpShareFields(context.Stream.fromJson({
+            network:'xhttp',xhttpSettings:{sessionPlacement:'query',sessionKey:'sid'},
+        }).xhttp);
+        assert.equal(sessionShare.sessionIDPlacement, 'query');
+        assert.equal(sessionShare.sessionIDKey, 'sid');
+        assert.equal(sessionShare.sessionPlacement, undefined);
         const sniffInput = {protocol:'vless', port:443, settings:{clients:[],decryption:'none'}, streamSettings:{network:'xhttp',security:'tls'}, sniffing:{enabled:true,destOverride:['tls'],futureSniffOption:'keep'}};
         const sniffJson = JSON.parse(JSON.stringify(context.In.fromJson(sniffInput).toJson()));
         assert.equal(sniffJson.sniffing.futureSniffOption, 'keep');
