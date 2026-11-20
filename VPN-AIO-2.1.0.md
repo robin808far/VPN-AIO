@@ -29,23 +29,23 @@ Target: fresh installation and upgrade from 2.0.0 on Ubuntu 24.04 amd64.
   complete Go suite, GUI model tests, pinned-core build, native-protocol smoke
   tests, XDRIVE checks, FinalMask configuration matrix and isolated Ubuntu
   startup/authentication/native-core/uninstall lifecycle check.
-- Clean source build from commit `178561444feab699ba5c9a40c7fed545b82a04ae`:
-  the full-asset 2.1.0 candidate is 354,332,600 bytes
+- Final clean source build from commit `bd467e04f867f88426c60ba03354a05c8fa2cc7e`:
+  the full-asset 2.1.0 candidate is 354,332,320 bytes
   (338 MiB), SHA-256
-  `5c5c654a043d22bda91345c91e48cf5f37f144ca59f783ec4a0e090d6375f64b`.
-  Built in `/home/ubuntu/vpn-aio-release-1785614/` with Go 1.27.4, initialized pinned
+  `8777fe57cc50a2735af195a4ba5f98e88e1efb94b1c5c498b607b105606c6fdc`.
+  Built in `/home/ubuntu/vpn-aio-release-bd467e0/` with Go 1.27.4, initialized pinned
   submodules and the complete cached Xray/geodata/daemon bundles. No tracked source
   changes were present in the build checkout. `BUILD-MANIFEST.json` and
   `embedded-inputs.SHA256SUMS` record the source and embedded-input provenance.
-- On that exact clean checkout, `go test -timeout 10m ./... -count=1` passed on
+- On the earlier clean checkout `1785614`, `go test -timeout 10m ./... -count=1` passed on
   `sweden` without a test-name exclusion filter. The panel was temporarily stopped
   to free the fixed SSH integration-test port and restored afterward. An initial
   run in an offline network namespace was inconclusive (a DNS-dependent test and
   an SSH accounting timing assertion failed); the complete host-network run passed.
-- The exact release asset passed the Ubuntu container lifecycle check: 30/30
+- The earlier clean asset and the final asset both passed the Ubuntu container lifecycle check: 30/30
   checks, including authenticated startup, embedded native protocols, XDRIVE,
   FinalMask, transport settings, uninstall and preservation of operator files.
-  Results: `/home/ubuntu/vpn-aio-release-1785614/build/out/lifecycle-final/`.
+  Final results: `/home/ubuntu/vpn-aio-release-bd467e0/build/out/lifecycle-final/`.
 - Pinned Xray 26.11.9: native MASQUE h2/h3, AnyTLS, TUIC, Naive and all FinalMask
   TCP/UDP configuration variants parsed or passed live traffic/authentication checks.
 - MASQUE live account add, removal, re-enable, traffic accounting, generated Xray
@@ -119,12 +119,21 @@ Target: fresh installation and upgrade from 2.0.0 on Ubuntu 24.04 amd64.
 - The later transport-audit candidate (`5fa99d1eaf7491d261a0bf753c3ae15ee2692a8abb6c4b565ecdc3a09ff2488d`)
   also passed the 39-check host upgrade/HTTPS/uninstall/restore cycle. Recovery
   snapshot: `/var/lib/vpn-aio-tests/host-uninstall-release-20261120/`.
-- The clean-source candidate listed above passed 7/7 upgrade/rollback checks:
+- The earlier clean-source candidate `1785614` passed 7/7 upgrade/rollback checks:
   exact asset installed; Xray and AWG running; certificate-verified HTTPS through
   an existing VLESS/XHTTP profile with both counters increased; original binary,
   database and service-unit bytes restored; service recovered; SQLite integrity
   `ok`; four original enabled inbounds retained. Recovery snapshot:
   `/var/lib/vpn-aio-tests/release-1785614/`.
+- Final security review identified two CodeQL alerts despite successful analysis
+  jobs: potential allocation-size overflow in Clash proxy-name capacity and an
+  HTML-tag extraction regexp in a browserless test. Commit `bd467e0` removes the
+  extra capacity arithmetic and uses explicit template script markers instead.
+- Final build `bd467e0` also passed the complete Go suite without test-name
+  exclusions and 30/30 Ubuntu container lifecycle checks. The exact final asset
+  passed the 7-check live existing-account HTTPS upgrade/rollback probe. Original
+  binary, database and systemd-unit bytes were restored; Xray/AWG recovered and
+  SQLite integrity is `ok`. Recovery snapshot: `/var/lib/vpn-aio-tests/release-bd467e0/`.
 
 ## Accepted validation limit
 
@@ -134,11 +143,12 @@ Target: fresh installation and upgrade from 2.0.0 on Ubuntu 24.04 amd64.
   interpret the 13-container result as proof that VPN tunnels or DKMS work across all
   listed distro kernels.
 
-## Release preparation
+## Release record
 
-- Public release is not yet published. `RELEASE-2.1.0.md` describes the changes,
-  installation/rollback requirements, checksum and exact scope of validation.
-- The release asset is built from commit `1785614`; subsequent release notes and
+- `RELEASE-2.1.0.md` contains the release notes, installation/rollback requirements,
+  final checksum and exact validation limits. GitHub PR #2 carries the integration;
+  public publication is a separate operation from this validation record.
+- The release asset is built from commit `bd467e0`; subsequent release notes and
   validation-record changes do not alter the built source. Keep all published
   2.0.0 tags and assets unchanged.
 
@@ -162,5 +172,5 @@ pre-test 2.1.0 application/database snapshot was restored and passed those check
 
 Final host state: experimental 2.1.0 running. Protected recovery snapshot:
 `/var/lib/vpn-aio-tests/rollback-20261118-034311`.
-These checks do not establish authenticated login, all VPN traffic paths or
-completion of the requested 2.1.0 feature scope. No public 2.1.0 release yet.
+This historical November 18 exercise alone did not establish authenticated login
+or all VPN traffic paths; later verification is listed above.

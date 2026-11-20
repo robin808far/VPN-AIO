@@ -1,6 +1,6 @@
 # VPN-AIO 2.1.0
 
-Prepared release for **Ubuntu 24.04 amd64**, with the existing Vue interface and
+Release for **Ubuntu 24.04 amd64**, with the existing Vue interface and
 the pinned Xray 26.11.9 core.
 
 ## Changes
@@ -21,6 +21,7 @@ the pinned Xray 26.11.9 core.
   interfaces, while `--cores keep` retains them.
 - Installer accepts `VPN_AIO_VERSION=2.0.0` (or another published version) for
   version-specific installation. Published 2.0.0 tags/assets remain unchanged.
+- Resolve CodeQL findings in Clash list allocation and the routing-modal test.
 
 ## Validation and limits
 
@@ -49,14 +50,14 @@ sudo env VPN_AIO_VERSION=2.1.0 bash deploy.sh
 Asset: `VPN-AIO-amd64`. Download `SHA256SUMS` alongside it and run
 `sha256sum -c SHA256SUMS` before installation.
 
-Full asset size: **354,332,600 bytes**. SHA-256:
+Full asset size: **354,332,320 bytes**. SHA-256:
 
 ```text
-5c5c654a043d22bda91345c91e48cf5f37f144ca59f783ec4a0e090d6375f64b  VPN-AIO-amd64
+8777fe57cc50a2735af195a4ba5f98e88e1efb94b1c5c498b607b105606c6fdc  VPN-AIO-amd64
 ```
 
 The binary is built from clean source commit
-`178561444feab699ba5c9a40c7fed545b82a04ae`, with the full cached pinned core,
+`bd467e04f867f88426c60ba03354a05c8fa2cc7e`, with the full cached pinned core,
 six geodata files and daemon bundle. `BUILD-MANIFEST.json` and
 `embedded-inputs.SHA256SUMS` record the source and embedded-input provenance.
 

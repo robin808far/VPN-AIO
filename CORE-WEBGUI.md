@@ -88,10 +88,12 @@ References:
       cleanup and exact restoration of the original service/binary/database.
 - [x] Regression test verifies that uninstall attempts each daemon-less kernel
       core cleanup even when one cleanup reports an error.
-- [x] Build from clean commit `1785614` with complete cached embedded assets and
+- [x] Build from clean commit `bd467e0` with complete cached embedded assets and
       record asset/input checksums. The exact release candidate passed the full Go
       suite without a test-name exclusion filter, 30 Ubuntu container lifecycle
       checks and 7 live existing-account upgrade/rollback checks.
+- [x] Resolve the CodeQL findings in Clash allocation sizing and routing test
+      script extraction before release; rebuild and verify the exact final asset.
 - Cross-distro VM tunnel/kernel/DKMS matrix: **not run; explicitly skipped by the
   operator**. This is an accepted validation limit, not a passing test. The userland
   matrix shares one kernel; live Ubuntu/AWG checks remain verified.
