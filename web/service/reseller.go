@@ -493,6 +493,8 @@ func applyToSettings(data *model.Inbound, profile *model.ResellerProfile, q Char
 	if !profile.AllowExternalProxy {
 		delete(cm, "externalProxy")
 	}
+	// Resellers cannot replace an administrator's managed endpoint selection.
+	delete(cm, "hostRuleIds")
 	// SECURITY: strip the auto-renew period. `reset` is a number of DAYS after
 	// which autoRenewClients (web/service/inbound.go) zeroes an account's up and
 	// down counters, re-enables it, and pushes its deadline forward, on a timer,

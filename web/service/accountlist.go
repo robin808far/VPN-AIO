@@ -105,6 +105,7 @@ type AccountRow struct {
 	SpeedLimitDown    *int                    `json:"speedLimitDown"`
 	SpeedLimitUp      *int                    `json:"speedLimitUp"`
 	UserLimitOverride *int                    `json:"userLimitOverride"`
+	HostRuleIds       []int                   `json:"hostRuleIds"`
 	Up                int64                   `json:"up"`
 	Down              int64                   `json:"down"`
 	Memberships       []AccountMembershipView `json:"memberships"`
@@ -227,6 +228,7 @@ func (s *AccountService) ListAccounts(user *model.User, page, size int, search, 
 			Reset: account.Reset, LimitIP: account.LimitIP, TgID: account.TgID,
 			SpeedLimitDown: account.SpeedLimitDown, SpeedLimitUp: account.SpeedLimitUp,
 			UserLimitOverride: account.UserLimitOverride,
+			HostRuleIds:       account.HostRuleIds,
 			Memberships:       mine, OwnedByReseller: owner[key],
 		}
 		if len(mine) == 0 {

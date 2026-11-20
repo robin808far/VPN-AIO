@@ -786,6 +786,19 @@ func (o *awgSettings) dnsList() string {
 // Identical to WgcService.RenderClientConfigs plus the AWG 1.0 obfuscation lines in [Interface]
 // (which a plain WireGuard client rejects , an AmneziaWG-aware client is required).
 func (s *AwgService) RenderClientConfigs(inbound *model.Inbound, email, endpointHost string) ([]AwgClientConfig, error) {
+	if views, managed, err := ManagedHostInbounds(inbound, email, "raw", endpointHost); err != nil {
+		return nil, err
+	} else if managed {
+		out := []AwgClientConfig{}
+		for _, view := range views {
+			configs, err := s.RenderClientConfigs(view, email, endpointHost)
+			if err != nil {
+				return nil, err
+			}
+			out = append(out, configs...)
+		}
+		return out, nil
+	}
 	settings, err := s.parseSettings(inbound)
 	if err != nil {
 		return nil, err
@@ -887,7 +900,7 @@ func (s *AwgService) RenderClientConfigs(inbound *model.Inbound, email, endpoint
 				if psk != "" {
 					b.WriteString("PresharedKey = " + psk + "\n")
 				}
-				b.WriteString(fmt.Sprintf("Endpoint = %s:%d\n", t.host, t.port))
+				b.WriteString(fmt.Sprintf("Endpoint = %s\n", formatHostEndpoint(t.host, t.port)))
 				b.WriteString("AllowedIPs = 0.0.0.0/0\n")
 				b.WriteString("PersistentKeepalive = 25\n")
 				// Label each config with its device slot so it is obvious that device 1 and
@@ -938,6 +951,19 @@ type AwgClientParams struct {
 // RenderClientParams mirrors RenderClientConfigs (same targets/devices loop + obfs)
 // but returns structured params instead of .conf text.
 func (s *AwgService) RenderClientParams(inbound *model.Inbound, email, endpointHost string) ([]AwgClientParams, error) {
+	if views, managed, err := ManagedHostInbounds(inbound, email, "clash", endpointHost); err != nil {
+		return nil, err
+	} else if managed {
+		out := []AwgClientParams{}
+		for _, view := range views {
+			configs, err := s.RenderClientParams(view, email, endpointHost)
+			if err != nil {
+				return nil, err
+			}
+			out = append(out, configs...)
+		}
+		return out, nil
+	}
 	settings, err := s.parseSettings(inbound)
 	if err != nil {
 		return nil, err

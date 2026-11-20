@@ -3303,6 +3303,10 @@ class Inbound extends XrayCommonClass {
     }
 
     genAllLinks(remark = '', remarkModel = '-ieo', client) {
+		if (typeof ManagedHosts !== 'undefined' && this._managedHostRows) {
+			const managed = ManagedHosts.links(this, remark, remarkModel, client);
+			if (managed !== null) return managed;
+		}
         let result = [];
         let email = client ? client.email : '';
         let addr = !ObjectUtil.isEmpty(this.listen) && this.listen !== "0.0.0.0" ? this.listen : location.hostname;

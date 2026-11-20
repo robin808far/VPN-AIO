@@ -104,10 +104,18 @@ func (s *SubJsonService) GetJson(subId string, host string) (string, string, err
 
 	var header string
 	usage := newSubUsage()
+	seenUsage := map[string]bool{}
+	closedSelection := false
 	var configArray []json_util.RawMessage
 
 	// Prepare Inbounds
-	for _, inbound := range inbounds {
+	renders, err := s.SubService.hostRenders(inbounds, "json", host)
+	if err != nil {
+		return "", "", err
+	}
+	for _, render := range renders {
+		inbound := render.Inbound
+		s.SubService.currentHost = render.Host
 		clients, err := s.inboundService.GetClients(inbound)
 		if err != nil {
 			logger.Error("SubJsonService - GetClients: Unable to get clients from inbound")
@@ -127,7 +135,15 @@ func (s *SubJsonService) GetJson(subId string, host string) (string, string, err
 		for _, client := range clients {
 			if client.Enable && client.SubID == subId {
 				ct, accountBacked, _ := s.SubService.resolveTraffic(inbound, client.Email)
-				usage.add(client.Email, ct, accountBacked)
+				usageKey := fmt.Sprintf("%d:%s", inbound.Id, client.Email)
+				if !seenUsage[usageKey] {
+					usage.add(client.Email, ct, accountBacked)
+					seenUsage[usageKey] = true
+				}
+				if !render.Allows(client) {
+					closedSelection = true
+					continue
+				}
 				newConfigs := s.getConfig(inbound, client, host)
 				configArray = append(configArray, newConfigs...)
 			}
@@ -135,6 +151,10 @@ func (s *SubJsonService) GetJson(subId string, host string) (string, string, err
 	}
 
 	if len(configArray) == 0 {
+		if closedSelection {
+			traffic := usage.result()
+			return "[]", fmt.Sprintf("upload=%d; download=%d; total=%d; expire=%d", traffic.Up, traffic.Down, traffic.Total, traffic.ExpiryTime/1000), nil
+		}
 		return "", "", nil
 	}
 
@@ -191,7 +211,7 @@ func (s *SubJsonService) getConfig(inbound *model.Inbound, client model.Client, 
 		extPrxy := ep.(map[string]any)
 		inbound.Listen = extPrxy["dest"].(string)
 		inbound.Port = int(extPrxy["port"].(float64))
-		newStream := maps.Clone(stream)
+		newStream := cloneMap(stream)
 		switch extPrxy["forceTls"].(string) {
 		case "tls":
 			if newStream["security"] != "tls" {
@@ -204,6 +224,7 @@ func (s *SubJsonService) getConfig(inbound *model.Inbound, client model.Client, 
 				delete(newStream, "tlsSettings")
 			}
 		}
+		s.SubService.applyHostClientStream(newStream)
 		streamSettings, _ := json.MarshalIndent(newStream, "", "  ")
 
 		var newOutbounds []json_util.RawMessage
@@ -229,12 +250,24 @@ func (s *SubJsonService) getConfig(inbound *model.Inbound, client model.Client, 
 			newOutbounds = append(newOutbounds, genMasqueOutbound(inbound, newStream, client))
 		}
 
+		if h := s.SubService.currentHost; h != nil && h.MuxParams != "" {
+			for i, raw := range newOutbounds {
+				var outbound map[string]any
+				if json.Unmarshal(raw, &outbound) == nil {
+					outbound["mux"] = json_util.RawMessage(h.MuxParams)
+					newOutbounds[i], _ = json.Marshal(outbound)
+				}
+			}
+		}
 		newOutbounds = append(newOutbounds, s.defaultOutbounds...)
 		newConfigJson := make(map[string]any)
 		maps.Copy(newConfigJson, s.configJson)
 
 		newConfigJson["outbounds"] = newOutbounds
 		newConfigJson["remarks"] = s.SubService.genRemark(inbound, client.Email, extPrxy["remark"].(string))
+		if h := s.SubService.currentHost; h != nil && h.ServerDescription != "" {
+			newConfigJson["serverDescription"] = h.ServerDescription
+		}
 
 		newConfig, _ := json.MarshalIndent(newConfigJson, "", "  ")
 		newJsonArray = append(newJsonArray, newConfig)
@@ -361,6 +394,9 @@ func (s *SubJsonService) genVless(inbound *model.Inbound, streamSettings json_ut
 	var inboundSettings map[string]any
 	json.Unmarshal([]byte(inbound.Settings), &inboundSettings)
 	encryption, _ := inboundSettings["encryption"].(string)
+	if encryption == "" {
+		encryption = "none"
+	}
 
 	user := map[string]any{
 		"id":         client.ID,

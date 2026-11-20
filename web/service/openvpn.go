@@ -905,6 +905,31 @@ func (s *OpenVpnService) StopServices() {
 // points at whatever address the admin is actually using — the same way xray
 // share-links resolve their host from location.hostname.
 func (s *OpenVpnService) GenerateClientConfig(inbound *model.Inbound, proto string, panelHost string) (string, error) {
+	if !inbound.HostProjection && inbound.Id > 0 && database.GetDB() != nil {
+		var hosts HostService
+		renders, err := hosts.Renders([]*model.Inbound{inbound}, "raw", panelHost)
+		if err != nil {
+			return "", err
+		}
+		endpoints := []any{}
+		for _, render := range renders {
+			if render.Host != nil {
+				endpoints = append(endpoints, map[string]any{"dest": render.Inbound.Listen, "port": render.Inbound.Port, "remark": render.Host.Remark})
+			}
+		}
+		if len(endpoints) > 0 {
+			view := *inbound
+			view.HostProjection = true
+			settings := hostObject(inbound.Settings)
+			settings["externalProxy"] = endpoints
+			data, err := json.Marshal(settings)
+			if err != nil {
+				return "", err
+			}
+			view.Settings = string(data)
+			return s.GenerateClientConfig(&view, proto, panelHost)
+		}
+	}
 	settings, err := s.parseSettings(inbound)
 	if err != nil {
 		return "", err

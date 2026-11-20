@@ -585,6 +585,11 @@ func newAccountFromEntry(entry map[string]any) *model.Account {
 		return &v
 	}
 
+	var hostRuleIDs []int
+	if raw, ok := entry["hostRuleIds"]; ok {
+		data, _ := json.Marshal(raw)
+		_ = json.Unmarshal(data, &hostRuleIDs)
+	}
 	return &model.Account{
 		Email:             str("email"),
 		SubID:             str("subId"),
@@ -598,6 +603,7 @@ func newAccountFromEntry(entry map[string]any) *model.Account {
 		SpeedLimitDown:    nullableInt("speedLimitDown"),
 		SpeedLimitUp:      nullableInt("speedLimitUp"),
 		UserLimitOverride: nullableInt("userLimitOverride"),
+		HostRuleIds:       hostRuleIDs,
 	}
 }
 

@@ -70,7 +70,7 @@ def main():
     os.chdir(ROOT)
     os.environ.setdefault('XRAY_LOCATION_ASSET', str(ROOT / 'bin'))
     password = secrets.token_urlsafe(24)
-    check('candidate version', run([str(BINARY), '-v']).stdout.strip() == '2.1.0')
+    check('candidate version', run([str(BINARY), '-v']).stdout.strip() == os.environ.get('VPN_AIO_EXPECTED_VERSION', '3.0.0'))
     digest = hashlib.sha256(BINARY.read_bytes()).hexdigest()
     run([str(BINARY), '--port', str(PORT), '--user', 'lifecycle-admin', '--pass', password, '--path', '/'])
     opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))

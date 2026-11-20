@@ -44,6 +44,7 @@ func (a *APIController) initRouter(g *gin.RouterGroup, customGeo *service.Custom
 	// Inbounds API
 	inbounds := api.Group("/inbounds")
 	a.inboundController = NewInboundController(inbounds)
+	NewHostController(api.Group("/hosts"))
 
 	// Clients API: the account-centric read model behind the Clients page. Same
 	// claim as the inbounds group because it shows the same accounts from the other
