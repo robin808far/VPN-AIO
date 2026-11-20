@@ -86,6 +86,14 @@ Target: fresh installation and upgrade from 2.0.0 on Ubuntu 24.04 amd64.
 - Added a regression test that verifies full uninstall attempts cleanup of every
   daemon-less kernel core interface and records failures without skipping later
   cleanups.
+- Repeated the destructive `sweden` cycle using the rebuilt uninstall-fix candidate
+  (354,324,200 bytes; SHA-256
+  `ab6c062e8f25c6acae877124f0a5d7dbc80fb96e8be2c8ae735cbcd2b20918eb`). All 39/39
+  host checks passed, including systemd stop/disable, removal of `awg1`, release of
+  TCP/UDP listeners, DKMS cleanup and an existing-account HTTPS request. The exact
+  original binary, service unit and SQLite bytes were restored; SQLite is healthy,
+  four enabled inbounds remain and Xray/AWG are running. Recovery snapshot:
+  `/var/lib/vpn-aio-tests/host-uninstall-final-20261120/`.
 
 ## Remaining before public release
 

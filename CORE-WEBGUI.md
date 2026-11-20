@@ -75,6 +75,10 @@ References:
       AmneziaWG and GRE kernel interfaces before removing their backing features.
       The rebuilt candidate then passed all host uninstall assertions and the exact
       pre-test files/database/service were restored.
+- [x] Repeated the full-host uninstall cycle with the kernel-interface cleanup fix
+      and a certificate-verified HTTPS tunnel request. Result: 39/39 checks passed,
+      including systemd stop/disable, TCP/UDP listener release, AWG interface/DKMS
+      cleanup and exact restoration of the original service/binary/database.
 - [x] Regression test verifies that uninstall attempts each daemon-less kernel
       core cleanup even when one cleanup reports an error.
 - [ ] Complete VPN tunnel/kernel/DKMS coverage across distros in disposable VMs.
