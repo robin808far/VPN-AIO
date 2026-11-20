@@ -36,10 +36,18 @@ Release assets include `VPN-AIO-amd64`, `SHA256SUMS`, `BUILD-MANIFEST.json` and 
 embedded-input checksum inventory. Verify the downloaded binary with SHA-256
 before installation. See `VPN-AIO-3.0.0.md` for build provenance and release gates.
 
+`VPN-AIO-amd64`: **354,573,744 bytes**
+
+```text
+4261971d3bcde8d95254fa4b4b2d59328619cd2e2fe8af0775809e60355c0603  VPN-AIO-amd64
+```
+
 Validation passed: the complete Linux Go suite, pinned-core Host JSON acceptance,
 three Node regression scripts, browser form/link checks and 30/30 isolated
-Ubuntu-container lifecycle checks. The original test-server service was not
-replaced. See the plan's validation record for exact provenance and limits.
+Ubuntu-container lifecycle checks. The exact release binary also passed 8/8
+existing-install upgrade/HTTPS/Host-schema/rollback checks; the original test
+server's binary/database/unit and service health were restored. See the
+validation record for exact provenance and limits.
 
 The cross-distribution VM/kernel/DKMS matrix remains explicitly waived. That
 waiver is a coverage limitation and must not be described as a passing test.

@@ -36,8 +36,9 @@ protocol exports. Adapted behavior references MHSanaei/3x-ui commit
 
 ## Validation record
 
-Implementation and the final validation run are complete. No 3.0.0 build or
-release has been published.
+Implementation and its final validation run are complete. At implementation
+sign-off no 3.0.0 build or release had been published. The separately authorized
+publication workflow and exact release asset are recorded in `VPN-AIO-3.0.0.md`.
 
 The implementation also fixes compatibility failures found by the regressions:
 fresh-database seeder ordering must not rehash bcrypt passwords, Host fanout must
@@ -85,6 +86,7 @@ Its SHA-256 is
 Logs are `build/hosts-v3-go-tests.log`, `build/hosts-v3-image.log` and
 `build/hosts-v3-lifecycle.log` in the same isolated source directory.
 
-These checks establish migration, authorization, exports, parser acceptance and
-isolated userland behavior. They do not claim a live third-party CDN test, a new
-kernel/VM matrix, a GitHub CodeQL run, or public-release readiness.
+These implementation-phase checks establish migration, authorization, exports,
+parser acceptance and isolated userland behavior. They do not claim a live
+third-party CDN test or a new kernel/VM matrix. GitHub CodeQL and public release
+verification belong to the subsequent workflow in `VPN-AIO-3.0.0.md`.
