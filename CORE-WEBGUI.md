@@ -46,10 +46,10 @@ References:
       headers, Noise expressions/scripts and Gecko packet sizing are represented with
       legacy migrations preserved.
 - [x] Audit XHTTP, TLS/REALITY, socket, DNS and routing settings against the pinned
-      schema. Structured TLS/REALITY/socket models now preserve unedited core keys;
-      the routing modal also keeps hidden selectors when another field is edited.
-      Browserless round-trip tests and pinned-core config parsing cover TLS and
-      REALITY XHTTP, socket options, DNS and routing sections.
+      schema. Structured TLS/REALITY/socket/sniffing models preserve unedited core
+      keys; the routing modal retains hidden selectors during edits. Browserless
+      round-trip tests and pinned-core parsing cover inbound/outbound XHTTP with
+      TLS/REALITY, socket options, DNS and routing.
 - [x] AWG S3/S4, I1-I5, header protection, padding/timing ranges,
       random trailers and cookie control: inbound form/model, outbound parser,
       kernel netlink, client config and Clash option serialization.
@@ -85,7 +85,7 @@ References:
       cleanup and exact restoration of the original service/binary/database.
 - [x] Regression test verifies that uninstall attempts each daemon-less kernel
       core cleanup even when one cleanup reports an error.
-- [x] Per operator choice, defer the cross-distro VM tunnel/kernel/DKMS matrix.
+- [x] Per operator choice, skip the cross-distro VM tunnel/kernel/DKMS matrix.
       The userland matrix shares one kernel and does not claim tunnel support on
       untested distro kernels; the live Ubuntu/AWG checks remain verified.
 

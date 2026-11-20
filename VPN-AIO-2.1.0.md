@@ -76,7 +76,8 @@ Target: fresh installation and upgrade from 2.0.0 on Ubuntu 24.04 amd64.
   preserving unrelated sentinel files. Container has no systemd boot, so this does
   not close the VM/systemd uninstall gate.
 - Distribution **userland** matrix: 13/13 passed using full-asset candidate
-  `912ecc7c…16843c95`, built before the uninstall-only kernel-interface cleanup:
+  `912ecc7c…16843c95`, built before the uninstall-only kernel-interface cleanup and
+  before the final transport round-trip audit (neither change alters tunnel handling):
   Ubuntu 24.04/26.04, Debian 12/13, Fedora 43/44, AlmaLinux 9/10, Rocky Linux 9/10,
   CentOS Stream 9/10 and Arch. Every image passed authenticated startup, the native
   Xray protocol smoke suite, XDRIVE/FinalMask configuration validation and isolated
@@ -100,10 +101,11 @@ Target: fresh installation and upgrade from 2.0.0 on Ubuntu 24.04 amd64.
 
 ## Remaining before public release
 
-- Per operator decision, do not run the cross-distribution VM tunnel/kernel/DKMS
-  matrix. The 13-image container matrix is userland-only and must not be interpreted
-  as proof of VPN tunnel compatibility on those distro kernels. Live tunnel and
-  kernel checks are limited to the Ubuntu 24.04 `sweden` host and the CI kernel runner.
+- Per operator decision, the cross-distribution VPN tunnel/kernel/DKMS VM matrix is
+  skipped; release claims remain limited accordingly. The Docker userland matrix
+  shares one host kernel and live tunnel checks were limited to Ubuntu 24.04. Do not
+  interpret the 13-container result as proof that VPN tunnels or DKMS work across all
+  listed distro kernels.
 - Publish the final release asset/checksum after the remaining host/client checks.
 
 Internal daemon paths retain upstream compatibility names. Public installation,
