@@ -75,15 +75,25 @@ Target: fresh installation and upgrade from 2.0.0 on Ubuntu 24.04 amd64.
   VPN daemon/tunnel, distro-kernel/DKMS or systemd service-stop compatibility.
   Logs, image IDs and machine-readable checks are archived on the host under
   `/home/ubuntu/vpn-aio-validation-containers-20261120/`.
+- Full-host uninstall on `sweden` passed 37/37 assertions after the new candidate
+  fix: systemd stopped/disabled; panel binary, DB, configs, bundles, firewall table,
+  policy rule/route, listeners and AWG interface/DKMS registration removed. This
+  test first revealed that a kernel AWG interface survived uninstall; full cleanup
+  now uses each kernel core's ownership-aware StopServices path. The exact original
+  binary, SQLite DB, systemd unit, `/etc`, DKMS/source/module snapshot were restored;
+  the original service/Xray/AWG are healthy again. Recovery snapshot:
+  `/var/lib/vpn-aio-tests/host-uninstall-awgfix-20261120/`.
+- Added a regression test that verifies full uninstall attempts cleanup of every
+  daemon-less kernel core interface and records failures without skipping later
+  cleanups.
 
 ## Remaining before public release
 
-- Complete the cross-distribution VPN protocol/kernel matrix and systemd uninstall
-  checks in disposable Incus/KVM VMs. The Docker check covers userland startup and
-  teardown only, not distro kernel modules or a booted systemd service.
-  The current `sweden` host has no `/dev/kvm` or Incus; this gate requires a
-  separate VM-capable test host. Do not run the destructive VM uninstall on the
-  live `sweden` install.
+- Complete the cross-distribution VPN tunnel/kernel/DKMS matrix in disposable
+  Incus/KVM VMs. The Docker userland matrix shares one host kernel and cannot prove
+  different-kernel modules or real VPN paths. `sweden` itself has no `/dev/kvm` or
+  Incus; enabling nested virtualization or using a VM-capable host is needed for
+  that remaining matrix.
 - Publish the final release asset/checksum after the remaining host/client checks.
 
 Internal daemon paths retain upstream compatibility names. Public installation,

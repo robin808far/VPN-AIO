@@ -69,8 +69,16 @@ References:
 - [x] Full-candidate container userland lifecycle matrix: 13/13 distributions
       passed authenticated startup, native Xray smoke, XDRIVE/FinalMask config
       checks and isolated uninstall/file/firewall/policy-route cleanup.
-- [ ] Complete VPN tunnel/kernel/DKMS and booted-systemd uninstall tests in
-      disposable VMs. Containers share the host kernel; `sweden` lacks KVM/Incus.
+- [x] Full uninstall on `sweden` stopped/disabled the systemd unit, removed app
+      files/data-plane routes and the AmneziaWG DKMS registration. It exposed a
+      surviving `awg1`; uninstall now explicitly stops manifest-owned WireGuard,
+      AmneziaWG and GRE kernel interfaces before removing their backing features.
+      The rebuilt candidate then passed all host uninstall assertions and the exact
+      pre-test files/database/service were restored.
+- [x] Regression test verifies that uninstall attempts each daemon-less kernel
+      core cleanup even when one cleanup reports an error.
+- [ ] Complete VPN tunnel/kernel/DKMS coverage across distros in disposable VMs.
+      The userland matrix shares one kernel; `sweden` lacks KVM/Incus.
 
 Do not copy React components into the Vue application. Use upstream schemas as
 reference while checking every option against the pinned executable's actual API.
