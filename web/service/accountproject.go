@@ -208,6 +208,15 @@ func renderClientEntry(account *model.Account, membership *model.AccountInbound,
 	entry["limitIp"] = account.LimitIP
 	entry["tgId"] = account.TgID
 	entry["comment"] = account.Comment
+	if len(account.HostRuleIds) > 0 {
+		ids := make([]any, len(account.HostRuleIds))
+		for i, id := range account.HostRuleIds {
+			ids[i] = float64(id)
+		}
+		entry["hostRuleIds"] = ids
+	} else {
+		delete(entry, "hostRuleIds")
+	}
 
 	// The three nullable limit overrides, projected onto the entry because THE ENTRY
 	// IS WHERE EVERY READER LOOKS. The columns on the account are the editable copy;
@@ -605,6 +614,9 @@ func (s *AccountService) upsertAccountFromEntry(tx *gorm.DB, entry map[string]an
 	}
 	if _, mentioned := entry["userLimitOverride"]; !mentioned {
 		updated.UserLimitOverride = account.UserLimitOverride
+	}
+	if _, mentioned := entry["hostRuleIds"]; !mentioned {
+		updated.HostRuleIds = account.HostRuleIds
 	}
 	// Then let THIS entry set the fields its own protocol owns. An edit that
 	// rotates a credential has to reach the account, or the projection would write

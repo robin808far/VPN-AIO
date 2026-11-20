@@ -102,7 +102,7 @@ func (a *SUBController) initRouter(g *gin.RouterGroup) {
 func (a *SUBController) subs(c *gin.Context) {
 	subId := c.Param("subid")
 	scheme, host, hostWithPort, hostHeader := a.subService.ResolveRequest(c)
-	subs, lastOnline, traffic, err := a.subService.GetSubs(subId, host)
+	subs, lastOnline, traffic, err := a.subService.GetSubs(subId, host, c.GetHeader("User-Agent"))
 	// An empty link list is NOT an error: an account whose only inbounds are wg-c/awg
 	// has real usage and a real expiry to report, but no single-line raw form (its
 	// config comes from the Clash sub). Erroring here would hide the traffic/days page

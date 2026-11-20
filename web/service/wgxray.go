@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	"github.com/mhsanaei/3x-ui/v2/database"
-	"github.com/mhsanaei/3x-ui/v2/util/common"
 	"github.com/mhsanaei/3x-ui/v2/database/model"
 	"github.com/mhsanaei/3x-ui/v2/logger"
+	"github.com/mhsanaei/3x-ui/v2/util/common"
 
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
@@ -469,6 +469,19 @@ func RenderWireguardXrayConfigs(inbound *model.Inbound, email, endpointHost stri
 	if inbound == nil || inbound.Protocol != model.WireGuard {
 		return nil, common.NewError("not an Xray wireguard inbound")
 	}
+	if views, managed, err := ManagedHostInbounds(inbound, email, "raw", endpointHost); err != nil {
+		return nil, err
+	} else if managed {
+		out := []WgxrayClientConfig{}
+		for _, view := range views {
+			configs, err := RenderWireguardXrayConfigs(view, email, view.Listen)
+			if err != nil {
+				return nil, err
+			}
+			out = append(out, configs...)
+		}
+		return out, nil
+	}
 	var raw map[string]json.RawMessage
 	if err := json.Unmarshal([]byte(inbound.Settings), &raw); err != nil {
 		return nil, err
@@ -532,7 +545,7 @@ func RenderWireguardXrayConfigs(inbound *model.Inbound, email, endpointHost stri
 			fmt.Fprintf(&b, "PresharedKey = %s\n", psk)
 		}
 		b.WriteString("AllowedIPs = 0.0.0.0/0\n")
-		fmt.Fprintf(&b, "Endpoint = %s:%d\n", endpointHost, inbound.Port)
+		fmt.Fprintf(&b, "Endpoint = %s\n", formatHostEndpoint(endpointHost, inbound.Port))
 		b.WriteString("PersistentKeepalive = 25\n")
 
 		out = append(out, WgxrayClientConfig{

@@ -697,6 +697,19 @@ func (o *wgcSettings) dnsList() string {
 // its remark) instead of a single default config — a WireGuard config holds only one
 // Endpoint, so alternate relays become separate configs (unlike OpenVPN's `remote` list).
 func (s *WgcService) RenderClientConfigs(inbound *model.Inbound, email, endpointHost string) ([]WgcClientConfig, error) {
+	if views, managed, err := ManagedHostInbounds(inbound, email, "raw", endpointHost); err != nil {
+		return nil, err
+	} else if managed {
+		out := []WgcClientConfig{}
+		for _, view := range views {
+			configs, err := s.RenderClientConfigs(view, email, endpointHost)
+			if err != nil {
+				return nil, err
+			}
+			out = append(out, configs...)
+		}
+		return out, nil
+	}
 	settings, err := s.parseSettings(inbound)
 	if err != nil {
 		return nil, err
@@ -768,7 +781,7 @@ func (s *WgcService) RenderClientConfigs(inbound *model.Inbound, email, endpoint
 				if psk != "" {
 					b.WriteString("PresharedKey = " + psk + "\n")
 				}
-				b.WriteString(fmt.Sprintf("Endpoint = %s:%d\n", t.host, t.port))
+				b.WriteString(fmt.Sprintf("Endpoint = %s\n", formatHostEndpoint(t.host, t.port)))
 				b.WriteString("AllowedIPs = 0.0.0.0/0\n")
 				b.WriteString("PersistentKeepalive = 25\n")
 				remark := ""
@@ -803,13 +816,13 @@ func (s *WgcService) RenderClientConfigs(inbound *model.Inbound, email, endpoint
 // rather than the text (e.g. the Clash subscription's `type: wireguard` proxy). Keep it
 // in lock-step with RenderClientConfigs: they share the target/device loop.
 type WgcClientParams struct {
-	Name         string   // per-device/endpoint label, fed to the subscription remark
-	PrivateKey   string   // client device private key
-	Address      string   // client address CIDR, e.g. 10.7.8.8/32
-	PublicKey    string   // server public key
-	PreSharedKey string   // empty when PSK is off
-	Host         string   // endpoint host the client dials
-	Port         int      // endpoint port
+	Name         string // per-device/endpoint label, fed to the subscription remark
+	PrivateKey   string // client device private key
+	Address      string // client address CIDR, e.g. 10.7.8.8/32
+	PublicKey    string // server public key
+	PreSharedKey string // empty when PSK is off
+	Host         string // endpoint host the client dials
+	Port         int    // endpoint port
 	MTU          int
 	DNS          []string
 	AllowedIPs   []string
@@ -818,6 +831,19 @@ type WgcClientParams struct {
 // RenderClientParams mirrors RenderClientConfigs (same targets/devices loop) but returns
 // structured params instead of .conf text.
 func (s *WgcService) RenderClientParams(inbound *model.Inbound, email, endpointHost string) ([]WgcClientParams, error) {
+	if views, managed, err := ManagedHostInbounds(inbound, email, "clash", endpointHost); err != nil {
+		return nil, err
+	} else if managed {
+		out := []WgcClientParams{}
+		for _, view := range views {
+			configs, err := s.RenderClientParams(view, email, endpointHost)
+			if err != nil {
+				return nil, err
+			}
+			out = append(out, configs...)
+		}
+		return out, nil
+	}
 	settings, err := s.parseSettings(inbound)
 	if err != nil {
 		return nil, err

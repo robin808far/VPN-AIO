@@ -35,6 +35,8 @@ class DBInbound {
         this.tag = "";
         this.sniffing = "";
         this.clientStats = ""
+		this.hosts = [];
+		this.hostRules = {};
         if (data == null) {
             return;
         }
@@ -173,6 +175,9 @@ class DBInbound {
         };
 
         this._cachedInbound = Inbound.fromJson(config);
+		this._cachedInbound._managedHostRows = this.hosts;
+		this._cachedInbound._managedHostRules = this.hostRules;
+		this._cachedInbound._managedInboundId = this.id;
         return this._cachedInbound;
     }
 

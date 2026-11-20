@@ -28,10 +28,12 @@ import (
 
 // SubService provides business logic for generating subscription links and managing subscription data.
 type SubService struct {
-	address     string
-	showInfo    bool
-	remarkModel string
-	datepicker  string
+	address                string
+	showInfo               bool
+	remarkModel            string
+	datepicker             string
+	currentHost            *model.Host
+	includeHostDescription bool
 	// scope is the state of the ONE response being rendered: which identities it
 	// spans, what each one's real quota is, and which node names have been handed
 	// out. Nil on the shared instance the router builds, and set on the per-response
@@ -120,12 +122,18 @@ func (s *SubService) resolveTraffic(inbound *model.Inbound, email string) (traff
 }
 
 // GetSubs retrieves subscription links for a given subscription ID and host.
-func (s *SubService) GetSubs(subId string, host string) ([]string, int64, xray.ClientTraffic, error) {
+func (s *SubService) GetSubs(subId string, host string, userAgent ...string) ([]string, int64, xray.ClientTraffic, error) {
 	s = s.forResponse()
+	s.includeHostDescription = len(userAgent) == 0
+	if len(userAgent) > 0 {
+		ua := strings.ToLower(userAgent[0])
+		s.includeHostDescription = strings.Contains(ua, "happ") || strings.Contains(ua, "incy")
+	}
 	s.address = host
 	var result []string
 	var traffic xray.ClientTraffic
 	usage := newSubUsage()
+	seenUsage := map[string]bool{}
 	inbounds, err := s.getInboundsBySubId(subId)
 	if err != nil {
 		return nil, 0, traffic, err
@@ -136,7 +144,13 @@ func (s *SubService) GetSubs(subId string, host string) ([]string, int64, xray.C
 	}
 
 	s.datepicker = s.resolveDatepicker()
-	for _, inbound := range inbounds {
+	renders, err := s.hostRenders(inbounds, "raw", host)
+	if err != nil {
+		return nil, 0, traffic, err
+	}
+	for _, render := range renders {
+		inbound := render.Inbound
+		s.currentHost = render.Host
 		clients, err := s.inboundService.GetClients(inbound)
 		if err != nil {
 			logger.Error("SubService - GetClients: Unable to get clients from inbound")
@@ -160,8 +174,15 @@ func (s *SubService) GetSubs(subId string, host string) ([]string, int64, xray.C
 				// config downloads; the credential VPNs add a connection-info line via
 				// getLink).
 				ct, accountBacked, _ := s.resolveTraffic(inbound, client.Email)
-				usage.add(client.Email, ct, accountBacked)
-				if link := s.getLink(inbound, client.Email); link != "" {
+				usageKey := fmt.Sprintf("%d:%s", inbound.Id, client.Email)
+				if !seenUsage[usageKey] {
+					usage.add(client.Email, ct, accountBacked)
+					seenUsage[usageKey] = true
+				}
+				if !render.Allows(client) {
+					continue
+				}
+				if link := s.decorateHostLinks(s.getLink(inbound, client.Email), inbound.Protocol); link != "" {
 					result = append(result, link)
 				}
 			}
@@ -1486,6 +1507,9 @@ func cloneStringMap(source map[string]string) map[string]string {
 // runs through subScope.uniqueName rather than the composition trying to be unique
 // by construction.
 func (s *SubService) genRemark(inbound *model.Inbound, email string, extra string) string {
+	if s.currentHost != nil && strings.Contains(s.currentHost.Remark, "{{") {
+		return s.scope.uniqueName(s.hostRemark(inbound, email), inbound, "-")
+	}
 	separationChar := string(s.remarkModel[0])
 	orderChars := s.remarkModel[1:]
 	orders := map[byte]string{

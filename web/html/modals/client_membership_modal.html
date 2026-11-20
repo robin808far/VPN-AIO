@@ -367,6 +367,17 @@
           </a-col>
         </a-row>
 
+        <div class="bo-cf-field" v-if="PERMS.accessHosts" :style="{marginTop:'14px'}">
+          <label>{{i18n "pages.hosts.clientSelection"}}</label>
+          <a-select v-model="clientMembershipModal.client.hostRuleIds" mode="multiple" :style="{width:'100%'}"
+            option-filter-prop="children" :get-popup-container="trigger => trigger.parentNode">
+            <a-select-option v-for="host in clientMembershipModal.hostOptions" :key="host.id" :value="host.id">
+              [[ host.remark || host.address || '#'+host.id ]] · [[ host.address ]] : [[ host.port || '↳' ]] (# [[ host.inboundId ]])
+            </a-select-option>
+          </a-select>
+          <div class="bo-cf-hint">{{i18n "pages.hosts.clientHint"}}</div>
+        </div>
+
         <!-- Said here rather than left for the operator to discover, because the
              field accepts a number bigger than the inbound's and then quietly does
              not honour it. It cannot: an account's tunnel addresses are laid out on
@@ -388,6 +399,7 @@
     okText: '',
     assignable: [],
     selected: [],
+	 hostOptions: [],
     totalGb: 0,
     days: 0,
     client: {},
@@ -495,7 +507,7 @@
     // entry) and the ad tag pair, which had to be hand-seeded for this same reason.
     blankClient() {
       return {
-        email: '', enable: true, limitIp: 0, comment: '', subId: '', reset: 0,
+        email: '', enable: true, limitIp: 0, comment: '', subId: '', reset: 0, hostRuleIds: [],
         tgId: 0, adtagEnable: false, adtag: '',
         id: '', password: '', vpnUsername: '', auth: '', secret: '',
         naiveUsername: '', security: '',
@@ -519,6 +531,7 @@
           email: row.email, enable: row.enable, limitIp: row.limitIp,
           comment: row.comment, subId: row.subId, reset: row.reset,
           tgId: row.tgId || 0,
+		  hostRuleIds: (row.hostRuleIds || []).slice(),
         });
         this.delayedStart = row.expiryTime < 0;
         // The account's credentials as they are stored TODAY, read off its
@@ -556,7 +569,13 @@
         this.limitDevices = '';
       }
       this.visible = true;
+	  if (typeof PERMS !== 'undefined' && PERMS.accessHosts) this.loadHostOptions();
     },
+
+	async loadHostOptions() {
+	  const result = await HttpUtil.get('/panel/api/hosts/raw');
+	  if (result.success) this.hostOptions = result.obj || [];
+	},
 
     // A stored override as the box shows it. Absent stays absent; anything else,
     // including 0, is shown as a number the operator can see and clear.
@@ -1027,6 +1046,7 @@
         speedLimitDown: this.postedLimit(this.limitDown),
         speedLimitUp: this.postedLimit(this.limitUp),
         userLimitOverride: this.postedLimit(this.limitDevices),
+		hostRuleIds: (c.hostRuleIds || []).slice(),
         comment: c.comment || '',
         subId: c.subId || '',
         reset: Number(c.reset) || 0,

@@ -447,6 +447,19 @@ func sshShareLink(user, password, host string, port int, label string) string {
 // email: a sing-box "ssh" outbound JSON plus a plaintext block, one per endpoint
 // (each external proxy, else a single default at the panel-access host).
 func (s *SshService) RenderClientConfigs(inbound *model.Inbound, email, endpointHost string) ([]SshClientConfig, error) {
+	if views, managed, err := ManagedHostInbounds(inbound, email, "raw", endpointHost); err != nil {
+		return nil, err
+	} else if managed {
+		out := []SshClientConfig{}
+		for _, view := range views {
+			configs, err := s.RenderClientConfigs(view, email, endpointHost)
+			if err != nil {
+				return nil, err
+			}
+			out = append(out, configs...)
+		}
+		return out, nil
+	}
 	settings, err := s.parseSettings(inbound)
 	if err != nil {
 		return nil, err

@@ -1,0 +1,194 @@
+{{template "page/head_start" .}}
+{{template "page/head_end" .}}
+{{template "page/body_start" .}}
+{{template "page/shell_start" .}}
+<a-spin :spinning="spinning" :delay="200">
+  <a-card hoverable>
+    <div class="bo-host-toolbar">
+      <a-button v-if="canEdit" type="primary" icon="plus" @click="edit()">{{i18n "pages.hosts.add"}}</a-button>
+      <a-button icon="reload" @click="load()" :aria-label="labels.refresh"></a-button>
+      <a-input-search v-model="search" :placeholder="labels.search" :style="{maxWidth:'300px'}"></a-input-search>
+      <a-select v-if="canSort" v-model="sortMode" @change="saveSortMode" :style="{minWidth:'180px'}" :aria-label="labels.sortMode">
+        <a-select-option value="inbound-first">{{i18n "pages.hosts.inboundFirst"}}</a-select-option>
+        <a-select-option value="hosts-first">{{i18n "pages.hosts.hostsFirst"}}</a-select-option>
+      </a-select>
+      <span class="bo-host-count">[[ groups.length ]] {{i18n "pages.hosts.groups"}} · [[ enabledCount ]] {{i18n "enabled"}}</span>
+    </div>
+    <div v-if="selected.length && canEdit" class="bo-host-toolbar" :style="{marginTop:'12px'}">
+      <a-tag>[[ selected.length ]]</a-tag>
+      <a-button @click="bulk('enable',true)">{{i18n "enable"}}</a-button>
+      <a-button @click="bulk('enable',false)">{{i18n "disable"}}</a-button>
+      <a-button type="danger" @click="bulk('delete')">{{i18n "delete"}}</a-button>
+    </div>
+    <a-table :columns="columns" :data-source="filtered" row-key="groupId" :pagination="false"
+      :scroll="{x:850}" :row-selection="canEdit ? selection : undefined">
+      <template slot="name" slot-scope="text,row">
+        <strong>[[ row.remark || labels.inherit ]]</strong>
+        <div v-if="row.serverDescription" class="bo-host-muted">[[ row.serverDescription ]]</div>
+        <a-tag v-for="tag in row.tags" :key="tag">[[ tag ]]</a-tag>
+        <a-tooltip v-if="!row.editable" :title="labels.shared"><a-icon type="lock"></a-icon></a-tooltip>
+      </template>
+      <template slot="addresses" slot-scope="text,row">
+        <div v-for="(host,i) in row.hosts" :key="i"><code>[[ host || labels.inherit ]]</code></div>
+      </template>
+      <template slot="inbounds" slot-scope="text,row">
+        <a-tag v-for="id in row.inboundIds" :key="id">[[ inboundName(id) ]]</a-tag>
+      </template>
+      <template slot="status" slot-scope="text,row">
+        <a-switch :checked="!row.isDisabled" :disabled="!row.editable || !canEdit || saving" @change="value => toggle(row,value)"></a-switch>
+      </template>
+      <template slot="actions" slot-scope="text,row">
+        <a-button-group>
+          <a-button icon="edit" :disabled="!row.editable || !canEdit" @click="edit(row)" :aria-label="labels.edit"></a-button>
+          <a-button icon="arrow-up" :disabled="!row.editable || !canEdit || saving" @click="move(row,-1)" :aria-label="labels.up"></a-button>
+          <a-button icon="arrow-down" :disabled="!row.editable || !canEdit || saving" @click="move(row,1)" :aria-label="labels.down"></a-button>
+          <a-button icon="delete" :disabled="!row.editable || !canEdit" @click="remove([row.groupId])" :aria-label="labels.delete"></a-button>
+        </a-button-group>
+      </template>
+    </a-table>
+  </a-card>
+</a-spin>
+
+<a-modal :visible="visible" :title="editing ? labels.edit : labels.add" :width="800"
+  :confirm-loading="saving" :ok-text="labels.save" :cancel-text="labels.cancel"
+  :class="themeSwitcher.currentTheme" @ok="save" @cancel="visible=false" :destroy-on-close="true">
+  <a-form layout="vertical" v-if="draft">
+    <a-tabs v-model="tab">
+      <a-tab-pane key="basic" :tab="labels.basic">
+        <a-form-item :label="labels.remark" required><a-input v-model="draft.remark" :max-length="256" :aria-label="labels.remark"></a-input></a-form-item>
+        <p class="bo-host-muted">{{i18n "pages.hosts.templateHint"}}</p>
+        <a-form-item :label="labels.description"><a-input v-model="draft.serverDescription" :max-length="256" :aria-label="labels.description"></a-input></a-form-item>
+        <a-form-item :label="labels.inbounds" required>
+          <a-select v-model="draft.inboundIds" mode="multiple" option-filter-prop="children" :get-popup-container="popupContainer" :aria-label="labels.inbounds">
+            <a-select-option v-for="ib in eligibleInbounds" :key="ib.id" :value="ib.id">[[ ib.remark || ib.tag ]] · [[ ib.protocol ]]</a-select-option>
+          </a-select>
+        </a-form-item>
+        <a-form-item :label="labels.addresses">
+          <a-textarea v-model="addresses" :rows="4" :aria-label="labels.addresses" placeholder="cdn.example.com:443&#10;198.51.100.10&#10;[2001:db8::10]:8443"></a-textarea>
+          <div class="bo-host-muted">{{i18n "pages.hosts.addressHint"}}</div>
+        </a-form-item>
+        <div class="bo-host-grid">
+          <a-form-item :label="labels.port"><a-input-number v-model="draft.port" :min="0" :max="65535"></a-input-number></a-form-item>
+          <a-form-item :label="labels.randomCount"><a-input-number v-model="draft.randomCount" :min="1" :max="100"></a-input-number></a-form-item>
+        </div>
+        <a-form-item :label="labels.tags"><a-select v-model="draft.tags" mode="tags" :get-popup-container="popupContainer"></a-select></a-form-item>
+        <a-form-item :label="labels.enabled"><a-switch :checked="!draft.isDisabled" @change="value => draft.isDisabled=!value"></a-switch></a-form-item>
+      </a-tab-pane>
+      <a-tab-pane key="security" :tab="labels.security">
+        <a-form-item :label="labels.security"><a-select v-model="draft.security" :get-popup-container="popupContainer">
+          <a-select-option value="same">[[ labels.inherit ]]</a-select-option><a-select-option value="tls">TLS</a-select-option>
+          <a-select-option value="none">None</a-select-option><a-select-option value="reality">REALITY</a-select-option>
+        </a-select></a-form-item>
+        <template v-if="draft.security !== 'none'">
+          <a-form-item label="SNI"><a-select v-model="draft.snis" mode="tags" :get-popup-container="popupContainer"></a-select></a-form-item>
+          <a-form-item :label="labels.sharedSni"><a-switch v-model="draft.sniSharedRandom" :disabled="draft.snis.length<2"></a-switch></a-form-item>
+          <a-form-item :label="labels.addressSni"><a-switch v-model="draft.overrideSniFromAddress" @change="value => {if(value) draft.keepSniBlank=false}"></a-switch></a-form-item>
+          <a-form-item :label="labels.blankSni"><a-switch v-model="draft.keepSniBlank" @change="value => {if(value) draft.overrideSniFromAddress=false}"></a-switch></a-form-item>
+          <a-form-item label="Fingerprint"><a-select v-model="draft.fingerprint" show-search allow-clear :get-popup-container="popupContainer">
+            <a-select-option v-for="fp in fingerprints" :key="fp" :value="fp">[[ fp ]]</a-select-option>
+          </a-select></a-form-item>
+          <a-form-item label="ALPN"><a-select v-model="draft.alpn" mode="tags" :get-popup-container="popupContainer"></a-select></a-form-item>
+          <a-form-item label="Cipher suites"><a-input v-model="draft.cipherSuites"></a-input></a-form-item>
+          <a-form-item label="Pinned peer certificate SHA-256"><a-select v-model="draft.pinnedPeerCertSha256" mode="tags" :get-popup-container="popupContainer"></a-select></a-form-item>
+          <a-form-item label="Verify peer certificate by name"><a-input v-model="draft.verifyPeerCertByName"></a-input></a-form-item>
+          <a-form-item label="ECH config list"><a-textarea v-model="draft.echConfigList" :rows="2"></a-textarea></a-form-item>
+          <a-form-item :label="labels.insecure"><a-switch v-model="draft.allowInsecure"></a-switch></a-form-item>
+          <a-alert v-if="draft.allowInsecure" type="warning" show-icon :message="labels.insecureWarning"></a-alert>
+        </template>
+      </a-tab-pane>
+      <a-tab-pane key="advanced" :tab="labels.advanced">
+        <a-form-item label="Host header"><a-input v-model="draft.hostHeader"></a-input></a-form-item>
+        <a-form-item label="Path"><a-input v-model="draft.path"></a-input></a-form-item>
+        <a-form-item label="VLESS route (0–65535)"><a-input v-model.trim="draft.vlessRoute"></a-input></a-form-item>
+        <a-form-item :label="labels.exclude"><a-select v-model="draft.excludeFromSubTypes" mode="multiple" :get-popup-container="popupContainer">
+          <a-select-option value="raw">RAW</a-select-option><a-select-option value="json">JSON</a-select-option><a-select-option value="clash">Clash</a-select-option>
+        </a-select></a-form-item>
+        <a-form-item v-for="field in jsonFields" :key="field.key" :label="field.label">
+          <a-textarea v-model="draft[field.key]" :rows="4" spellcheck="false" class="bo-host-json" placeholder="{}"></a-textarea>
+        </a-form-item>
+        <p class="bo-host-muted">{{i18n "pages.hosts.jsonHint"}}</p>
+      </a-tab-pane>
+      <a-tab-pane key="clash" tab="Clash / Mihomo">
+        <a-form-item label="IP version"><a-select v-model="draft.mihomoIpVersion" allow-clear :get-popup-container="popupContainer">
+          <a-select-option v-for="value in ipVersions" :key="value" :value="value">[[ value ]]</a-select-option>
+        </a-select></a-form-item>
+        <a-form-item label="Mihomo X25519"><a-switch v-model="draft.mihomoX25519"></a-switch></a-form-item>
+        <p class="bo-host-muted">{{i18n "pages.hosts.mihomoHint"}}</p>
+      </a-tab-pane>
+    </a-tabs>
+  </a-form>
+</a-modal>
+{{template "page/shell_end" .}}
+{{template "page/body_scripts" .}}
+{{template "component/aSidebar" .}}
+{{template "component/aThemeSwitch" .}}
+<style>
+  .bo-host-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+  .bo-host-count,.bo-host-muted{color:var(--text-secondary);font-size:12px}
+  .bo-host-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .bo-host-json{font-family:monospace;direction:ltr;text-align:left}
+  @media(max-width:600px){.bo-host-grid{grid-template-columns:1fr}.bo-host-toolbar .ant-input-search{max-width:none!important;flex:1 1 100%}}
+</style>
+<script>
+const app = new Vue({
+  el:'#app',delimiters:['[[',']]'],
+  data:{themeSwitcher,pageTitle:'{{i18n "pages.hosts.title"}}',pageClass:'hosts-page',spinning:false,saving:false,groups:[],inbounds:[],selected:[],search:'',visible:false,editing:'',draft:null,addresses:'',tab:'basic',
+    canEdit:{{if .perms.editInbound}}true{{else}}false{{end}},
+    canSort:{{if .perms.accessPanelSettings}}true{{else}}false{{end}},sortMode:'inbound-first',
+    fingerprints:['chrome','firefox','safari','ios','android','edge','360','qq','random','randomized'],
+    ipVersions:['dual','ipv4','ipv6','ipv4-prefer','ipv6-prefer'],
+    jsonFields:[{key:'muxParams',label:'Mux · JSON'},{key:'sockoptParams',label:'Sockopt · JSON'},{key:'finalMask',label:'FinalMask · JSON'},{key:'xhttpExtraParams',label:'XHTTP extras · JSON'}],
+    labels:{add:'{{i18n "pages.hosts.add"}}',edit:'{{i18n "edit"}}',delete:'{{i18n "delete"}}',save:'{{i18n "sure"}}',cancel:'{{i18n "cancel"}}',refresh:'{{i18n "refresh"}}',
+      search:'{{i18n "pages.hosts.search"}}',sortMode:'{{i18n "pages.hosts.sortMode"}}',inherit:'{{i18n "pages.hosts.inherit"}}',shared:'{{i18n "pages.hosts.shared"}}',up:'{{i18n "pages.hosts.up"}}',down:'{{i18n "pages.hosts.down"}}',
+      basic:'{{i18n "pages.hosts.basic"}}',remark:'{{i18n "pages.hosts.remark"}}',description:'{{i18n "pages.hosts.serverDescription"}}',inbounds:'{{i18n "pages.hosts.inbounds"}}',addresses:'{{i18n "pages.hosts.addresses"}}',
+      port:'{{i18n "pages.hosts.port"}}',randomCount:'{{i18n "pages.hosts.randomCount"}}',tags:'{{i18n "pages.hosts.tags"}}',enabled:'{{i18n "enabled"}}',security:'{{i18n "pages.hosts.security"}}',
+      sharedSni:'{{i18n "pages.hosts.sharedSni"}}',addressSni:'{{i18n "pages.hosts.addressSni"}}',blankSni:'{{i18n "pages.hosts.blankSni"}}',insecure:'{{i18n "pages.hosts.insecure"}}',insecureWarning:'{{i18n "pages.hosts.insecureWarning"}}',
+      advanced:'{{i18n "pages.hosts.advanced"}}',exclude:'{{i18n "pages.hosts.exclude"}}',deleteConfirm:'{{i18n "pages.hosts.deleteConfirm"}}'}
+  },
+  computed:{
+    eligibleInbounds(){return this.inbounds.filter(ib=>!['gre','mixed','http','tunnel','tun'].includes(ib.protocol))},
+    enabledCount(){return this.groups.filter(g=>!g.isDisabled).length},
+    filtered(){const q=this.search.trim().toLowerCase();return this.groups.filter(g=>!q||[g.remark,...(g.hosts||[]),...(g.tags||[])].join(' ').toLowerCase().includes(q))},
+    selection(){return {selectedRowKeys:this.selected,onChange:keys=>this.selected=keys,getCheckboxProps:row=>({props:{disabled:!row.editable}})}},
+    columns(){return [
+      {title:this.labels.remark,key:'name',scopedSlots:{customRender:'name'}},
+      {title:this.labels.addresses,key:'addresses',scopedSlots:{customRender:'addresses'}},
+      {title:this.labels.inbounds,key:'inbounds',scopedSlots:{customRender:'inbounds'}},
+      {title:this.labels.enabled,key:'status',scopedSlots:{customRender:'status'}},
+      {title:'',key:'actions',width:160,scopedSlots:{customRender:'actions'}}]}
+  },
+  methods:{
+    popupContainer(trigger){return trigger.parentNode},
+    async post(path,payload){
+      try {
+        const response=await fetch(basePath.replace(/\/$/,'')+path,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-Requested-With':'XMLHttpRequest'},body:JSON.stringify(payload)});
+        if(response.status===401){location.reload();return new Msg(false)}
+        if(!response.ok)throw new Error('HTTP '+response.status);
+        const data=await response.json(),msg=new Msg(data.success,data.msg||'',data.obj);
+        HttpUtil._handleMsg(msg);return msg;
+      }catch(error){this.$message.error(error.message);return new Msg(false,error.message)}
+    },
+    inboundName(id){const ib=this.inbounds.find(i=>i.id===id);return ib ? ib.remark||ib.tag : '#'+id},
+    async load(){this.spinning=true;try{const [hosts,inbounds,sort]=await Promise.all([HttpUtil.get('/panel/api/hosts/list'),HttpUtil.get('/panel/api/inbounds/list'),HttpUtil.get('/panel/api/hosts/sortMode')]);if(hosts.success)this.groups=hosts.obj||[];if(inbounds.success)this.inbounds=inbounds.obj||[];if(sort.success)this.sortMode=sort.obj;this.selected=this.selected.filter(id=>this.groups.some(g=>g.groupId===id&&g.editable))}finally{this.spinning=false}},
+    async saveSortMode(mode){await this.post('/panel/api/hosts/sortMode',{mode})},
+    edit(row){
+      this.editing=row?.groupId||'';
+      this.draft=Object.assign({remark:'',serverDescription:'',inboundIds:[],hosts:[],port:0,security:'same',snis:[],sni:'',sniSharedRandom:false,overrideSniFromAddress:false,keepSniBlank:false,fingerprint:'',alpn:[],cipherSuites:'',pinnedPeerCertSha256:[],verifyPeerCertByName:'',echConfigList:'',allowInsecure:false,hostHeader:'',path:'',vlessRoute:'',tags:[],isDisabled:false,randomCount:1,muxParams:'',sockoptParams:'',finalMask:'',xhttpExtraParams:'',excludeFromSubTypes:[],mihomoIpVersion:'',mihomoX25519:false},JSON.parse(JSON.stringify(row||{})));
+      for(const key of ['snis','alpn','pinnedPeerCertSha256','tags','excludeFromSubTypes'])this.draft[key]=this.draft[key]||[];
+      if(!this.draft.snis.length&&this.draft.sni)this.draft.snis=[this.draft.sni];
+      this.addresses=(this.draft.hosts||[]).join('\n');this.tab='basic';this.visible=true;
+    },
+    async save(){
+      if(!this.draft.remark.trim()||!this.draft.inboundIds.length){this.$message.error('{{i18n "pages.hosts.required"}}');return}
+      for(const field of this.jsonFields){const raw=this.draft[field.key];if(!raw)continue;try{const value=JSON.parse(raw);if(!value||Array.isArray(value)||typeof value!=='object')throw Error()}catch(e){this.$message.error(field.label+': {{i18n "pages.hosts.badJson"}}');this.tab='advanced';return}}
+      const payload={...this.draft,hosts:this.addresses.split(/\r?\n/).map(x=>x.trim()).filter(Boolean),sni:this.draft.snis[0]||'',fingerprint:this.draft.fingerprint||'',mihomoIpVersion:this.draft.mihomoIpVersion||''};
+      this.saving=true;try{const response=await this.post('/panel/api/hosts/'+(this.editing?'update/'+encodeURIComponent(this.editing):'add'),payload);if(response.success){this.visible=false;await this.load()}}finally{this.saving=false}
+    },
+    async toggle(row,value){this.saving=true;try{const response=await this.post('/panel/api/hosts/setEnable/'+encodeURIComponent(row.groupId),{enable:value});if(response.success)await this.load()}finally{this.saving=false}},
+    async move(row,direction){const ids=this.groups.filter(g=>g.editable).map(g=>g.groupId),index=ids.indexOf(row.groupId),next=index+direction;if(index<0||next<0||next>=ids.length)return;[ids[index],ids[next]]=[ids[next],ids[index]];this.saving=true;try{const response=await this.post('/panel/api/hosts/reorder',{ids});if(response.success)await this.load()}finally{this.saving=false}},
+    remove(ids){this.$confirm({title:this.labels.deleteConfirm,class:themeSwitcher.currentTheme,onOk:async()=>{const response=await this.post('/panel/api/hosts/bulk/del',{ids});if(response.success){this.selected=[];await this.load()}}})},
+    async bulk(action,enable){if(action==='delete'){this.remove(this.selected.slice());return}this.saving=true;try{const response=await this.post('/panel/api/hosts/bulk/setEnable',{ids:this.selected.slice(),enable});if(response.success){this.selected=[];await this.load()}}finally{this.saving=false}}
+  },mounted(){this.load()}
+});
+</script>
+{{template "page/body_end" .}}

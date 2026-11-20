@@ -55,7 +55,12 @@ func (s *InboundService) GetInboundsFor(user *model.User) ([]*model.Inbound, err
 		return []*model.Inbound{}, nil
 	}
 	if user.IsSuperAdmin {
-		return s.getInboundsWhere(nil)
+		inbounds, err := s.getInboundsWhere(nil)
+		if err == nil {
+			var hosts HostService
+			err = hosts.AttachMetadata(inbounds)
+		}
+		return inbounds, err
 	}
 	var adminService AdminService
 	ids, err := adminService.AccessibleInboundIds(user.Id)
@@ -70,7 +75,8 @@ func (s *InboundService) GetInboundsFor(user *model.User) ([]*model.Inbound, err
 		return nil, err
 	}
 	if !user.IsReseller {
-		return inbounds, nil
+		var hosts HostService
+		return inbounds, hosts.AttachMetadata(inbounds)
 	}
 	// Fail closed, like every other ownership question in this panel: an OwnedEmails
 	// that errors must not fall through to the unfiltered list, which is every
@@ -81,7 +87,8 @@ func (s *InboundService) GetInboundsFor(user *model.User) ([]*model.Inbound, err
 		return nil, err
 	}
 	s.FilterInboundsForReseller(inbounds, owned)
-	return inbounds, nil
+	var hosts HostService
+	return inbounds, hosts.AttachMetadata(inbounds)
 }
 
 // emptyClientSettings is what an inbound's settings become when they cannot be read
@@ -1457,6 +1464,9 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 
 	err = tx.Save(inbound).Error
 	if err == nil {
+		err = importInboundHosts(tx, inbound)
+	}
+	if err == nil {
 		if len(inbound.ClientStats) == 0 {
 			for _, client := range clients {
 				if err = s.AddClientStat(tx, inbound.Id, &client); err != nil {
@@ -1552,7 +1562,15 @@ func (s *InboundService) DelInbound(id int) (bool, error) {
 		}
 	}
 
-	return needRestart, db.Delete(model.Inbound{}, id).Error
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		if err := database.DeleteHosts(tx, "inbound_id = ?", id); err != nil {
+			return err
+		}
+		return tx.Delete(&model.Inbound{}, id).Error
+	}); err != nil {
+		return needRestart, err
+	}
+	return needRestart, nil
 }
 
 // LoadClientStats fills in an inbound's traffic rows, for the callers that fetched the
@@ -1690,6 +1708,7 @@ func (s *InboundService) UpdateInbound(inbound *model.Inbound) (*model.Inbound, 
 	}
 
 	tag := oldInbound.Tag
+	legacyBefore := *oldInbound
 
 	db := database.GetDB()
 	tx := db.Begin()
@@ -1842,7 +1861,12 @@ func (s *InboundService) UpdateInbound(inbound *model.Inbound) (*model.Inbound, 
 		s.xrayApi.Close()
 	}
 
-	return inbound, needRestart, tx.Save(oldInbound).Error
+	err = database.SyncLegacyHosts(tx, &legacyBefore, inbound)
+	if err != nil {
+		return inbound, needRestart, err
+	}
+	err = tx.Save(oldInbound).Error
+	return inbound, needRestart, err
 }
 
 func (s *InboundService) buildRuntimeInboundForAPI(tx *gorm.DB, inbound *model.Inbound) (*model.Inbound, error) {

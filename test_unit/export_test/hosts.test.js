@@ -1,0 +1,38 @@
+"use strict";
+const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');
+const root=path.resolve(__dirname,'../..');
+const context=vm.createContext({console,URL,location:{hostname:'panel.example'},window:{crypto:require('node:crypto').webcrypto},document:{addEventListener(){}},Base64:{encode:s=>Buffer.from(s).toString('base64'),decode:s=>Buffer.from(s,'base64').toString()}});
+const source=['web/assets/js/util/index.js','web/assets/js/model/inbound.js','web/assets/js/model/dbinbound.js','web/assets/js/model/hosts.js'].map(p=>fs.readFileSync(path.join(root,p),'utf8')).join('\n');
+vm.runInContext(source+'\nglobalThis.Models={Inbound,DBInbound,ManagedHosts};',context);
+const {Inbound,DBInbound,ManagedHosts}=context.Models;
+const client={email:'alice',id:'11111111-2222-3333-4444-555555555555',enable:true,subId:'s'};
+const input={port:443,tag:'inbound-443',protocol:'vless',listen:'0.0.0.0',settings:{clients:[client],decryption:'none'},streamSettings:{network:'ws',security:'tls',wsSettings:{path:'/old'},tlsSettings:{serverName:'old.sni',settings:{fingerprint:'chrome'}}}};
+const inbound=Inbound.fromJson(input),before=JSON.stringify(inbound.toJson());
+inbound._managedHostRows=[{id:1,groupId:'a',address:'edge.example',port:8443,remark:'edge',security:'same',sni:'new.sni',path:'/new',hostHeader:'http.example',fingerprint:'firefox'}];
+const links=inbound.genAllLinks('source','-ieo',inbound.clients[0]);
+assert.equal(links.length,1);
+const uri=new URL(links[0].link);
+assert.equal(uri.host,'edge.example:8443');assert.equal(uri.searchParams.get('sni'),'new.sni');assert.equal(uri.searchParams.get('fp'),'firefox');assert.equal(uri.searchParams.get('path'),'/new');assert.equal(uri.searchParams.get('host'),'http.example');
+assert.equal(JSON.stringify(inbound.toJson()),before,'render changed the editable inbound');
+inbound._managedHostRules={alice:[42]};assert.equal(inbound.genAllLinks('source','-ieo',inbound.clients[0]).length,0,'deleted selection fell back');
+inbound._managedHostRules={};inbound._managedHostRows[0].isDisabled=true;
+assert.equal(new URL(inbound.genAllLinks('source','-ieo',inbound.clients[0])[0].link).hostname,'panel.example','hostless fallback changed');
+inbound._managedHostRows[0].isDisabled=false;inbound._managedHostRows[0].keepSniBlank=true;
+assert.equal(new URL(inbound.genAllLinks('source','-ieo',inbound.clients[0])[0].link).searchParams.get('sni'),'');
+inbound._managedHostRows[0].keepSniBlank=false;inbound._managedHostRows[0].overrideSniFromAddress=true;
+assert.equal(new URL(inbound.genAllLinks('source','-ieo',inbound.clients[0])[0].link).searchParams.get('sni'),'edge.example');
+inbound._managedHostRows[0].remark='{{INBOUND}}/{{EMAIL}}/{{ADDRESS}}';
+assert.equal(decodeURIComponent(new URL(inbound.genAllLinks('source','-ieo',inbound.clients[0])[0].link).hash.slice(1)),'source/alice/edge.example');
+for(const [cidr,count] of [['198.51.100.0/29',6],['2001:db8::/125',7],['203.0.113.1/32',1],['2001:db8::1/128',1]]){
+ const ips=ManagedHosts.cidrAddresses(cidr,100);assert.equal(ips.length,count);assert.equal(new Set(ips).size,count);
+}
+const db=new DBInbound({id:1,...input,settings:JSON.stringify(input.settings),streamSettings:JSON.stringify(input.streamSettings),hosts:[{id:2,groupId:'b',address:'db.example',port:9443,remark:'db',security:'same'}],hostRules:{alice:[2]}});
+assert.equal(new URL(db.toInbound().genAllLinks('source','-ieo',db.toInbound().clients[0])[0].link).host,'db.example:9443','database view dropped Host metadata');
+const poisoned=JSON.parse('{"__proto__":{"polluted":true},"constructor":{"polluted":true},"path":"/safe"}');
+assert.equal(ManagedHosts.merge({},poisoned).path,'/safe');assert.equal({}.polluted,undefined);
+db.hosts.push({id:3,groupId:'b',address:'2001:db8::10',port:9443,remark:'db',security:'same'});
+db.hostRules={};db.invalidateCache();
+const ipv6Links=db.toInbound().genAllLinks('source','-ieo',db.toInbound().clients[0]);
+assert.equal(ipv6Links.length,2);assert.equal(new URL(ipv6Links[1].link).host,'[2001:db8::10]:9443');
+assert.equal(ipv6Links[1].remark,'source-alice-db-inbound-443','duplicate Host names were not disambiguated');
+console.log('Hosts panel link, selection, CIDR, SNI and non-mutation regressions passed');

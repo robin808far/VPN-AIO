@@ -518,7 +518,7 @@
                 // service would never come up. hasCoreConfigProblem() is the
                 // single gate; the form itself says which rule was hit.
                 const stream = ib.stream;
-                if (stream && stream.finalmask && stream.finalmask.hasInvalidFinalMaskTransform()) {
+                if (stream && stream.finalmask && stream.hasInvalidFinalMaskTransform()) {
                     at("transport", "Transport", "every custom-header transform must be a JSON object");
                 }
                 if (stream && stream.network === "xhttp" && stream.xhttp

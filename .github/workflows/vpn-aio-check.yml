@@ -2,7 +2,7 @@ name: VPN-AIO Ubuntu validation
 
 on:
   push:
-    branches: [main, release/v2.0.0, feature/core-webgui]
+    branches: [main, release/v2.0.0, feature/core-webgui, feature/hosts-v3.0.0]
   pull_request:
   workflow_dispatch:
 
@@ -29,6 +29,7 @@ jobs:
       - name: Check GUI model round trips
         run: |
           node test_unit/export_test/core-webgui.test.js
+          node test_unit/export_test/hosts.test.js
           node test_unit/export_test/routing-modal-roundtrip.test.js
       - name: Build pinned Xray and fetch geodata
         run: GEO_LEAN=1 bash build/core/build.sh amd64

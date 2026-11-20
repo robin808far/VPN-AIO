@@ -34,6 +34,8 @@ func initModels() error {
 		&model.User{},
 		&model.Inbound{},
 		&model.InboundAccess{},
+		&model.Host{},
+		&model.HostTombstone{},
 		&model.ResellerProfile{},
 		&model.ResellerClient{},
 		// The accounts layer. Creating these is purely additive: an old binary rolled
@@ -425,7 +427,10 @@ func InitDB(dbPath string) error {
 	migrateGlobalTwoFactor()
 	migrateInboundOwners()
 	migrateInboundAccess()
-	return runSeeders(isUsersEmpty)
+	if err := runSeeders(isUsersEmpty); err != nil {
+		return err
+	}
+	return migrateHosts()
 }
 
 // GetSettingValue opens the DB and returns a single `settings` value via a plain

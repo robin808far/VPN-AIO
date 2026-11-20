@@ -47,9 +47,17 @@ func (s *SubClashService) GetClash(subId string, host string) (string, string, e
 	}
 
 	usage := newSubUsage()
+	seenUsage := map[string]bool{}
+	closedSelection := false
 	var proxies []map[string]any
 
-	for _, inbound := range inbounds {
+	renders, err := s.SubService.hostRenders(inbounds, "clash", host)
+	if err != nil {
+		return "", "", err
+	}
+	for _, render := range renders {
+		inbound := render.Inbound
+		s.SubService.currentHost = render.Host
 		clients, err := s.inboundService.GetClients(inbound)
 		if err != nil {
 			logger.Error("SubClashService - GetClients: Unable to get clients from inbound")
@@ -68,13 +76,21 @@ func (s *SubClashService) GetClash(subId string, host string) (string, string, e
 		for _, client := range clients {
 			if client.Enable && client.SubID == subId {
 				ct, accountBacked, _ := s.SubService.resolveTraffic(inbound, client.Email)
-				usage.add(client.Email, ct, accountBacked)
+				usageKey := fmt.Sprintf("%d:%s", inbound.Id, client.Email)
+				if !seenUsage[usageKey] {
+					usage.add(client.Email, ct, accountBacked)
+					seenUsage[usageKey] = true
+				}
+				if !render.Allows(client) {
+					closedSelection = true
+					continue
+				}
 				proxies = append(proxies, s.getProxies(inbound, client, host)...)
 			}
 		}
 	}
 
-	if len(proxies) == 0 {
+	if len(proxies) == 0 && !closedSelection {
 		return "", "", nil
 	}
 
@@ -154,6 +170,7 @@ func (s *SubClashService) getProxies(inbound *model.Inbound, client model.Client
 
 		proxy := s.buildProxy(&workingInbound, client, workingStream, extPrxy["remark"].(string))
 		if len(proxy) > 0 {
+			s.SubService.applyHostClash(proxy)
 			proxies = append(proxies, proxy)
 		}
 	}

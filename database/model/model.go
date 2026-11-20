@@ -226,17 +226,20 @@ type ResellerClient struct {
 
 // Inbound represents an Xray inbound configuration with traffic statistics and settings.
 type Inbound struct {
-	Id                   int    `json:"id" form:"id" gorm:"primaryKey;autoIncrement"`                                                    // Unique identifier
-	UserId               int    `json:"-"`                                                                                               // Associated user ID
-	Up                   int64  `json:"up" form:"up"`                                                                                    // Upload traffic in bytes
-	Down                 int64  `json:"down" form:"down"`                                                                                // Download traffic in bytes
-	Total                int64  `json:"total" form:"total"`                                                                              // Total traffic limit in bytes
-	AllTime              int64  `json:"allTime" form:"allTime" gorm:"default:0"`                                                         // All-time traffic usage
-	Remark               string `json:"remark" form:"remark"`                                                                            // Human-readable remark
-	Enable               bool   `json:"enable" form:"enable" gorm:"index:idx_enable_traffic_reset,priority:1"`                           // Whether the inbound is enabled
-	ExpiryTime           int64  `json:"expiryTime" form:"expiryTime"`                                                                    // Expiration timestamp
-	TrafficReset         string `json:"trafficReset" form:"trafficReset" gorm:"default:never;index:idx_enable_traffic_reset,priority:2"` // Traffic reset schedule
-	LastTrafficResetTime int64  `json:"lastTrafficResetTime" form:"lastTrafficResetTime" gorm:"default:0"`                               // Last traffic reset timestamp
+	Hosts                []*Host          `json:"hosts,omitempty" gorm:"-"`
+	HostRules            map[string][]int `json:"hostRules" gorm:"-"`
+	HostProjection       bool             `json:"-" gorm:"-"`
+	Id                   int              `json:"id" form:"id" gorm:"primaryKey;autoIncrement"`                                                    // Unique identifier
+	UserId               int              `json:"-"`                                                                                               // Associated user ID
+	Up                   int64            `json:"up" form:"up"`                                                                                    // Upload traffic in bytes
+	Down                 int64            `json:"down" form:"down"`                                                                                // Download traffic in bytes
+	Total                int64            `json:"total" form:"total"`                                                                              // Total traffic limit in bytes
+	AllTime              int64            `json:"allTime" form:"allTime" gorm:"default:0"`                                                         // All-time traffic usage
+	Remark               string           `json:"remark" form:"remark"`                                                                            // Human-readable remark
+	Enable               bool             `json:"enable" form:"enable" gorm:"index:idx_enable_traffic_reset,priority:1"`                           // Whether the inbound is enabled
+	ExpiryTime           int64            `json:"expiryTime" form:"expiryTime"`                                                                    // Expiration timestamp
+	TrafficReset         string           `json:"trafficReset" form:"trafficReset" gorm:"default:never;index:idx_enable_traffic_reset,priority:2"` // Traffic reset schedule
+	LastTrafficResetTime int64            `json:"lastTrafficResetTime" form:"lastTrafficResetTime" gorm:"default:0"`                               // Last traffic reset timestamp
 	// ClientStats is the accounts this inbound SERVES, each with this inbound's share
 	// of their usage. Filled by InboundService.attachClientStats, which is what every
 	// list the panel renders goes through.
@@ -402,20 +405,21 @@ type CustomGeoResource struct {
 
 // Client represents a client configuration for Xray inbounds with traffic limits and settings.
 type Client struct {
-	ID         string `json:"id,omitempty"`                 // Unique client identifier
-	Security   string `json:"security"`                     // Security method (e.g., "auto", "aes-128-gcm")
-	Password   string `json:"password,omitempty"`           // Client password
-	Flow       string `json:"flow,omitempty"`               // Flow control (XTLS)
-	Auth       string `json:"auth,omitempty"`               // Auth password (Hysteria)
-	Email      string `json:"email"`                        // Client email identifier
-	LimitIP    int    `json:"limitIp"`                      // IP limit for this client
-	TotalGB    int64  `json:"totalGB" form:"totalGB"`       // Total traffic limit in GB
-	ExpiryTime int64  `json:"expiryTime" form:"expiryTime"` // Expiration timestamp
-	Enable     bool   `json:"enable" form:"enable"`         // Whether the client is enabled
-	TgID       int64  `json:"tgId" form:"tgId"`             // Telegram user ID for notifications
-	SubID      string `json:"subId" form:"subId"`           // Subscription identifier
-	Comment    string `json:"comment" form:"comment"`       // Client comment
-	Reset      int    `json:"reset" form:"reset"`           // Reset period in days
+	HostRuleIds []int  `json:"hostRuleIds,omitempty"`
+	ID          string `json:"id,omitempty"`                 // Unique client identifier
+	Security    string `json:"security"`                     // Security method (e.g., "auto", "aes-128-gcm")
+	Password    string `json:"password,omitempty"`           // Client password
+	Flow        string `json:"flow,omitempty"`               // Flow control (XTLS)
+	Auth        string `json:"auth,omitempty"`               // Auth password (Hysteria)
+	Email       string `json:"email"`                        // Client email identifier
+	LimitIP     int    `json:"limitIp"`                      // IP limit for this client
+	TotalGB     int64  `json:"totalGB" form:"totalGB"`       // Total traffic limit in GB
+	ExpiryTime  int64  `json:"expiryTime" form:"expiryTime"` // Expiration timestamp
+	Enable      bool   `json:"enable" form:"enable"`         // Whether the client is enabled
+	TgID        int64  `json:"tgId" form:"tgId"`             // Telegram user ID for notifications
+	SubID       string `json:"subId" form:"subId"`           // Subscription identifier
+	Comment     string `json:"comment" form:"comment"`       // Client comment
+	Reset       int    `json:"reset" form:"reset"`           // Reset period in days
 
 	// Per-client OVERRIDES of the inbound's speed limit and User Limit. nil means
 	// "inherit the inbound", which is what every client written before these existed
@@ -658,11 +662,12 @@ type Account struct {
 	//
 	// The default buys nothing here. This table is new, so there are no legacy
 	// rows to backfill, and every writer sets the field explicitly.
-	Enable  bool   `json:"enable"`
-	Reset   int    `json:"reset" gorm:"default:0"`
-	LimitIP int    `json:"limitIp" gorm:"column:limit_ip"`
-	TgID    int64  `json:"tgId" gorm:"column:tg_id"`
-	Comment string `json:"comment"`
+	Enable      bool   `json:"enable"`
+	Reset       int    `json:"reset" gorm:"default:0"`
+	LimitIP     int    `json:"limitIp" gorm:"column:limit_ip"`
+	TgID        int64  `json:"tgId" gorm:"column:tg_id"`
+	Comment     string `json:"comment"`
+	HostRuleIds []int  `json:"hostRuleIds,omitempty" gorm:"serializer:json"`
 
 	// Per-account OVERRIDES of the three limits an inbound sets for everyone on it.
 	// nil means "inherit whatever the inbound says", which is what every row written

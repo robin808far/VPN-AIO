@@ -510,6 +510,13 @@ func (a *InboundController) getInbound(c *gin.Context) {
 		jsonMsg(c, I18nWeb(c, "pages.inbounds.notFound"), errNotOwned)
 		return
 	}
+	if user := session.GetLoginUser(c); user != nil {
+		var hosts service.HostService
+		if err := hosts.AttachMetadata([]*model.Inbound{inbound}); err != nil {
+			jsonMsg(c, I18nWeb(c, "get"), err)
+			return
+		}
+	}
 	jsonObj(c, inbound, nil)
 }
 

@@ -1620,3 +1620,10 @@ it out of the raw settings map for any protocol that goes through `NormalizeVpnR
 and the browser reads it too, on l2tp and pptp, whose `fromJson` seeds `ipRanges` from it
 when the list is empty. It is a compatibility path on both sides, not a server-side
 oddity. `localIp` is the one that is genuinely Go-only.
+
+## Managed Hosts (3.0.0)
+
+The authenticated `/panel/api/hosts` API manages scoped Host groups, bulk state,
+ordering and the numeric Host IDs used by account `hostRuleIds`. See
+[HOSTS.md](HOSTS.md#api) for routes, request examples, format-specific behavior,
+permissions and migration/rollback semantics.

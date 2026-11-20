@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/mhsanaei/3x-ui/v2/database/model"
+	"github.com/mhsanaei/3x-ui/v2/web/service"
 )
 
 // Config-file downloads for the subscriber page.
@@ -45,6 +46,7 @@ type SubConfigLink struct {
 // what the renderers fall back to when no external proxy is configured (the same rule
 // the panel's own buttons follow, where it is the admin's browser host).
 func (s *SubService) ConfigFiles(subId string, host string) []SubConfigFile {
+	s = s.forResponse()
 	s.address = host
 	inbounds, err := s.getInboundsBySubId(subId)
 	if err != nil {
@@ -116,6 +118,23 @@ func (s *SubService) ConfigLinks(subId, host, scheme, hostWithPort, subPath stri
 }
 
 func (s *SubService) inboundConfigFiles(inbound *model.Inbound, email, host string) []SubConfigFile {
+	if !inbound.HostProjection && inbound.Protocol == model.OPENVPN {
+		views, managed, err := service.ManagedHostInbounds(inbound, email, "raw", host)
+		if err != nil {
+			return nil
+		}
+		if managed {
+			out := []SubConfigFile{}
+			for index, view := range views {
+				for _, cfg := range s.inboundConfigFiles(view, email, host) {
+					cfg.Key += fmt.Sprintf("-host-%d", index)
+					cfg.Filename = fmt.Sprintf("host-%d-%s", index+1, cfg.Filename)
+					out = append(out, cfg)
+				}
+			}
+			return out
+		}
+	}
 	switch inbound.Protocol {
 	case model.OPENVPN:
 		var out []SubConfigFile
