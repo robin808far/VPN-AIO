@@ -3,8 +3,8 @@
 Working branch: `feature/core-webgui`.
 
 Target version: **2.1.0**. Published 2.0.0 tags and assets must remain intact.
-The test host `sweden` currently runs 2.0.0; back up its database and configuration
-before deploying a test build, then verify a real upgrade with existing settings.
+The test host `sweden` runs the restored experimental 2.1.0 binary. Keep recovery
+snapshots outside the application directory before upgrade/uninstall tests.
 
 The installer accepts `VPN_AIO_VERSION=2.0.0` (or `v2.0.0`) to install a specific
 published version. Omission retains the latest-release behavior. Example:
@@ -50,6 +50,9 @@ References:
       keys; the routing modal retains hidden selectors during edits. Browserless
       round-trip tests and pinned-core parsing cover inbound/outbound XHTTP with
       TLS/REALITY, socket options, DNS and routing.
+- [x] Normalize pinned-core option names: XHTTP session placement/key fields use
+      `sessionIDPlacement`/`sessionIDKey` on save and in copied share links;
+      canonical `v6only`/`maxTimeDiff` spellings retain their values during edits.
 - [x] AWG S3/S4, I1-I5, header protection, padding/timing ranges,
       random trailers and cookie control: inbound form/model, outbound parser,
       kernel netlink, client config and Clash option serialization.
@@ -85,9 +88,13 @@ References:
       cleanup and exact restoration of the original service/binary/database.
 - [x] Regression test verifies that uninstall attempts each daemon-less kernel
       core cleanup even when one cleanup reports an error.
-- [x] Per operator choice, skip the cross-distro VM tunnel/kernel/DKMS matrix.
-      The userland matrix shares one kernel and does not claim tunnel support on
-      untested distro kernels; the live Ubuntu/AWG checks remain verified.
+- [x] Build from clean commit `1785614` with complete cached embedded assets and
+      record asset/input checksums. The exact release candidate passed the full Go
+      suite without a test-name exclusion filter, 30 Ubuntu container lifecycle
+      checks and 7 live existing-account upgrade/rollback checks.
+- Cross-distro VM tunnel/kernel/DKMS matrix: **not run; explicitly skipped by the
+  operator**. This is an accepted validation limit, not a passing test. The userland
+  matrix shares one kernel; live Ubuntu/AWG checks remain verified.
 
 Do not copy React components into the Vue application. Use upstream schemas as
 reference while checking every option against the pinned executable's actual API.

@@ -25,14 +25,27 @@ Target: fresh installation and upgrade from 2.0.0 on Ubuntu 24.04 amd64.
 
 ## Verified
 
-- GitHub Actions run `44630111298` passed for commit `9e023a4`, including the
+- GitHub Actions run `44680089511` passed for commit `1785614`, including the
   complete Go suite, GUI model tests, pinned-core build, native-protocol smoke
   tests, XDRIVE checks, FinalMask configuration matrix and isolated Ubuntu
   startup/authentication/native-core/uninstall lifecycle check.
-- Ubuntu `sweden`: the final full-asset 2.1.0 candidate is 354,324,200 bytes
+- Clean source build from commit `178561444feab699ba5c9a40c7fed545b82a04ae`:
+  the full-asset 2.1.0 candidate is 354,332,600 bytes
   (338 MiB), SHA-256
-  `ab6c062e8f25c6acae877124f0a5d7dbc80fb96e8be2c8ae735cbcd2b20918eb`.
-  It was built with the complete pinned Xray/geodata and daemon bundles.
+  `5c5c654a043d22bda91345c91e48cf5f37f144ca59f783ec4a0e090d6375f64b`.
+  Built in `/home/ubuntu/vpn-aio-release-1785614/` with Go 1.27.4, initialized pinned
+  submodules and the complete cached Xray/geodata/daemon bundles. No tracked source
+  changes were present in the build checkout. `BUILD-MANIFEST.json` and
+  `embedded-inputs.SHA256SUMS` record the source and embedded-input provenance.
+- On that exact clean checkout, `go test -timeout 10m ./... -count=1` passed on
+  `sweden` without a test-name exclusion filter. The panel was temporarily stopped
+  to free the fixed SSH integration-test port and restored afterward. An initial
+  run in an offline network namespace was inconclusive (a DNS-dependent test and
+  an SSH accounting timing assertion failed); the complete host-network run passed.
+- The exact release asset passed the Ubuntu container lifecycle check: 30/30
+  checks, including authenticated startup, embedded native protocols, XDRIVE,
+  FinalMask, transport settings, uninstall and preservation of operator files.
+  Results: `/home/ubuntu/vpn-aio-release-1785614/build/out/lifecycle-final/`.
 - Pinned Xray 26.11.9: native MASQUE h2/h3, AnyTLS, TUIC, Naive and all FinalMask
   TCP/UDP configuration variants parsed or passed live traffic/authentication checks.
 - MASQUE live account add, removal, re-enable, traffic accounting, generated Xray
@@ -60,7 +73,10 @@ Target: fresh installation and upgrade from 2.0.0 on Ubuntu 24.04 amd64.
   sockopt; the inbound profiles also include DNS, routing and sniffing. A JSON
   regression test confirms DNS/routing template sections remain raw across config
   validation/representation.
-- Controlled full-candidate upgrade on `sweden`: the candidate above started the
+- Pinned-core option names: canonical `v6only`/`maxTimeDiff` values survive edits,
+  and XHTTP sessions serialize as `sessionIDPlacement`/`sessionIDKey`, including
+  copied share links; legacy panel spellings are read and normalized on save.
+- Controlled full-candidate upgrade on `sweden`: an earlier full candidate started the
   panel and Xray 26.11.9; a certificate-verified HTTPS request traversed an existing
   enabled VLESS/XHTTP profile and increased both Xray traffic counters. The live
   panel also rendered an existing AWG profile that imported and round-tripped with
@@ -70,7 +86,7 @@ Target: fresh installation and upgrade from 2.0.0 on Ubuntu 24.04 amd64.
   binary (SHA-256 `e0865aa6d1884b5b95a484e6974d1ef35171d05fa5328a0fbcb4b256439e3695`),
   SQLite integrity is `ok`, four enabled inbounds remain, and no test inbounds remain.
   Recovery snapshot: `/var/lib/vpn-aio-tests/upgrade-fullprofile-awgfix-20261120`.
-- Disposable-container lifecycle smoke with the same full candidate: authenticated
+- Disposable-container lifecycle smoke with the earlier full candidate: authenticated
   startup and Xray native/XDRIVE/FinalMask checks passed; uninstall removed the
   binary, SQLite DB, extracted bundles, firewall table, policy rule and route, while
   preserving unrelated sentinel files. Container has no systemd boot, so this does
@@ -91,22 +107,40 @@ Target: fresh installation and upgrade from 2.0.0 on Ubuntu 24.04 amd64.
 - Added a regression test that verifies full uninstall attempts cleanup of every
   daemon-less kernel core interface and records failures without skipping later
   cleanups.
-- Final destructive `sweden` cycle using the candidate above passed 39/39 host
+- Destructive `sweden` cycle using the pre-audit uninstall-fix candidate
+  (`ab6c062e8f25c6acae877124f0a5d7dbc80fb96e8be2c8ae735cbcd2b20918eb`)
+  passed 39/39 host
   assertions, including systemd stop/disable, removal of `awg1`, release of TCP/UDP
   listeners, DKMS cleanup and an existing-account HTTPS request. This first exposed
   and then verified the fix for an AWG interface surviving uninstall. The exact
   original binary, service unit and SQLite bytes were restored; SQLite is healthy,
   four enabled inbounds remain and Xray/AWG are running. Recovery snapshot:
   `/var/lib/vpn-aio-tests/host-uninstall-final-20261120/`.
+- The later transport-audit candidate (`5fa99d1eaf7491d261a0bf753c3ae15ee2692a8abb6c4b565ecdc3a09ff2488d`)
+  also passed the 39-check host upgrade/HTTPS/uninstall/restore cycle. Recovery
+  snapshot: `/var/lib/vpn-aio-tests/host-uninstall-release-20261120/`.
+- The clean-source candidate listed above passed 7/7 upgrade/rollback checks:
+  exact asset installed; Xray and AWG running; certificate-verified HTTPS through
+  an existing VLESS/XHTTP profile with both counters increased; original binary,
+  database and service-unit bytes restored; service recovered; SQLite integrity
+  `ok`; four original enabled inbounds retained. Recovery snapshot:
+  `/var/lib/vpn-aio-tests/release-1785614/`.
 
-## Remaining before public release
+## Accepted validation limit
 
 - Per operator decision, the cross-distribution VPN tunnel/kernel/DKMS VM matrix is
   skipped; release claims remain limited accordingly. The Docker userland matrix
   shares one host kernel and live tunnel checks were limited to Ubuntu 24.04. Do not
   interpret the 13-container result as proof that VPN tunnels or DKMS work across all
   listed distro kernels.
-- Publish the final release asset/checksum after the remaining host/client checks.
+
+## Release preparation
+
+- Public release is not yet published. `RELEASE-2.1.0.md` describes the changes,
+  installation/rollback requirements, checksum and exact scope of validation.
+- The release asset is built from commit `1785614`; subsequent release notes and
+  validation-record changes do not alter the built source. Keep all published
+  2.0.0 tags and assets unchanged.
 
 Internal daemon paths retain upstream compatibility names. Public installation,
 service, application and primary UI branding use VPN-AIO. Original GPL-3.0 and
