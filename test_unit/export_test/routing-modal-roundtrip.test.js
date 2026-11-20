@@ -6,7 +6,10 @@ const assert = require("node:assert/strict");
 
 const root = path.resolve(__dirname, "../..");
 const html = fs.readFileSync(path.join(root, "web/html/modals/xray_rule_modal.html"), "utf8");
-const script = html.match(/<script>([\s\S]*?)<\/script>/)[1]
+const scriptStart = html.indexOf("<script>");
+const scriptEnd = html.indexOf("</script>", scriptStart);
+assert.ok(scriptStart >= 0 && scriptEnd > scriptStart, "routing template script markers missing");
+const script = html.slice(scriptStart + "<script>".length, scriptEnd)
     .replace(/\{\{\s*i18n\s+"[^"]+"\s*\}\}/g, "test");
 const context = vm.createContext({
     Vue: class { constructor() {} },

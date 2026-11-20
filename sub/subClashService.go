@@ -82,7 +82,7 @@ func (s *SubClashService) GetClash(subId string, host string) (string, string, e
 	// account served on several inbounds as unlimited and never expiring.
 	traffic := usage.result()
 
-	proxyNames := make([]string, 0, len(proxies)+1)
+	proxyNames := make([]string, 0, len(proxies))
 	for _, proxy := range proxies {
 		if name, ok := proxy["name"].(string); ok && name != "" {
 			proxyNames = append(proxyNames, name)
