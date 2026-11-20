@@ -562,6 +562,7 @@ class TlsStreamSettings extends CommonClass {
         echConfigList = '',
         verifyPeerCertByName = '',
         pinnedPeerCertSha256 = '',
+        extra = {},
     ) {
         super();
         this.serverName = serverName;
@@ -570,6 +571,7 @@ class TlsStreamSettings extends CommonClass {
         this.echConfigList = echConfigList;
         this.verifyPeerCertByName = verifyPeerCertByName;
         this.pinnedPeerCertSha256 = pinnedPeerCertSha256;
+        this.extra = extra && typeof extra === 'object' ? extra : {};
     }
 
     static fromJson(json = {}) {
@@ -580,11 +582,12 @@ class TlsStreamSettings extends CommonClass {
             json.echConfigList,
             json.verifyPeerCertByName,
             json.pinnedPeerCertSha256,
+            outboundUnmodeledFields(json, TlsStreamSettings.STRUCTURED_KEYS),
         );
     }
 
     toJson() {
-        const o = { serverName: this.serverName };
+        const o = Object.assign({}, this.extra, { serverName: this.serverName });
         // Emit optional TLS fields only when they carry a value. Xray rejects a
         // blank/"none" fingerprint ("unknown fingerprint"), and empty optionals
         // just add noise, so omit them.
@@ -598,6 +601,11 @@ class TlsStreamSettings extends CommonClass {
         return o;
     }
 }
+TlsStreamSettings.STRUCTURED_KEYS = new Set([
+    'serverName', 'alpn', 'fingerprint', 'echConfigList', 'verifyPeerCertByName',
+    // The pinned core rejects this removed compatibility switch.
+    'pinnedPeerCertSha256', 'allowInsecure',
+]);
 
 class RealityStreamSettings extends CommonClass {
     constructor(
@@ -606,7 +614,8 @@ class RealityStreamSettings extends CommonClass {
         serverName = '',
         shortId = '',
         spiderX = '',
-        mldsa65Verify = ''
+        mldsa65Verify = '',
+        extra = {},
     ) {
         super();
         this.publicKey = publicKey;
@@ -615,6 +624,7 @@ class RealityStreamSettings extends CommonClass {
         this.shortId = shortId
         this.spiderX = spiderX;
         this.mldsa65Verify = mldsa65Verify;
+        this.extra = extra && typeof extra === 'object' ? extra : {};
     }
     static fromJson(json = {}) {
         return new RealityStreamSettings(
@@ -623,20 +633,24 @@ class RealityStreamSettings extends CommonClass {
             json.serverName,
             json.shortId,
             json.spiderX,
-            json.mldsa65Verify
+            json.mldsa65Verify,
+            outboundUnmodeledFields(json, RealityStreamSettings.STRUCTURED_KEYS),
         );
     }
     toJson() {
-        return {
+        return Object.assign({}, this.extra, {
             publicKey: this.publicKey,
             fingerprint: this.fingerprint,
             serverName: this.serverName,
             shortId: this.shortId,
             spiderX: this.spiderX,
             mldsa65Verify: this.mldsa65Verify
-        };
+        });
     }
 };
+RealityStreamSettings.STRUCTURED_KEYS = new Set([
+    'publicKey', 'fingerprint', 'serverName', 'shortId', 'spiderX', 'mldsa65Verify',
+]);
 
 class HysteriaStreamSettings extends CommonClass {
     constructor(
@@ -747,6 +761,7 @@ class SockoptStreamSettings extends CommonClass {
         interfaceName = "",
         mark = 0,
         trustedXForwardedFor = [],
+        extra = {},
     ) {
         super();
         this.dialerProxy = dialerProxy;
@@ -758,6 +773,7 @@ class SockoptStreamSettings extends CommonClass {
         this.interfaceName = interfaceName;
         this.mark = mark;
         this.trustedXForwardedFor = trustedXForwardedFor;
+        this.extra = extra && typeof extra === 'object' ? extra : {};
     }
 
     static fromJson(json = {}) {
@@ -771,19 +787,20 @@ class SockoptStreamSettings extends CommonClass {
             json.addressPortStrategy,
             json.interface,
             json.mark,
-            json.trustedXForwardedFor || []
+            json.trustedXForwardedFor || [],
+            outboundUnmodeledFields(json, SockoptStreamSettings.STRUCTURED_KEYS),
         );
     }
 
     toJson() {
-        const result = {
+        const result = Object.assign({}, this.extra, {
             dialerProxy: this.dialerProxy,
             tcpFastOpen: this.tcpFastOpen,
             tcpKeepAliveInterval: this.tcpKeepAliveInterval,
             tcpMptcp: this.tcpMptcp,
             penetrate: this.penetrate,
             addressPortStrategy: this.addressPortStrategy
-        };
+        });
         // Only emitted when set, so an outbound that never used them does not
         // gain SO_BINDTODEVICE/SO_MARK keys just by being opened and saved.
         if (this.interfaceName) {
@@ -1021,6 +1038,23 @@ class QuicParams extends CommonClass {
         return result;
     }
 }
+SockoptStreamSettings.STRUCTURED_KEYS = new Set([
+    'dialerProxy', 'tcpFastOpen', 'tcpKeepAliveInterval', 'tcpMptcp', 'penetrate',
+    'addressPortStrategy', 'interface', 'mark', 'trustedXForwardedFor',
+]);
+
+// Keep Xray transport keys unknown to this form when editing other settings.
+// This lets a newer pinned core or hand-edited JSON survive a model round-trip.
+function outboundUnmodeledFields(json, modeledKeys) {
+    const extra = {};
+    if (!json || typeof json !== 'object' || Array.isArray(json)) return extra;
+    for (const [key, value] of Object.entries(json)) {
+        if (!modeledKeys.has(key)) {
+            Object.defineProperty(extra, key, {value, enumerable: true, writable: true, configurable: true});
+        }
+    }
+    return extra;
+}
 
 function outboundMaskItemFromJson(item = {}) {
     return {...item,kind:item.reuse?'reuse':(item.transform?'transform':'bytes'),transformText:item.transform?JSON.stringify(item.transform,null,2):''};
@@ -1169,6 +1203,7 @@ class StreamSettings extends CommonClass {
         sockopt = undefined,
         xdriveSettings = {},
         masqueSettings = {},
+        extra = {},
     ) {
         super();
         this.network = network;
@@ -1186,6 +1221,7 @@ class StreamSettings extends CommonClass {
         this.sockopt = sockopt;
         this.xdrive = Object.assign({service: 'local', remoteFolder: '', secrets: [], s3: {endpoint: '', region: '', bucket: '', pathStyle: true}}, xdriveSettings);
         this.masque = Object.assign({host: '', path: '', user: '', pass: '', headers: {}, warp: undefined, xmux: {}}, masqueSettings);
+        this.extra = extra && typeof extra === 'object' ? extra : {};
     }
 
     addTcpMask(type = 'fragment') {
@@ -1266,12 +1302,13 @@ class StreamSettings extends CommonClass {
             SockoptStreamSettings.fromJson(json.sockopt),
             json.xdriveSettings,
             json.masqueSettings,
+            outboundUnmodeledFields(json, StreamSettings.STRUCTURED_KEYS),
         );
     }
 
     toJson() {
         const network = this.network;
-        return {
+        return Object.assign({}, this.extra, {
             network: network,
             security: this.security,
             tlsSettings: this.security == 'tls' ? this.tls.toJson() : undefined,
@@ -1287,9 +1324,14 @@ class StreamSettings extends CommonClass {
             masqueSettings: network === 'masque' ? this.masqueToJson() : undefined,
             finalmask: this.hasFinalMask ? this.finalmask.toJson() : undefined,
             sockopt: this.sockopt != undefined ? this.sockopt.toJson() : undefined,
-        };
+        });
     }
 }
+StreamSettings.STRUCTURED_KEYS = new Set([
+    'network', 'security', 'tlsSettings', 'realitySettings', 'tcpSettings', 'kcpSettings',
+    'wsSettings', 'grpcSettings', 'httpupgradeSettings', 'xhttpSettings', 'hysteriaSettings',
+    'finalmask', 'sockopt', 'xdriveSettings', 'masqueSettings',
+]);
 
 class Mux extends CommonClass {
     constructor(enabled = false, concurrency = 8, xudpConcurrency = 16, xudpProxyUDP443 = "reject") {

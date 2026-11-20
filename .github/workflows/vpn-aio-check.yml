@@ -25,9 +25,11 @@ jobs:
           for file in deploy.sh vpn-ui.sh build.sh build/core/build.sh; do
             bash -n "$file"
           done
-          python3 -c 'import ast,pathlib; ast.parse(pathlib.Path("test_unit/finalmask-config-check.py").read_text()); ast.parse(pathlib.Path("test_unit/native-core-smoke.py").read_text())'
+          python3 -c 'import ast,pathlib; [ast.parse(pathlib.Path(p).read_text()) for p in ("test_unit/finalmask-config-check.py", "test_unit/native-core-smoke.py", "test_unit/transport-settings-config-check.py")]'
       - name: Check GUI model round trips
-        run: node test_unit/export_test/core-webgui.test.js
+        run: |
+          node test_unit/export_test/core-webgui.test.js
+          node test_unit/export_test/routing-modal-roundtrip.test.js
       - name: Build pinned Xray and fetch geodata
         run: GEO_LEAN=1 bash build/core/build.sh amd64
       - name: Test panel integration
@@ -42,6 +44,10 @@ jobs:
         run: python3 test_unit/xdrive-config-check.py corebundle/core/amd64/xray
       - name: FinalMask core configuration validation
         run: python3 test_unit/finalmask-config-check.py corebundle/core/amd64/xray
+      - name: XHTTP, TLS/REALITY, sockopt, DNS and routing core validation
+        env:
+          XRAY_LOCATION_ASSET: ${{ github.workspace }}/corebundle/core
+        run: python3 test_unit/transport-settings-config-check.py corebundle/core/amd64/xray
       - name: AmneziaWG kernel 3.1 integration
         if: runner.os == 'Linux'
         env:
@@ -63,7 +69,8 @@ jobs:
           cp build/out/VPN-AIO-check "$context/build/out/"
           cp test_unit/Containerfile test_unit/container-lifecycle.py \
              test_unit/native-core-smoke.py test_unit/xdrive-config-check.py \
-             test_unit/finalmask-config-check.py "$context/test_unit/"
+             test_unit/finalmask-config-check.py test_unit/transport-settings-config-check.py \
+             "$context/test_unit/"
           docker build -f "$context/test_unit/Containerfile" \
             -t vpn-aio-lifecycle-test "$context"
       - name: Exercise startup, native protocols and uninstall in isolation

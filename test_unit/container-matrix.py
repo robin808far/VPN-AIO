@@ -38,7 +38,7 @@ INSTALL = {
     'dnf': 'dnf -y --setopt=install_weak_deps=False install python3 openssl ca-certificates nftables iproute procps-ng',
     'pacman': 'pacman -Syu --noconfirm python openssl ca-certificates nftables iproute2 procps-ng',
 }
-SCRIPTS = ('container-lifecycle.py', 'native-core-smoke.py', 'xdrive-config-check.py', 'finalmask-config-check.py')
+SCRIPTS = ('container-lifecycle.py', 'native-core-smoke.py', 'xdrive-config-check.py', 'finalmask-config-check.py', 'transport-settings-config-check.py')
 
 
 def docker(*args, timeout=300):

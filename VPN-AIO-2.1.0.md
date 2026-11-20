@@ -19,6 +19,9 @@ Target: fresh installation and upgrade from 2.0.0 on Ubuntu 24.04 amd64.
   emitted because MASQUE has no standardized URI format.
 - FinalMask forms now cover the pinned core's TCP/UDP mask variants and migrate legacy
   fragment, mKCP and xDNS shapes without silently discarding settings.
+- XHTTP, TLS/REALITY and socket forms preserve unedited core fields during saves;
+  DNS/routing template JSON remains raw and round-trippable. The routing-rule modal
+  now retains fields it does not expose when editing a known field.
 
 ## Verified
 
@@ -49,6 +52,14 @@ Target: fresh installation and upgrade from 2.0.0 on Ubuntu 24.04 amd64.
   accepts boolean values as `on`/`off`, not `true`/`false`; the `.conf` exporter and
   regression test now use the accepted syntax. Desktop/mobile AWG clients were not
   tested.
+- Frontend transport/settings audit: round-trip checks cover inbound/outbound
+  XHTTP, TLS/REALITY, sockopt, sniffing and unknown future fields; legacy REALITY
+  `dest` is normalized to `target`, and routing-rule edits preserve selectors such
+  as `localIP`, `process`, `webhook` and unknown keys. The pinned Xray 26.11.9 parser
+  accepted inbound and outbound XHTTP+TLS and XHTTP+REALITY configurations containing
+  sockopt; the inbound profiles also include DNS, routing and sniffing. A JSON
+  regression test confirms DNS/routing template sections remain raw across config
+  validation/representation.
 - Controlled full-candidate upgrade on `sweden`: the candidate above started the
   panel and Xray 26.11.9; a certificate-verified HTTPS request traversed an existing
   enabled VLESS/XHTTP profile and increased both Xray traffic counters. The live
@@ -89,13 +100,10 @@ Target: fresh installation and upgrade from 2.0.0 on Ubuntu 24.04 amd64.
 
 ## Remaining before public release
 
-- Complete the cross-distribution VPN tunnel/kernel/DKMS matrix in disposable
-  Incus/KVM VMs. The Docker userland matrix shares one host kernel and cannot prove
-  different-kernel modules or real VPN paths. `sweden` is currently AWS `t3.small`
-  and has no `/dev/kvm` or Incus. AWS lists M7i-family instances as supporting nested
-  virtualization; an `m7i.2xlarge` (8 vCPU/32 GiB) with nested virtualization enabled
-  is a suitable target, subject to availability in the instance's region. AWS requires
-  stopping the instance before enabling nested virtualization on it.
+- Per operator decision, do not run the cross-distribution VM tunnel/kernel/DKMS
+  matrix. The 13-image container matrix is userland-only and must not be interpreted
+  as proof of VPN tunnel compatibility on those distro kernels. Live tunnel and
+  kernel checks are limited to the Ubuntu 24.04 `sweden` host and the CI kernel runner.
 - Publish the final release asset/checksum after the remaining host/client checks.
 
 Internal daemon paths retain upstream compatibility names. Public installation,

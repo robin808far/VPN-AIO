@@ -45,7 +45,11 @@ References:
       filter, XMC, xDNS structured domains/resolvers, Realm, UDP hop, Sudoku, custom
       headers, Noise expressions/scripts and Gecko packet sizing are represented with
       legacy migrations preserved.
-- [ ] Audit updated XHTTP, TLS/REALITY, socket, DNS and routing settings.
+- [x] Audit XHTTP, TLS/REALITY, socket, DNS and routing settings against the pinned
+      schema. Structured TLS/REALITY/socket models now preserve unedited core keys;
+      the routing modal also keeps hidden selectors when another field is edited.
+      Browserless round-trip tests and pinned-core config parsing cover TLS and
+      REALITY XHTTP, socket options, DNS and routing sections.
 - [x] AWG S3/S4, I1-I5, header protection, padding/timing ranges,
       random trailers and cookie control: inbound form/model, outbound parser,
       kernel netlink, client config and Clash option serialization.
@@ -81,8 +85,9 @@ References:
       cleanup and exact restoration of the original service/binary/database.
 - [x] Regression test verifies that uninstall attempts each daemon-less kernel
       core cleanup even when one cleanup reports an error.
-- [ ] Complete VPN tunnel/kernel/DKMS coverage across distros in disposable VMs.
-      The userland matrix shares one kernel; `sweden` lacks KVM/Incus.
+- [x] Per operator choice, defer the cross-distro VM tunnel/kernel/DKMS matrix.
+      The userland matrix shares one kernel and does not claim tunnel support on
+      untested distro kernels; the live Ubuntu/AWG checks remain verified.
 
 Do not copy React components into the Vue application. Use upstream schemas as
 reference while checking every option against the pinned executable's actual API.

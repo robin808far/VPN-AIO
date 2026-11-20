@@ -68,6 +68,7 @@ def main():
     if unsafe:
         raise SystemExit('Refusing destructive container test with protected bind mounts: ' + ', '.join(unsafe))
     os.chdir(ROOT)
+    os.environ.setdefault('XRAY_LOCATION_ASSET', str(ROOT / 'bin'))
     password = secrets.token_urlsafe(24)
     check('candidate version', run([str(BINARY), '-v']).stdout.strip() == '2.1.0')
     digest = hashlib.sha256(BINARY.read_bytes()).hexdigest()
@@ -98,7 +99,8 @@ def main():
             else:
                 raise RuntimeError('Embedded Xray did not become ready')
             check('embedded Xray running', True)
-            for script in ('native-core-smoke.py', 'xdrive-config-check.py', 'finalmask-config-check.py'):
+            for script in ('native-core-smoke.py', 'xdrive-config-check.py',
+                           'finalmask-config-check.py', 'transport-settings-config-check.py'):
                 result = run([sys.executable, '/checks/' + script, str(ROOT / 'bin/xray-linux-amd64')], timeout=180)
                 Path('/tmp/' + script + '.log').write_text(result.stdout + result.stderr)
                 check(script, result.returncode == 0)

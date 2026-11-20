@@ -44,6 +44,62 @@ for (const model of ["inbound", "outbound"]) {
     fresh.xdrive.service = "s3";
     fresh.xdrive.s3.bucket = "new-bucket";
     assert.equal(fresh.toJson().xdriveSettings.s3.bucket, "new-bucket");
+
+    // Fields the form does not edit still belong to the saved Xray object.
+    // This pins forward-compatible TLS, certificate, socket and transport
+    // settings alongside the structured values the controls do own.
+    const transportInput = {
+        network: 'xhttp', security: 'tls',
+        futureStreamOption: {enabled: true},
+        tlsSettings: {
+            serverName: 'inbound.example.test', alpn: ['h2'],
+            allowInsecure: true,
+            curvePreferences: ['X25519'], masterKeyLog: '/tmp/tls.keys',
+            useSystemCA: true,
+            certificates: [{certificateFile: '/etc/test/fullchain.pem', keyFile: '/etc/test/key.pem', ocspStapling: 3600}],
+            settings: {fingerprint: 'chrome', echConfigList: 'ECH-config', futureTlsSetting: 'keep'},
+        },
+        xhttpSettings: {path: '/x', mode: 'stream-one', futureXhttpOption: {value: 9}},
+        sockopt: {
+            mark: 7, tcpFastOpen: true, tcpCongestion: 'cubic',
+            customSockopt: [{system: 'linux', network: 'tcp', level: 1, opt: 2, value: 1}],
+            happyEyeballs: {prioritizeIpv6: true, tryDelayMs: 25},
+        },
+    };
+    const transportModel = context.Stream.fromJson(transportInput);
+    transportModel.tls[model === 'inbound' ? 'sni' : 'serverName'] = 'edited.example.test';
+    const transportJson = JSON.parse(JSON.stringify(transportModel.toJson()));
+    assert.equal(transportJson.futureStreamOption.enabled, true, `${model} lost an unmodeled stream option`);
+    assert.equal(transportJson.tlsSettings.serverName, 'edited.example.test');
+    assert.equal(transportJson.tlsSettings.allowInsecure, undefined, 'obsolete insecure TLS option was retained');
+    assert.deepEqual(JSON.parse(JSON.stringify(transportJson.tlsSettings.curvePreferences)), ['X25519']);
+    assert.equal(transportJson.tlsSettings.masterKeyLog, '/tmp/tls.keys');
+    assert.equal(transportJson.tlsSettings.useSystemCA, true);
+    assert.equal(transportJson.tlsSettings.certificates[0].ocspStapling, 3600);
+    assert.equal(transportJson.tlsSettings.settings.futureTlsSetting, 'keep');
+    assert.equal(transportJson.xhttpSettings.futureXhttpOption.value, 9);
+    assert.deepEqual(JSON.parse(JSON.stringify(transportJson.sockopt.customSockopt)), transportInput.sockopt.customSockopt);
+    assert.deepEqual(JSON.parse(JSON.stringify(transportJson.sockopt.happyEyeballs)), transportInput.sockopt.happyEyeballs);
+    assert.equal(transportJson.sockopt[model === 'inbound' ? 'tcpcongestion' : 'tcpCongestion'], 'cubic');
+    if (model === 'inbound') {
+        const canonicalSocket = context.Stream.fromJson({network:'tcp',sockopt:{tcpCongestion:'reno'}}).toJson().sockopt;
+        assert.equal(canonicalSocket.tcpcongestion, 'reno');
+        assert.equal(canonicalSocket.tcpCongestion, undefined);
+    }
+
+    const realityInput = model === 'inbound'
+        ? {network:'xhttp', security:'reality', realitySettings:{dest:'127.0.0.1:443', serverNames:['localhost'], privateKey:'test-key', shortIds:['aabbccdd'], masterKeyLog:'/tmp/reality.keys', limitFallbackUpload:{afterBytes:1024,bytesPerSec:20}, settings:{publicKey:'test-pub',fingerprint:'chrome',serverName:'localhost',futureRealitySetting:'keep'}}}
+        : {network:'xhttp', security:'reality', realitySettings:{publicKey:'test-pub',fingerprint:'chrome',serverName:'localhost',shortId:'aabbccdd',spiderX:'/',mldsa65Verify:'verify-data',futureRealitySetting:'keep'}};
+    const realityModel = context.Stream.fromJson(realityInput);
+    const realityJson = JSON.parse(JSON.stringify(realityModel.toJson())).realitySettings;
+    if (model === 'inbound') {
+        assert.equal(realityJson.target, '127.0.0.1:443', 'inbound REALITY dest alias was lost');
+        assert.equal(realityJson.masterKeyLog, '/tmp/reality.keys');
+        assert.equal(realityJson.limitFallbackUpload.bytesPerSec, 20);
+        assert.equal(realityJson.settings.futureRealitySetting, 'keep');
+    } else {
+        assert.equal(realityJson.futureRealitySetting, 'keep');
+    }
     if (model === "inbound") {
         vm.runInContext("globalThis.Awg = Inbound.AwgSettings;", context);
         const awg = context.Awg.fromJson({s3: 12, s4: 24, randomTrailers:true, headerProtectionKey:'abc', clients: []});
@@ -80,6 +136,11 @@ for (const model of ["inbound", "outbound"]) {
         const customJson = JSON.parse(JSON.stringify(custom.toJson().streamSettings.finalmask.tcp[0].settings.clients[0][0]));
         assert.deepEqual(customJson.transform, {op:'concat',args:[{type:'str',bytes:'OK '},{reuse:'head'}]});
         assert.equal(customJson.transformText, undefined);
+        vm.runInContext('globalThis.In = Inbound;', context);
+        const sniffInput = {protocol:'vless', port:443, settings:{clients:[],decryption:'none'}, streamSettings:{network:'xhttp',security:'tls'}, sniffing:{enabled:true,destOverride:['tls'],futureSniffOption:'keep'}};
+        const sniffJson = JSON.parse(JSON.stringify(context.In.fromJson(sniffInput).toJson()));
+        assert.equal(sniffJson.sniffing.futureSniffOption, 'keep');
+        assert.deepEqual(JSON.parse(JSON.stringify(sniffJson.sniffing.destOverride)), ['tls']);
     }
     if (model === "outbound") {
         vm.runInContext("globalThis.Out = Outbound; globalThis.P = Protocols;", context);

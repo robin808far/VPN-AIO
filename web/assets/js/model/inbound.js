@@ -1173,7 +1173,8 @@ class TlsStreamSettings extends XrayCommonClass {
         alpn = [ALPN_OPTION.H2, ALPN_OPTION.HTTP1],
         echServerKeys = '',
         echForceQuery = 'none',
-        settings = new TlsStreamSettings.Settings()
+        settings = new TlsStreamSettings.Settings(),
+        extra = {},
     ) {
         super();
         this.sni = serverName;
@@ -1188,6 +1189,7 @@ class TlsStreamSettings extends XrayCommonClass {
         this.echServerKeys = echServerKeys;
         this.echForceQuery = echForceQuery;
         this.settings = settings;
+        this.extra = extra && typeof extra === 'object' ? extra : {};
     }
 
     addCert() {
@@ -1206,7 +1208,7 @@ class TlsStreamSettings extends XrayCommonClass {
         }
 
         if (!ObjectUtil.isEmpty(json.settings)) {
-            settings = new TlsStreamSettings.Settings(json.settings.fingerprint, json.settings.echConfigList);
+            settings = TlsStreamSettings.Settings.fromJson(json.settings);
         }
         return new TlsStreamSettings(
             json.serverName,
@@ -1221,11 +1223,12 @@ class TlsStreamSettings extends XrayCommonClass {
             json.echServerKeys,
             json.echForceQuery,
             settings,
+            inboundUnmodeledFields(json, TlsStreamSettings.STRUCTURED_KEYS),
         );
     }
 
     toJson() {
-        return {
+        return Object.assign({}, this.extra, {
             serverName: this.sni,
             minVersion: this.minVersion,
             maxVersion: this.maxVersion,
@@ -1237,10 +1240,17 @@ class TlsStreamSettings extends XrayCommonClass {
             alpn: this.alpn,
             echServerKeys: this.echServerKeys,
             echForceQuery: this.echForceQuery,
-            settings: this.settings,
-        };
+            settings: this.settings.toJson(),
+        });
     }
 }
+TlsStreamSettings.STRUCTURED_KEYS = new Set([
+    'serverName', 'minVersion', 'maxVersion', 'cipherSuites', 'rejectUnknownSni',
+    'disableSystemRoot', 'enableSessionResumption', 'certificates', 'alpn',
+    // Xray removed this option; consume it instead of preserving a field that
+    // makes the pinned core refuse to build the TLS config.
+    'echServerKeys', 'echForceQuery', 'settings', 'allowInsecure',
+]);
 
 TlsStreamSettings.Cert = class extends XrayCommonClass {
     constructor(
@@ -1252,6 +1262,7 @@ TlsStreamSettings.Cert = class extends XrayCommonClass {
         oneTimeLoading = false,
         usage = USAGE_OPTION.ENCIPHERMENT,
         buildChain = false,
+        extra = {},
     ) {
         super();
         this.useFile = useFile;
@@ -1261,7 +1272,8 @@ TlsStreamSettings.Cert = class extends XrayCommonClass {
         this.key = Array.isArray(key) ? key.join('\n') : key;
         this.oneTimeLoading = oneTimeLoading;
         this.usage = usage;
-        this.buildChain = buildChain
+        this.buildChain = buildChain;
+        this.extra = extra && typeof extra === 'object' ? extra : {};
     }
 
     static fromJson(json = {}) {
@@ -1273,6 +1285,7 @@ TlsStreamSettings.Cert = class extends XrayCommonClass {
                 json.oneTimeLoading,
                 json.usage,
                 json.buildChain,
+                inboundUnmodeledFields(json, TlsStreamSettings.Cert.STRUCTURED_KEYS),
             );
         } else {
             return new TlsStreamSettings.Cert(
@@ -1282,53 +1295,61 @@ TlsStreamSettings.Cert = class extends XrayCommonClass {
                 json.oneTimeLoading,
                 json.usage,
                 json.buildChain,
+                inboundUnmodeledFields(json, TlsStreamSettings.Cert.STRUCTURED_KEYS),
             );
         }
     }
 
     toJson() {
         if (this.useFile) {
-            return {
+            return Object.assign({}, this.extra, {
                 certificateFile: this.certFile,
                 keyFile: this.keyFile,
                 oneTimeLoading: this.oneTimeLoading,
                 usage: this.usage,
                 buildChain: this.buildChain,
-            };
+            });
         } else {
-            return {
+            return Object.assign({}, this.extra, {
                 certificate: this.cert.split('\n'),
                 key: this.key.split('\n'),
                 oneTimeLoading: this.oneTimeLoading,
                 usage: this.usage,
                 buildChain: this.buildChain,
-            };
+            });
         }
     }
 };
+TlsStreamSettings.Cert.STRUCTURED_KEYS = new Set([
+    'certificateFile', 'keyFile', 'certificate', 'key', 'oneTimeLoading', 'usage', 'buildChain',
+]);
 
 TlsStreamSettings.Settings = class extends XrayCommonClass {
     constructor(
         fingerprint = UTLS_FINGERPRINT.UTLS_CHROME,
         echConfigList = '',
+        extra = {},
     ) {
         super();
         this.fingerprint = fingerprint;
         this.echConfigList = echConfigList;
+        this.extra = extra && typeof extra === 'object' ? extra : {};
     }
     static fromJson(json = {}) {
         return new TlsStreamSettings.Settings(
             json.fingerprint,
             json.echConfigList,
+            inboundUnmodeledFields(json, TlsStreamSettings.Settings.STRUCTURED_KEYS),
         );
     }
     toJson() {
-        return {
+        return Object.assign({}, this.extra, {
             fingerprint: this.fingerprint,
             echConfigList: this.echConfigList
-        };
+        });
     }
 };
+TlsStreamSettings.Settings.STRUCTURED_KEYS = new Set(['fingerprint', 'echConfigList']);
 
 
 class RealityStreamSettings extends XrayCommonClass {
@@ -1343,7 +1364,8 @@ class RealityStreamSettings extends XrayCommonClass {
         maxTimediff = 0,
         shortIds = RandomUtil.randomShortIds(),
         mldsa65Seed = '',
-        settings = new RealityStreamSettings.Settings()
+        settings = new RealityStreamSettings.Settings(),
+        extra = {},
     ) {
         super();
         // If target/serverNames are not provided, use random values
@@ -1365,23 +1387,18 @@ class RealityStreamSettings extends XrayCommonClass {
         this.shortIds = Array.isArray(shortIds) ? shortIds.join(",") : shortIds;
         this.mldsa65Seed = mldsa65Seed;
         this.settings = settings;
+        this.extra = extra && typeof extra === 'object' ? extra : {};
     }
 
     static fromJson(json = {}) {
         let settings;
         if (!ObjectUtil.isEmpty(json.settings)) {
-            settings = new RealityStreamSettings.Settings(
-                json.settings.publicKey,
-                json.settings.fingerprint,
-                json.settings.serverName,
-                json.settings.spiderX,
-                json.settings.mldsa65Verify,
-            );
+            settings = RealityStreamSettings.Settings.fromJson(json.settings);
         }
         return new RealityStreamSettings(
             json.show,
             json.xver,
-            json.target,
+            ObjectUtil.isEmpty(json.target) ? json.dest : json.target,
             json.serverNames,
             json.privateKey,
             json.minClientVer,
@@ -1390,11 +1407,12 @@ class RealityStreamSettings extends XrayCommonClass {
             json.shortIds,
             json.mldsa65Seed,
             settings,
+            inboundUnmodeledFields(json, RealityStreamSettings.STRUCTURED_KEYS),
         );
     }
 
     toJson() {
-        return {
+        return Object.assign({}, this.extra, {
             show: this.show,
             xver: this.xver,
             target: this.target,
@@ -1405,10 +1423,14 @@ class RealityStreamSettings extends XrayCommonClass {
             maxTimediff: this.maxTimediff,
             shortIds: this.shortIds.split(","),
             mldsa65Seed: this.mldsa65Seed,
-            settings: this.settings,
-        };
+            settings: this.settings.toJson(),
+        });
     }
 }
+RealityStreamSettings.STRUCTURED_KEYS = new Set([
+    'show', 'xver', 'target', 'dest', 'serverNames', 'privateKey', 'minClientVer',
+    'maxClientVer', 'maxTimediff', 'shortIds', 'mldsa65Seed', 'settings',
+]);
 
 RealityStreamSettings.Settings = class extends XrayCommonClass {
     constructor(
@@ -1416,7 +1438,8 @@ RealityStreamSettings.Settings = class extends XrayCommonClass {
         fingerprint = UTLS_FINGERPRINT.UTLS_CHROME,
         serverName = '',
         spiderX = '/',
-        mldsa65Verify = ''
+        mldsa65Verify = '',
+        extra = {},
     ) {
         super();
         this.publicKey = publicKey;
@@ -1424,6 +1447,7 @@ RealityStreamSettings.Settings = class extends XrayCommonClass {
         this.serverName = serverName;
         this.spiderX = spiderX;
         this.mldsa65Verify = mldsa65Verify;
+        this.extra = extra && typeof extra === 'object' ? extra : {};
     }
     static fromJson(json = {}) {
         return new RealityStreamSettings.Settings(
@@ -1431,19 +1455,23 @@ RealityStreamSettings.Settings = class extends XrayCommonClass {
             json.fingerprint,
             json.serverName,
             json.spiderX,
-            json.mldsa65Verify
+            json.mldsa65Verify,
+            inboundUnmodeledFields(json, RealityStreamSettings.Settings.STRUCTURED_KEYS),
         );
     }
     toJson() {
-        return {
+        return Object.assign({}, this.extra, {
             publicKey: this.publicKey,
             fingerprint: this.fingerprint,
             serverName: this.serverName,
             spiderX: this.spiderX,
             mldsa65Verify: this.mldsa65Verify
-        };
+        });
     }
 };
+RealityStreamSettings.Settings.STRUCTURED_KEYS = new Set([
+    'publicKey', 'fingerprint', 'serverName', 'spiderX', 'mldsa65Verify',
+]);
 
 class SockoptStreamSettings extends XrayCommonClass {
     constructor(
@@ -1464,6 +1492,7 @@ class SockoptStreamSettings extends XrayCommonClass {
         tcpWindowClamp = 600,
         interfaceName = "",
         trustedXForwardedFor = [],
+        extra = {},
     ) {
         super();
         this.acceptProxyProtocol = acceptProxyProtocol;
@@ -1483,6 +1512,7 @@ class SockoptStreamSettings extends XrayCommonClass {
         this.tcpWindowClamp = tcpWindowClamp;
         this.interfaceName = interfaceName;
         this.trustedXForwardedFor = trustedXForwardedFor;
+        this.extra = extra && typeof extra === 'object' ? extra : {};
     }
 
     static fromJson(json = {}) {
@@ -1500,16 +1530,17 @@ class SockoptStreamSettings extends XrayCommonClass {
             json.tcpKeepAliveInterval,
             json.tcpKeepAliveIdle,
             json.tcpUserTimeout,
-            json.tcpcongestion,
+            json.tcpcongestion ?? json.tcpCongestion,
             json.V6Only,
             json.tcpWindowClamp,
             json.interface,
             json.trustedXForwardedFor || [],
+            inboundUnmodeledFields(json, SockoptStreamSettings.STRUCTURED_KEYS),
         );
     }
 
     toJson() {
-        const result = {
+        const result = Object.assign({}, this.extra, {
             acceptProxyProtocol: this.acceptProxyProtocol,
             tcpFastOpen: this.tcpFastOpen,
             mark: this.mark,
@@ -1526,13 +1557,19 @@ class SockoptStreamSettings extends XrayCommonClass {
             V6Only: this.V6Only,
             tcpWindowClamp: this.tcpWindowClamp,
             interface: this.interfaceName,
-        };
+        });
         if (this.trustedXForwardedFor && this.trustedXForwardedFor.length > 0) {
             result.trustedXForwardedFor = this.trustedXForwardedFor;
         }
         return result;
     }
 }
+SockoptStreamSettings.STRUCTURED_KEYS = new Set([
+    'acceptProxyProtocol', 'tcpFastOpen', 'mark', 'tproxy', 'tcpMptcp', 'penetrate',
+    'domainStrategy', 'tcpMaxSeg', 'dialerProxy', 'tcpKeepAliveInterval',
+    'tcpKeepAliveIdle', 'tcpUserTimeout', 'tcpcongestion', 'tcpCongestion',
+    'V6Only', 'v6only', 'tcpWindowClamp', 'interface', 'trustedXForwardedFor',
+]);
 
 function upgradeFinalMaskXdns(settings) {
     const types = {'': 16, txt: 16, a: 1, aaaa: 28};
@@ -1570,6 +1607,20 @@ function upgradeFinalMaskXdns(settings) {
         return entry;
     });
     return {...settings,domains,resolvers};
+}
+
+// Preserve keys the form does not model when an operator edits another field.
+// The pinned core evolves faster than the settings UI; dropping an unfamiliar
+// TLS/REALITY/socket option on save can silently change a live inbound.
+function inboundUnmodeledFields(json, modeledKeys) {
+    const extra = {};
+    if (!json || typeof json !== 'object' || Array.isArray(json)) return extra;
+    for (const [key, value] of Object.entries(json)) {
+        if (!modeledKeys.has(key)) {
+            Object.defineProperty(extra, key, {value, enumerable: true, writable: true, configurable: true});
+        }
+    }
+    return extra;
 }
 
 function inboundMaskItemFromJson(item = {}) {
@@ -1948,6 +1999,7 @@ class StreamSettings extends XrayCommonClass {
         sockopt = undefined,
         xdriveSettings = {},
         masqueSettings = {},
+        extra = {},
     ) {
         super();
         this.network = network;
@@ -1966,6 +2018,7 @@ class StreamSettings extends XrayCommonClass {
         this.sockopt = sockopt;
         this.xdrive = Object.assign({service: 'local', remoteFolder: '', secrets: [], s3: {endpoint: '', region: '', bucket: '', pathStyle: true}}, xdriveSettings);
         this.masque = Object.assign({path: ''}, masqueSettings);
+        this.extra = extra && typeof extra === 'object' ? extra : {};
     }
 
     addTcpMask(type = 'fragment') {
@@ -2071,12 +2124,13 @@ class StreamSettings extends XrayCommonClass {
             SockoptStreamSettings.fromJson(json.sockopt),
             json.xdriveSettings,
             json.masqueSettings,
+            inboundUnmodeledFields(json, StreamSettings.STRUCTURED_KEYS),
         );
     }
 
     toJson() {
         const network = this.network;
-        return {
+        return Object.assign({}, this.extra, {
             network: network,
             security: this.security,
             externalProxy: this.externalProxy,
@@ -2093,9 +2147,15 @@ class StreamSettings extends XrayCommonClass {
             masqueSettings: network === 'masque' ? {...this.masque} : undefined,
             finalmask: this.hasFinalMask ? this.finalmask.toJson() : undefined,
             sockopt: this.sockopt != undefined ? this.sockopt.toJson() : undefined,
-        };
+        });
     }
 }
+StreamSettings.STRUCTURED_KEYS = new Set([
+    'network', 'security', 'externalProxy', 'tlsSettings', 'realitySettings',
+    'tcpSettings', 'kcpSettings', 'wsSettings', 'grpcSettings',
+    'httpupgradeSettings', 'xhttpSettings', 'hysteriaSettings', 'xdriveSettings',
+    'masqueSettings', 'finalmask', 'sockopt',
+]);
 
 class Sniffing extends XrayCommonClass {
     constructor(
@@ -2104,7 +2164,8 @@ class Sniffing extends XrayCommonClass {
         metadataOnly = false,
         routeOnly = false,
         ipsExcluded = [],
-        domainsExcluded = []) {
+        domainsExcluded = [],
+        extra = {}) {
         super();
         this.enabled = enabled;
         this.destOverride = Array.isArray(destOverride) && destOverride.length > 0 ? destOverride : ['http', 'tls', 'quic', 'fakedns'];
@@ -2112,6 +2173,7 @@ class Sniffing extends XrayCommonClass {
         this.routeOnly = routeOnly;
         this.ipsExcluded = Array.isArray(ipsExcluded) ? ipsExcluded : [];
         this.domainsExcluded = Array.isArray(domainsExcluded) ? domainsExcluded : [];
+        this.extra = extra && typeof extra === 'object' ? extra : {};
     }
 
     static fromJson(json = {}) {
@@ -2126,20 +2188,24 @@ class Sniffing extends XrayCommonClass {
             json.routeOnly,
             json.ipsExcluded || [],
             json.domainsExcluded || [],
+            inboundUnmodeledFields(json, Sniffing.STRUCTURED_KEYS),
         );
     }
 
     toJson() {
-        return {
+        return Object.assign({}, this.extra, {
             enabled: this.enabled,
             destOverride: this.destOverride,
             metadataOnly: this.metadataOnly,
             routeOnly: this.routeOnly,
             ipsExcluded: this.ipsExcluded.length > 0 ? this.ipsExcluded : undefined,
             domainsExcluded: this.domainsExcluded.length > 0 ? this.domainsExcluded : undefined,
-        };
+        });
     }
 }
+Sniffing.STRUCTURED_KEYS = new Set([
+    'enabled', 'destOverride', 'metadataOnly', 'routeOnly', 'ipsExcluded', 'domainsExcluded',
+]);
 
 class Inbound extends XrayCommonClass {
     static setFinalMaskItemKind(item, kind) { setInboundMaskItemKind(item, kind); }

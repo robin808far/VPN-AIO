@@ -146,6 +146,12 @@ routes are removed while sentinel operator files survive. The script refuses to
 run without `VPN_AIO_CONTAINER_LIFECYCLE_ACK=yes` and rejects bind mounts over
 system paths.
 
+`transport-settings-config-check.py` separately asks the pinned Xray executable to
+parse representative XHTTP+TLS and XHTTP+REALITY configurations carrying socket,
+DNS, routing and sniffing settings. It is also run in the isolated lifecycle test.
+The browserless model tests cover the transport round-trip and preserve fields the
+current UI does not edit.
+
 This is deliberately narrower than the Incus matrix: the container has no
 systemd boot and shares the host kernel, so it does not validate unit stop/disable,
 DKMS, kernel modules, or VPN tunnel behavior across distro kernels. Those remain
