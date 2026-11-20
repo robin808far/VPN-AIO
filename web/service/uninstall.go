@@ -91,6 +91,13 @@ func Uninstall(opts UninstallOptions) *UninstallReport {
 	//    KeepCores spares the CORE daemons only; the other-panel kill at the end
 	//    of stopVpnDaemons always runs.
 	stopVpnDaemons(r, opts.ExePath, opts.KeepCores)
+	if !opts.KeepCores {
+		// WireGuard, AmneziaWG and GRE are kernel interfaces rather than managed
+		// child processes. They survive stopping the panel, so a full uninstall
+		// must explicitly run their normal manifest-aware cleanup before removing
+		// the shared data plane or deregistering the AmneziaWG DKMS module.
+		stopKernelCoreInterfaces(r)
+	}
 
 	// 2b. Client-side VPN outbound tunnels (wg/gre/tun/ppp/xfrm netdevs plus whatever
 	//     client each driver spawned). Nothing else here reaches them: they are not
@@ -420,6 +427,31 @@ func Uninstall(opts UninstallOptions) *UninstallReport {
 
 	logger.Info("uninstall: host teardown complete")
 	return r
+}
+
+// stopKernelCoreInterfaces reuses each server protocol's positive ownership
+// checks rather than sweeping netdev names in the generic uninstall path.
+// Keep this limited to server-side cores: client/outbound tunnels are torn down
+// separately by VpnOutboundService.StopAll above.
+func stopKernelCoreInterfaces(r *UninstallReport) {
+	stopKernelCoreInterfacesWith(r, []kernelInterfaceStop{
+		{name: "WireGuard (C)", stop: (&WgcService{}).StopServices},
+		{name: "AmneziaWG", stop: (&AwgService{}).StopServices},
+		{name: "GRE", stop: (&GreService{}).StopServices},
+	})
+}
+
+type kernelInterfaceStop struct {
+	name string
+	stop func() error
+}
+
+func stopKernelCoreInterfacesWith(r *UninstallReport, steps []kernelInterfaceStop) {
+	for _, step := range steps {
+		if err := step.stop(); err != nil {
+			r.fail("stop "+step.name+" kernel interfaces", err)
+		}
+	}
 }
 
 // stopVpnDaemons stops the supervised VPN daemons. procMgr.StopAll covers

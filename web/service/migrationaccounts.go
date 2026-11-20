@@ -662,7 +662,7 @@ func extractAccountCredential(account *model.Account, entry map[string]any, prot
 		set("security", &account.Security, str("security"))
 	case model.VLESS:
 		set("uuid", &account.UUID, str("id"))
-	case model.Trojan, model.Shadowsocks, model.ANYTLS:
+	case model.Trojan, model.Shadowsocks, model.ANYTLS, model.MASQUE:
 		set("password", &account.Password, str("password"))
 	case model.NAIVE:
 		set("password", &account.Password, str("password"))

@@ -126,6 +126,10 @@
     okText: '{{ i18n "sure" }}',
     isEdit: false,
     confirm: null,
+    // Keep rule fields the editor does not currently expose (localIP, process,
+    // localOS, webhook, ruleTag and any newer Xray keys) when an operator edits
+    // a different field. A UI save must not narrow the core's routing schema.
+    extra: {},
     rule: {
       type: "field",
       domain: "",
@@ -161,36 +165,40 @@
       this.okText = okText;
       this.confirm = confirm;
       this.visible = true;
+      this.extra = {};
+      this.rule = {
+        type: 'field', domain: '', ip: '', port: '', sourcePort: '', vlessRoute: '',
+        network: '', sourceIP: '', user: '', inboundTag: [], protocol: [], attrs: [],
+        outboundTag: '', balancerTag: '',
+      };
       if (isEdit) {
-        this.rule.domain = rule.domain ? rule.domain.join(',') : [];
-        this.rule.ip = rule.ip ? rule.ip.join(',') : [];
-        this.rule.port = rule.port;
-        this.rule.sourcePort = rule.sourcePort;
-        this.rule.vlessRoute = rule.vlessRoute;
-        this.rule.network = rule.network;
-        this.rule.sourceIP = rule.sourceIP ? rule.sourceIP.join(',') : [];
-        this.rule.user = rule.user ? rule.user.join(',') : [];
-        this.rule.inboundTag = rule.inboundTag;
-        this.rule.protocol = rule.protocol;
+        const modeled = new Set([
+          'type', 'domain', 'domains', 'ip', 'port', 'sourcePort', 'vlessRoute',
+          'network', 'sourceIP', 'source', 'user', 'inboundTag', 'protocol',
+          'attrs', 'outboundTag', 'balancerTag',
+        ]);
+        Object.keys(rule || {}).forEach(key => {
+          if (!modeled.has(key)) this.extra[key] = rule[key];
+        });
+        // Xray still accepts the legacy aliases; surface them in the current
+        // controls and drop the alias so an edited value wins when saved.
+        const domains = rule.domain !== undefined ? rule.domain : rule.domains;
+        const sources = rule.sourceIP !== undefined ? rule.sourceIP : rule.source;
+        delete this.extra.domains;
+        delete this.extra.source;
+        this.rule.domain = domains ? domains.join(',') : '';
+        this.rule.ip = rule.ip ? rule.ip.join(',') : '';
+        this.rule.port = rule.port || '';
+        this.rule.sourcePort = rule.sourcePort || '';
+        this.rule.vlessRoute = rule.vlessRoute || '';
+        this.rule.network = rule.network || '';
+        this.rule.sourceIP = sources ? sources.join(',') : '';
+        this.rule.user = rule.user ? rule.user.join(',') : '';
+        this.rule.inboundTag = rule.inboundTag || [];
+        this.rule.protocol = rule.protocol || [];
         this.rule.attrs = rule.attrs ? Object.entries(rule.attrs) : [];
-        this.rule.outboundTag = rule.outboundTag;
+        this.rule.outboundTag = rule.outboundTag || '';
         this.rule.balancerTag = rule.balancerTag ? rule.balancerTag : "";
-      } else {
-        this.rule = {
-          domain: "",
-          ip: "",
-          port: "",
-          sourcePort: "",
-          vlessRoute: "",
-          network: "",
-          sourceIP: "",
-          user: "",
-          inboundTag: [],
-          protocol: [],
-          attrs: [],
-          outboundTag: "",
-          balancerTag: "",
-        }
       }
       this.isEdit = isEdit;
       this.inboundTags = app.templateSettings.inbounds.filter((i) => !ObjectUtil.isEmpty(i.tag)).map(obj => obj.tag);
@@ -218,7 +226,7 @@
     getResult() {
       value = ruleModal.rule;
       rule = {};
-      newRule = {};
+      newRule = { ...(ruleModal.extra || {}) };
       rule.type = "field";
       rule.domain = value.domain.length > 0 ? value.domain.split(',').map(s => s.trim()) : [];
       rule.ip = value.ip.length > 0 ? value.ip.split(',').map(s => s.trim()) : [];

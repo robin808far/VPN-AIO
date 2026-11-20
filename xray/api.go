@@ -147,9 +147,11 @@ func (x *XrayAPI) DelInbound(tag string) error {
 // type URLs the running core resolves through serial.GetInstance, so they must match the
 // `package` + `message` of the core's own .proto byte for byte. See forkAccount.
 const (
-	anytlsAccountType = "xray.proxy.anytls.Account"
-	tuicAccountType   = "xray.proxy.tuic.Account"
-	naiveAccountType  = "xray.proxy.naive.Account"
+	anytlsAccountType          = "xray.proxy.anytls.Account"
+	tuicAccountType            = "xray.proxy.tuic.Account"
+	naiveAccountType           = "xray.proxy.naive.Account"
+	masqueAccountType          = "xray.proxy.masque.Account"
+	masqueAccountPasswordField = 1
 )
 
 // Field numbers in xray.proxy.naive.Account. Named because they are the one part of
@@ -369,6 +371,12 @@ func (x *XrayAPI) AddUser(Protocol string, inboundTag string, user map[string]an
 			protoStringField{naiveAccountPasswordField, password},
 			protoStringField{naiveAccountUsernameField, username},
 		)
+	case "masque":
+		password, err := getRequiredUserString(user, "password")
+		if err != nil {
+			return err
+		}
+		account = forkAccount(masqueAccountType, protoStringField{masqueAccountPasswordField, password})
 	default:
 		return nil
 	}

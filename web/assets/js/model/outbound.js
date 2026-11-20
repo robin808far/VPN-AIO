@@ -17,6 +17,7 @@ const Protocols = {
     AnyTLS: "anytls",
     Tuic: "tuic",
     Naive: "naive",
+    Masque: "masque",
     // Not an Xray protocol: Xray core ships no ssh outbound. The panel keeps the
     // SSH connection itself and fronts it with a local SOCKS5 proxy, so what
     // reaches the config is a `socks` outbound pointing at that proxy (see
@@ -92,6 +93,7 @@ const PROTOCOL_LABELS = {
     [Protocols.AnyTLS]: 'AnyTLS',
     [Protocols.Tuic]: 'TUIC',
     [Protocols.Naive]: 'NaiveProxy',
+    [Protocols.Masque]: 'MASQUE',
 };
 
 // What the Add Outbound picker shows for one protocol. The KEY of the Protocols
@@ -560,6 +562,7 @@ class TlsStreamSettings extends CommonClass {
         echConfigList = '',
         verifyPeerCertByName = '',
         pinnedPeerCertSha256 = '',
+        extra = {},
     ) {
         super();
         this.serverName = serverName;
@@ -568,6 +571,7 @@ class TlsStreamSettings extends CommonClass {
         this.echConfigList = echConfigList;
         this.verifyPeerCertByName = verifyPeerCertByName;
         this.pinnedPeerCertSha256 = pinnedPeerCertSha256;
+        this.extra = extra && typeof extra === 'object' ? extra : {};
     }
 
     static fromJson(json = {}) {
@@ -578,11 +582,12 @@ class TlsStreamSettings extends CommonClass {
             json.echConfigList,
             json.verifyPeerCertByName,
             json.pinnedPeerCertSha256,
+            outboundUnmodeledFields(json, TlsStreamSettings.STRUCTURED_KEYS),
         );
     }
 
     toJson() {
-        const o = { serverName: this.serverName };
+        const o = Object.assign({}, this.extra, { serverName: this.serverName });
         // Emit optional TLS fields only when they carry a value. Xray rejects a
         // blank/"none" fingerprint ("unknown fingerprint"), and empty optionals
         // just add noise, so omit them.
@@ -596,6 +601,11 @@ class TlsStreamSettings extends CommonClass {
         return o;
     }
 }
+TlsStreamSettings.STRUCTURED_KEYS = new Set([
+    'serverName', 'alpn', 'fingerprint', 'echConfigList', 'verifyPeerCertByName',
+    // The pinned core rejects this removed compatibility switch.
+    'pinnedPeerCertSha256', 'allowInsecure',
+]);
 
 class RealityStreamSettings extends CommonClass {
     constructor(
@@ -604,7 +614,8 @@ class RealityStreamSettings extends CommonClass {
         serverName = '',
         shortId = '',
         spiderX = '',
-        mldsa65Verify = ''
+        mldsa65Verify = '',
+        extra = {},
     ) {
         super();
         this.publicKey = publicKey;
@@ -613,6 +624,7 @@ class RealityStreamSettings extends CommonClass {
         this.shortId = shortId
         this.spiderX = spiderX;
         this.mldsa65Verify = mldsa65Verify;
+        this.extra = extra && typeof extra === 'object' ? extra : {};
     }
     static fromJson(json = {}) {
         return new RealityStreamSettings(
@@ -621,20 +633,24 @@ class RealityStreamSettings extends CommonClass {
             json.serverName,
             json.shortId,
             json.spiderX,
-            json.mldsa65Verify
+            json.mldsa65Verify,
+            outboundUnmodeledFields(json, RealityStreamSettings.STRUCTURED_KEYS),
         );
     }
     toJson() {
-        return {
+        return Object.assign({}, this.extra, {
             publicKey: this.publicKey,
             fingerprint: this.fingerprint,
             serverName: this.serverName,
             shortId: this.shortId,
             spiderX: this.spiderX,
             mldsa65Verify: this.mldsa65Verify
-        };
+        });
     }
 };
+RealityStreamSettings.STRUCTURED_KEYS = new Set([
+    'publicKey', 'fingerprint', 'serverName', 'shortId', 'spiderX', 'mldsa65Verify',
+]);
 
 class HysteriaStreamSettings extends CommonClass {
     constructor(
@@ -745,6 +761,7 @@ class SockoptStreamSettings extends CommonClass {
         interfaceName = "",
         mark = 0,
         trustedXForwardedFor = [],
+        extra = {},
     ) {
         super();
         this.dialerProxy = dialerProxy;
@@ -756,6 +773,7 @@ class SockoptStreamSettings extends CommonClass {
         this.interfaceName = interfaceName;
         this.mark = mark;
         this.trustedXForwardedFor = trustedXForwardedFor;
+        this.extra = extra && typeof extra === 'object' ? extra : {};
     }
 
     static fromJson(json = {}) {
@@ -769,19 +787,20 @@ class SockoptStreamSettings extends CommonClass {
             json.addressPortStrategy,
             json.interface,
             json.mark,
-            json.trustedXForwardedFor || []
+            json.trustedXForwardedFor || [],
+            outboundUnmodeledFields(json, SockoptStreamSettings.STRUCTURED_KEYS),
         );
     }
 
     toJson() {
-        const result = {
+        const result = Object.assign({}, this.extra, {
             dialerProxy: this.dialerProxy,
             tcpFastOpen: this.tcpFastOpen,
             tcpKeepAliveInterval: this.tcpKeepAliveInterval,
             tcpMptcp: this.tcpMptcp,
             penetrate: this.penetrate,
             addressPortStrategy: this.addressPortStrategy
-        };
+        });
         // Only emitted when set, so an outbound that never used them does not
         // gain SO_BINDTODEVICE/SO_MARK keys just by being opened and saved.
         if (this.interfaceName) {
@@ -807,15 +826,21 @@ class UdpMask extends CommonClass {
     _getDefaultSettings(type, settings = {}) {
         switch (type) {
             case 'salamander':
-            case 'mkcp-aes128gcm':
-                return { password: settings.password || '' };
+                return { ...settings, password: settings.password || '', packetSize: settings.packetSize || '' };
             case 'header-dns':
                 return { domain: settings.domain || '' };
             case 'xdns':
-                return { resolvers: Array.isArray(settings.resolvers) ? settings.resolvers : [] };
+                return upgradeOutboundFinalMaskXdns(settings);
             case 'xicmp':
-                return { ip: settings.ip || '', id: settings.id ?? 0 };
-            case 'mkcp-original':
+                return { ...settings, dgram: settings.dgram ?? false, ips: Array.isArray(settings.ips) ? settings.ips : (settings.ip ? [settings.ip] : []) };
+            case 'mkcp-legacy':
+                return { ...settings, header: settings.header || '', value: settings.value || '' };
+            case 'filter':
+                return { ...settings, blockedSourceIPs: settings.blockedSourceIPs || [], allowedSourceIPs: settings.allowedSourceIPs || [] };
+            case 'realm':
+                return { ...settings, url: settings.url || '', stunServers: settings.stunServers || [], ipMode: settings.ipMode || '' };
+            case 'udphop':
+                return { ...settings, mode: settings.mode || 'intervalRemote', interval: settings.interval || '5-10', remoteIPs: settings.remoteIPs || [], remotePorts: settings.remotePorts || '' };
             case 'header-dtls':
             case 'header-srtp':
             case 'header-utp':
@@ -824,16 +849,20 @@ class UdpMask extends CommonClass {
                 return {}; // No settings needed
             case 'header-custom':
                 return {
-                    client: Array.isArray(settings.client) ? settings.client : [],
-                    server: Array.isArray(settings.server) ? settings.server : [],
+                    ...settings,
+                    mode: settings.mode || 'prefix',
+                    client: outboundMaskItemsFromJson(settings.client),
+                    server: outboundMaskItemsFromJson(settings.server),
                 };
             case 'noise':
                 return {
+                    ...settings,
                     reset: settings.reset ?? 0,
                     noise: Array.isArray(settings.noise) ? settings.noise : [],
                 };
             case 'sudoku':
                 return {
+                    ...settings,
                     ascii: settings.ascii || '',
                     customTable: settings.customTable || '',
                     customTables: Array.isArray(settings.customTables) ? settings.customTables : [],
@@ -846,30 +875,29 @@ class UdpMask extends CommonClass {
     }
 
     static fromJson(json = {}) {
+        const legacy = normalizeOutboundUdpMask(json.type || 'salamander', json.settings || {});
         return new UdpMask(
-            json.type || 'salamander',
-            json.settings || {}
+            legacy.type,
+            legacy.settings,
         );
     }
 
     toJson() {
-        const cleanItem = item => {
-            const out = { ...item };
-            if (out.type === 'array') {
-                delete out.packet;
-            } else {
-                delete out.rand;
-                delete out.randRange;
-            }
-            return out;
-        };
+        const cleanItem = outboundMaskItemToJson;
 
         let settings = this.settings;
-        if (this.type === 'noise' && settings && Array.isArray(settings.noise)) {
+        if (this.type === 'salamander' && settings && !settings.packetSize) {
+            const {packetSize, ...rest} = settings;
+            settings = rest;
+        } else if (this.type === 'noise' && settings && settings.script) {
+            settings = { ...settings };
+            delete settings.noise;
+        } else if (this.type === 'noise' && settings && Array.isArray(settings.noise)) {
             settings = { ...settings, noise: settings.noise.map(cleanItem) };
         } else if (this.type === 'header-custom' && settings) {
             settings = {
                 ...settings,
+                mode: settings.mode || 'prefix',
                 client: Array.isArray(settings.client) ? settings.client.map(cleanItem) : settings.client,
                 server: Array.isArray(settings.server) ? settings.server.map(cleanItem) : settings.server,
             };
@@ -892,14 +920,18 @@ class TcpMask extends CommonClass {
     _getDefaultSettings(type, settings = {}) {
         switch (type) {
             case 'fragment':
-                return {
+                const fragment = {...settings,
                     packets: settings.packets ?? 'tlshello',
-                    length: settings.length ?? '',
-                    delay: settings.delay ?? '',
+                    lengths: Array.isArray(settings.lengths) ? settings.lengths : (settings.length ? [settings.length] : ['100-200']),
+                    delays: Array.isArray(settings.delays) ? settings.delays : (settings.delay ? [settings.delay] : []),
                     maxSplit: settings.maxSplit ?? '',
                 };
+                delete fragment.length;
+                delete fragment.delay;
+                return fragment;
             case 'sudoku':
                 return {
+                    ...settings,
                     password: settings.password ?? '',
                     ascii: settings.ascii ?? '',
                     customTable: settings.customTable ?? '',
@@ -909,9 +941,15 @@ class TcpMask extends CommonClass {
                 };
             case 'header-custom':
                 return {
-                    clients: Array.isArray(settings.clients) ? settings.clients : [],
-                    servers: Array.isArray(settings.servers) ? settings.servers : [],
+                    ...settings,
+                    clients: outboundMaskGroupsFromJson(settings.clients),
+                    servers: outboundMaskGroupsFromJson(settings.servers),
+                    errors: outboundMaskGroupsFromJson(settings.errors),
                 };
+            case 'xmc':
+                return {...settings,hostname:settings.hostname||'',profiles:Array.isArray(settings.profiles)?settings.profiles:[{username:'',uuid:'',texturesValue:'',texturesSignature:''}],password:settings.password||RandomUtil.randomLowerAndNum(16)};
+            case 'filter':
+                return {...settings,blockedSourceIPs:settings.blockedSourceIPs||[],allowedSourceIPs:settings.allowedSourceIPs||[]};
             default:
                 return settings;
         }
@@ -925,24 +963,19 @@ class TcpMask extends CommonClass {
     }
 
     toJson() {
-        const cleanItem = item => {
-            const out = { ...item };
-            if (out.type === 'array') {
-                delete out.packet;
-            } else {
-                delete out.rand;
-                delete out.randRange;
-            }
-            return out;
-        };
+        const cleanItem = outboundMaskItemToJson;
 
         let settings = this.settings;
+        if (this.type === 'fragment' && settings && !String(settings.maxSplit || '').trim()) {
+            settings = { ...settings };
+            delete settings.maxSplit;
+        }
         if (this.type === 'header-custom' && settings) {
-            const cleanGroup = group => Array.isArray(group) ? group.map(cleanItem) : group;
             settings = {
                 ...settings,
-                clients: Array.isArray(settings.clients) ? settings.clients.map(cleanGroup) : settings.clients,
-                servers: Array.isArray(settings.servers) ? settings.servers.map(cleanGroup) : settings.servers,
+                clients: Array.isArray(settings.clients) ? settings.clients.map(group => group.map(cleanItem)) : settings.clients,
+                servers: Array.isArray(settings.servers) ? settings.servers.map(group => group.map(cleanItem)) : settings.servers,
+                errors: Array.isArray(settings.errors) ? settings.errors.map(group => group.map(cleanItem)) : settings.errors,
             };
         }
 
@@ -960,6 +993,7 @@ class QuicParams extends CommonClass {
         brutalUp = '',
         brutalDown = '',
         udpHop = undefined,
+        options = {},
     ) {
         super();
         this.congestion = congestion;
@@ -967,6 +1001,9 @@ class QuicParams extends CommonClass {
         this.brutalUp = brutalUp;
         this.brutalDown = brutalDown;
         this.udpHop = udpHop;
+        for (const [key, value] of Object.entries(QuicParams.DEFAULTS)) {
+            this[key] = options[key] ?? value;
+        }
     }
 
     get hasUdpHop() {
@@ -985,6 +1022,7 @@ class QuicParams extends CommonClass {
             json.brutalUp,
             json.brutalDown,
             json.udpHop ? { ports: json.udpHop.ports, interval: json.udpHop.interval } : undefined,
+            json,
         );
     }
 
@@ -994,15 +1032,126 @@ class QuicParams extends CommonClass {
         if (this.brutalUp) result.brutalUp = this.brutalUp;
         if (this.brutalDown) result.brutalDown = this.brutalDown;
         if (this.udpHop) result.udpHop = { ports: this.udpHop.ports, interval: this.udpHop.interval };
+        for (const key of Object.keys(QuicParams.DEFAULTS)) {
+            if (this[key] !== undefined && this[key] !== null) result[key] = this[key];
+        }
         return result;
     }
 }
+SockoptStreamSettings.STRUCTURED_KEYS = new Set([
+    'dialerProxy', 'tcpFastOpen', 'tcpKeepAliveInterval', 'tcpMptcp', 'penetrate',
+    'addressPortStrategy', 'interface', 'mark', 'trustedXForwardedFor',
+]);
+
+// Keep Xray transport keys unknown to this form when editing other settings.
+// This lets a newer pinned core or hand-edited JSON survive a model round-trip.
+function outboundUnmodeledFields(json, modeledKeys) {
+    const extra = {};
+    if (!json || typeof json !== 'object' || Array.isArray(json)) return extra;
+    for (const [key, value] of Object.entries(json)) {
+        if (key !== '__proto__' && !modeledKeys.has(key)) {
+            Object.defineProperty(extra, key, {value, enumerable: true, writable: true, configurable: true});
+        }
+    }
+    return extra;
+}
+
+function outboundMaskItemFromJson(item = {}) {
+    return {...item,kind:item.reuse?'reuse':(item.transform?'transform':'bytes'),transformText:item.transform?JSON.stringify(item.transform,null,2):''};
+}
+
+function outboundMaskItemsFromJson(items) {
+    return Array.isArray(items)?items.map(outboundMaskItemFromJson):[];
+}
+
+function outboundMaskGroupsFromJson(groups) {
+    return Array.isArray(groups)?groups.map(outboundMaskItemsFromJson):[];
+}
+
+function outboundMaskItemToJson(item) {
+    const out={...item};
+    const kind=out.kind||(out.reuse?'reuse':(out.transformText||out.transform?'transform':'bytes'));
+    delete out.kind;
+    if('transformText' in out) {
+        const text=String(out.transformText||'').trim();
+        delete out.transformText; delete out.transform;
+        if(text) { try { const parsed=JSON.parse(text); out.transform=parsed&&typeof parsed==='object'&&!Array.isArray(parsed)?parsed:{}; } catch (_) { out.transform={}; } }
+    }
+    if(kind==='reuse') { delete out.packet; delete out.rand; delete out.randRange; delete out.transform; return out; }
+    if(kind==='transform') { delete out.packet; delete out.rand; delete out.randRange; delete out.reuse; return out; }
+    delete out.reuse; delete out.transform;
+    if(out.type==='array') delete out.packet; else { delete out.rand; delete out.randRange; }
+    return out;
+}
+
+function invalidOutboundExprArgs(args) {
+    return !Array.isArray(args) || args.length === 0 || args.some(arg => !arg || [arg.bytes !== undefined, arg.u64 !== undefined, !!arg.reuse, !!arg.metadata, !!arg.transform].filter(Boolean).length !== 1);
+}
+
+function setOutboundMaskItemKind(item, kind) {
+    delete item.packet; delete item.rand; delete item.randRange; delete item.reuse; delete item.transform; item.transformText=''; item.kind=kind;
+    if(kind==='bytes') { item.type='array'; item.rand=0; }
+    if(kind==='transform') item.transformText='{"op":"concat","args":[]}';
+}
+
+function normalizeOutboundUdpMask(type, settings) {
+    const legacyHeaders = {
+        'mkcp-aes128gcm': '', 'mkcp-original': '', 'header-dns': 'dns',
+        'header-dtls': 'dtls', 'header-srtp': 'srtp', 'header-utp': 'utp',
+        'header-wechat': 'wechat', 'header-wireguard': 'wireguard',
+    };
+    if (!(type in legacyHeaders)) return {type, settings};
+    const header = legacyHeaders[type];
+    return {type:'mkcp-legacy',settings:{...settings,header,value:header === 'dns' ? (settings.domain || '') : (settings.value || settings.password || '')}};
+}
+
+function upgradeOutboundFinalMaskXdns(settings) {
+    const types = {'':16,txt:16,a:1,aaaa:28};
+    const domains=[];
+    for(const entry of (Array.isArray(settings.domains)?settings.domains:[])) {
+        if(typeof entry==='string') {
+            const split=entry.lastIndexOf(':'); const type=split<0?16:types[entry.slice(split+1).toLowerCase()];
+            const name=(split<0?entry:entry.slice(0,split)).replace(/^\.+|\.+$/g,'');
+            if(name&&type!==undefined) domains.push({names:[name],types:[type],edns0:1232});
+        } else if(entry&&typeof entry==='object') domains.push(typeof entry.name==='string'?(({name,...rest})=>({...rest,names:[name,...(Array.isArray(rest.names)?rest.names.filter(v=>v!==name):[])]}))(entry):entry);
+    }
+    const resolvers=(Array.isArray(settings.resolvers)?settings.resolvers:[]).map(entry=>{
+        if(typeof entry==='string') {
+            const split=entry.indexOf('+udp://');
+            if(split>=0) {
+                const [name,kind='txt']=entry.slice(0,split).split(':'); const record=types[kind.toLowerCase()];
+                if(name&&record!==undefined) domains.push({names:[name],types:[record],edns0:1232});
+                return {addrs:[`udp://${entry.slice(split+7).trim()}`]};
+            }
+            return {addrs:[entry.includes('://')?entry:`udp://${entry}`]};
+        }
+        if(entry&&typeof entry==='object'&&!Array.isArray(entry)&&!Array.isArray(entry.addrs)&&typeof entry.settings?.addr==='string'&&['udp','tcp'].includes(entry.type)) return {addrs:[`${entry.type}://${entry.settings.addr}`]};
+        return entry;
+    });
+    return {...settings,domains,resolvers};
+}
+
+QuicParams.DEFAULTS = Object.freeze({
+    bbrProfile: 'standard',
+    brutalDisableLossCompensation: false,
+    initStreamReceiveWindow: 0,
+    maxStreamReceiveWindow: 0,
+    initConnectionReceiveWindow: 0,
+    maxConnectionReceiveWindow: 0,
+    maxIdleTimeout: 30,
+    keepAlivePeriod: 0,
+    disablePathMTUDiscovery: false,
+    disableChromeParrot: false,
+    disableGSO: false,
+    maxIncomingStreams: 0,
+    disableStatelessReset: false,
+});
 
 class FinalMaskStreamSettings extends CommonClass {
     constructor(tcp = [], udp = [], quicParams = undefined) {
         super();
         this.tcp = Array.isArray(tcp) ? tcp.map(t => t instanceof TcpMask ? t : new TcpMask(t.type, t.settings)) : [];
-        this.udp = Array.isArray(udp) ? udp.map(u => new UdpMask(u.type, u.settings)) : [new UdpMask(udp.type, udp.settings)];
+        this.udp = Array.isArray(udp) ? udp.map(u => u instanceof UdpMask ? u : UdpMask.fromJson(u)) : [UdpMask.fromJson(udp)];
         this.quicParams = quicParams instanceof QuicParams ? quicParams : (quicParams ? QuicParams.fromJson(quicParams) : undefined);
     }
 
@@ -1052,6 +1201,9 @@ class StreamSettings extends CommonClass {
         hysteriaSettings = new HysteriaStreamSettings(),
         finalmask = new FinalMaskStreamSettings(),
         sockopt = undefined,
+        xdriveSettings = {},
+        masqueSettings = {},
+        extra = {},
     ) {
         super();
         this.network = network;
@@ -1067,10 +1219,31 @@ class StreamSettings extends CommonClass {
         this.hysteria = hysteriaSettings;
         this.finalmask = finalmask;
         this.sockopt = sockopt;
+        this.xdrive = Object.assign({service: 'local', remoteFolder: '', secrets: [], s3: {endpoint: '', region: '', bucket: '', pathStyle: true}}, xdriveSettings);
+        this.masque = Object.assign({host: '', path: '', user: '', pass: '', headers: {}, warp: undefined, xmux: {}}, masqueSettings);
+        this.extra = extra && typeof extra === 'object' ? extra : {};
     }
 
     addTcpMask(type = 'fragment') {
         this.finalmask.tcp.push(new TcpMask(type));
+    }
+
+    setMasqueWarp(enabled) {
+        if (enabled) {
+            this.masque.warp = {privateKey: '', publicKey: '', address: []};
+        } else {
+            this.masque.warp = undefined;
+        }
+    }
+
+    masqueToJson() {
+        const settings = {...this.masque};
+        // The core rejects Basic credentials when WARP is enabled.
+        if (settings.warp) {
+            delete settings.user;
+            delete settings.pass;
+        }
+        return settings;
     }
 
     delTcpMask(index) {
@@ -1127,12 +1300,15 @@ class StreamSettings extends CommonClass {
             HysteriaStreamSettings.fromJson(json.hysteriaSettings),
             FinalMaskStreamSettings.fromJson(json.finalmask),
             SockoptStreamSettings.fromJson(json.sockopt),
+            json.xdriveSettings,
+            json.masqueSettings,
+            outboundUnmodeledFields(json, StreamSettings.STRUCTURED_KEYS),
         );
     }
 
     toJson() {
         const network = this.network;
-        return {
+        return Object.assign({}, this.extra, {
             network: network,
             security: this.security,
             tlsSettings: this.security == 'tls' ? this.tls.toJson() : undefined,
@@ -1144,11 +1320,18 @@ class StreamSettings extends CommonClass {
             httpupgradeSettings: network === 'httpupgrade' ? this.httpupgrade.toJson() : undefined,
             xhttpSettings: network === 'xhttp' ? this.xhttp.toJson() : undefined,
             hysteriaSettings: network === 'hysteria' ? this.hysteria.toJson() : undefined,
+            xdriveSettings: network === 'xdrive' ? {...this.xdrive} : undefined,
+            masqueSettings: network === 'masque' ? this.masqueToJson() : undefined,
             finalmask: this.hasFinalMask ? this.finalmask.toJson() : undefined,
             sockopt: this.sockopt != undefined ? this.sockopt.toJson() : undefined,
-        };
+        });
     }
 }
+StreamSettings.STRUCTURED_KEYS = new Set([
+    'network', 'security', 'tlsSettings', 'realitySettings', 'tcpSettings', 'kcpSettings',
+    'wsSettings', 'grpcSettings', 'httpupgradeSettings', 'xhttpSettings', 'hysteriaSettings',
+    'finalmask', 'sockopt', 'xdriveSettings', 'masqueSettings',
+]);
 
 class Mux extends CommonClass {
     constructor(enabled = false, concurrency = 8, xudpConcurrency = 16, xudpProxyUDP443 = "reject") {
@@ -1180,6 +1363,7 @@ class Mux extends CommonClass {
 }
 
 class Outbound extends CommonClass {
+    static setFinalMaskItemKind(item, kind) { setOutboundMaskItemKind(item, kind); }
     constructor(
         tag = '',
         protocol = Protocols.VLESS,
@@ -1227,6 +1411,11 @@ class Outbound extends CommonClass {
     // by settings.network while the stream it is dialled over is decided here.
     // They are set together by setNaiveNetwork below and start on the h2 pair.
     static defaultStreamFor(protocol) {
+        if (protocol === Protocols.Masque) {
+            const stream = new StreamSettings('masque', 'tls');
+            stream.tls.alpn = ['h3'];
+            return stream;
+        }
         if (protocol === Protocols.Tuic) {
             const stream = new StreamSettings('tuic', 'tls');
             stream.tls.alpn = ['h3'];
@@ -1291,6 +1480,7 @@ class Outbound extends CommonClass {
     }
 
     canEnableTls() {
+        if (this.protocol === Protocols.Masque) return true;
         if (this.protocol === Protocols.Hysteria) return true;
         // TUIC is QUIC, so TLS is not a choice the operator makes, it is the only
         // way the protocol exists. The section is offered anyway because it is
@@ -1358,7 +1548,49 @@ class Outbound extends CommonClass {
             Protocols.AnyTLS,
             Protocols.Tuic,
             Protocols.Naive,
+            Protocols.Masque,
         ].includes(this.protocol);
+    }
+
+    hasInvalidFinalMaskTransform() {
+        const masks = [...(this.stream?.finalmask?.tcp || []), ...(this.stream?.finalmask?.udp || [])];
+        for (const mask of masks) {
+            const settings = mask.settings || {};
+            const groups = mask.type === 'header-custom'
+                ? (mask instanceof TcpMask ? [...(settings.clients || []), ...(settings.servers || []), ...(settings.errors || [])] : [settings.client || [], settings.server || []])
+                : [];
+            for (const group of groups) for (const item of (Array.isArray(group) ? group : [])) {
+                if (item.kind === 'reuse' && !/^[A-Za-z_][A-Za-z0-9_]*$/.test(String(item.reuse || ''))) return true;
+                if (item.kind !== 'transform') continue;
+                try {
+                    const value = JSON.parse(String(item.transformText || ''));
+                    if (!value || typeof value !== 'object' || Array.isArray(value) || typeof value.op !== 'string' || !value.op || !Array.isArray(value.args) || !value.args.length) return true;
+                    if (invalidOutboundExprArgs(value.args)) return true;
+                } catch (_) { return true; }
+            }
+        }
+        return false;
+    }
+
+    hasInvalidFinalMaskItem() {
+        const masks = [...(this.stream?.finalmask?.tcp || []), ...(this.stream?.finalmask?.udp || [])];
+        for (const mask of masks) {
+            const settings = mask.settings || {};
+            const groups = mask.type === 'header-custom'
+                ? (mask instanceof TcpMask ? [...(settings.clients || []), ...(settings.servers || []), ...(settings.errors || [])] : [settings.client || [], settings.server || []])
+                : [];
+            for (const group of groups) for (const item of (Array.isArray(group) ? group : [])) {
+                if (item.capture && !/^[A-Za-z_][A-Za-z0-9_]*$/.test(String(item.capture))) return true;
+                if (item.kind === 'reuse' && !/^[A-Za-z_][A-Za-z0-9_]*$/.test(String(item.reuse || ''))) return true;
+                if (item.kind === 'transform') {
+                    try {
+                        const value = JSON.parse(String(item.transformText || ''));
+                        if (!value || typeof value !== 'object' || Array.isArray(value) || !value.op || !Array.isArray(value.args) || !value.args.length || invalidOutboundExprArgs(value.args)) return true;
+                    } catch (_) { return true; }
+                }
+            }
+        }
+        return false;
     }
 
     canEnableMux() {
@@ -1373,6 +1605,10 @@ class Outbound extends CommonClass {
             this.mux.enabled = false;
             return false;
         }
+		if (this.protocol === Protocols.Masque) {
+			this.mux.enabled = false;
+			return false;
+		}
 
         // Allow Mux only for these protocols
         //
@@ -1414,7 +1650,8 @@ class Outbound extends CommonClass {
             Protocols.Hysteria,
             Protocols.AnyTLS,
             Protocols.Tuic,
-            Protocols.Naive
+            Protocols.Naive,
+            Protocols.Masque
         ].includes(this.protocol);
     }
 
@@ -1964,6 +2201,7 @@ Outbound.Settings = class extends CommonClass {
             case Protocols.AnyTLS: return new Outbound.AnyTLSSettings();
             case Protocols.Tuic: return new Outbound.TuicSettings();
             case Protocols.Naive: return new Outbound.NaiveSettings();
+            case Protocols.Masque: return new Outbound.MasqueSettings();
             case Protocols.SSH: return new Outbound.SshSettings();
             // Reached only for a protocol nobody added a case for, and the null
             // is load-bearing downstream in the worst way: canEnableMux() reads
@@ -1991,6 +2229,7 @@ Outbound.Settings = class extends CommonClass {
             case Protocols.AnyTLS: return Outbound.AnyTLSSettings.fromJson(json);
             case Protocols.Tuic: return Outbound.TuicSettings.fromJson(json);
             case Protocols.Naive: return Outbound.NaiveSettings.fromJson(json);
+            case Protocols.Masque: return Outbound.MasqueSettings.fromJson(json);
             case Protocols.SSH: return Outbound.SshSettings.fromJson(json);
             // Same null, same consequence as in getSettings above: an outbound
             // read back from the config with no case here reaches the form with
@@ -2780,6 +3019,8 @@ const VPN_OUT_AWG_FIELDS = VPN_OUT_WG_FIELDS.concat([
     { name: 'jmax', type: 'number', def: null, min: 0, max: 1280, plain: 'Jmax' },
     { name: 's1', type: 'number', def: null, min: 0, max: 1280, plain: 'S1' },
     { name: 's2', type: 'number', def: null, min: 0, max: 1280, plain: 'S2' },
+    { name: 's3', type: 'number', def: null, min: 0, max: 1280, plain: 'S3 (cookie padding)' },
+    { name: 's4', type: 'number', def: null, min: 0, max: 1280, plain: 'S4 (transport padding)' },
     // All four or none: they replace the four packet types together, so a partial
     // set breaks half the packets. The driver rejects it, but the rule is not
     // guessable from the form.
@@ -2787,6 +3028,20 @@ const VPN_OUT_AWG_FIELDS = VPN_OUT_WG_FIELDS.concat([
     { name: 'h2', type: 'text', def: '', plain: 'H2' },
     { name: 'h3', type: 'text', def: '', plain: 'H3' },
     { name: 'h4', type: 'text', def: '', plain: 'H4' },
+    { name: 'i1', type: 'text', def: '', plain: 'I1 (init packet pattern)' },
+    { name: 'i2', type: 'text', def: '', plain: 'I2' },
+    { name: 'i3', type: 'text', def: '', plain: 'I3' },
+    { name: 'i4', type: 'text', def: '', plain: 'I4' },
+    { name: 'i5', type: 'text', def: '', plain: 'I5' },
+    { name: 'headerProtectionKey', type: 'text', def: '', plain: 'Header protection key (base64)' },
+    { name: 'contentPaddingAddition', type: 'text', def: '', plain: 'Content padding range' },
+    { name: 'rekeyAfterTime', type: 'text', def: '', plain: 'Rekey-after range' },
+    { name: 'rekeyTimeout', type: 'text', def: '', plain: 'Rekey-timeout range' },
+    { name: 'rejectAfterTime', type: 'text', def: '', plain: 'Reject-after range' },
+    { name: 'keepaliveTimeout', type: 'text', def: '', plain: 'Keepalive-timeout range' },
+    { name: 'maxHandshakeAttempts', type: 'text', def: '', plain: 'Handshake-attempt range' },
+    { name: 'randomTrailers', type: 'boolean', def: false, plain: 'Random trailers' },
+    { name: 'disableCookies', type: 'boolean', def: false, plain: 'Disable cookies' },
 ]);
 
 const VPN_OUT_KINDS = {
@@ -3583,4 +3838,10 @@ Outbound.HysteriaSettings = class extends CommonClass {
             version: this.version
         };
     }
+};
+
+Outbound.MasqueSettings = class extends Outbound.Settings {
+    constructor(address='', port=443, remoteDNS=[]) { super(Protocols.Masque); this.address=address; this.port=port; this.remoteDNS=remoteDNS; }
+    static fromJson(json={}) { return new Outbound.MasqueSettings(json.address||'', json.port||443, Array.isArray(json.remoteDNS)?json.remoteDNS:[]); }
+    toJson() { return {address:this.address, port:this.port, remoteDNS:this.remoteDNS}; }
 };

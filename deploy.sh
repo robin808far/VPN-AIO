@@ -17,7 +17,17 @@ UNIT_FALLBACK="VPN-AIO"
 # ($DEST install-menu), never curled from the repo's default branch: that would pin
 # a menu from a different release than the binary it drives.
 MENU="/usr/bin/VPN-AIO"
-DL_URL="https://github.com/$REPO/releases/latest/download/$ASSET"
+# Optional explicit release, e.g. VPN_AIO_VERSION=2.0.0 bash deploy.sh.
+RELEASE_VERSION="${VPN_AIO_VERSION:-latest}"
+if [[ "$RELEASE_VERSION" == "latest" ]]; then
+    DL_URL="https://github.com/$REPO/releases/latest/download/$ASSET"
+elif [[ "$RELEASE_VERSION" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$ ]]; then
+    RELEASE_VERSION="v${RELEASE_VERSION#v}"
+    DL_URL="https://github.com/$REPO/releases/download/$RELEASE_VERSION/$ASSET"
+else
+    printf 'Invalid VPN_AIO_VERSION: %s\n' "$RELEASE_VERSION" >&2
+    exit 2
+fi
 # The panel keeps its SQLite DB next to the binary (exe dir). Backups go beside it.
 DB="$DEST_DIR/VPN-AIO.db"
 BACKUP_DIR="$DEST_DIR/backups"
@@ -116,15 +126,15 @@ elif command -v wget >/dev/null 2>&1; then DL="wget"
 else die "need 'curl' or 'wget' to download the release."; fi
 
 # Resolve + download the latest release asset
-msg "Fetching latest release of $REPO"
+msg "Fetching ${RELEASE_VERSION} release of $REPO"
 
 # Best-effort: read the release tag from the /releases/latest redirect (display only).
-ver=""
-if [[ "$DL" == "curl" ]]; then
+ver="$RELEASE_VERSION"
+if [[ "$RELEASE_VERSION" == "latest" && "$DL" == "curl" ]]; then
     ver="$(curl -sILo /dev/null -w '%{url_effective}' "https://github.com/$REPO/releases/latest" 2>/dev/null \
            | grep -oE 'tag/[^/[:space:]]+$' | sed 's#tag/##' || true)"
 fi
-[[ -n "$ver" ]] && act "latest release: ${GREEN}${ver}${R}" || act "asset: ${GREEN}${ASSET}${R}"
+[[ -n "$ver" ]] && act "release: ${GREEN}${ver}${R}" || act "asset: ${GREEN}${ASSET}${R}"
 if [[ "$MODE" == "update" ]]; then
     act "mode:   ${YELLOW}update${R} (${OLD_VER:-unknown} -> ${ver:-latest})"
 else

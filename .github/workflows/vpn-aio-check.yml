@@ -2,7 +2,7 @@ name: VPN-AIO Ubuntu validation
 
 on:
   push:
-    branches: [main, release/v2.0.0]
+    branches: [main, release/v2.0.0, feature/core-webgui]
   pull_request:
   workflow_dispatch:
 
@@ -25,6 +25,11 @@ jobs:
           for file in deploy.sh vpn-ui.sh build.sh build/core/build.sh; do
             bash -n "$file"
           done
+          python3 -c 'import ast,pathlib; [ast.parse(pathlib.Path(p).read_text()) for p in ("test_unit/finalmask-config-check.py", "test_unit/native-core-smoke.py", "test_unit/transport-settings-config-check.py")]'
+      - name: Check GUI model round trips
+        run: |
+          node test_unit/export_test/core-webgui.test.js
+          node test_unit/export_test/routing-modal-roundtrip.test.js
       - name: Build pinned Xray and fetch geodata
         run: GEO_LEAN=1 bash build/core/build.sh amd64
       - name: Test panel integration
@@ -35,9 +40,42 @@ jobs:
         run: go test -timeout 10m ./...
       - name: Native Xray protocol integration
         run: python3 test_unit/native-core-smoke.py corebundle/core/amd64/xray
+      - name: XDRIVE core configuration validation
+        run: python3 test_unit/xdrive-config-check.py corebundle/core/amd64/xray
+      - name: FinalMask core configuration validation
+        run: python3 test_unit/finalmask-config-check.py corebundle/core/amd64/xray
+      - name: XHTTP, TLS/REALITY, sockopt, DNS and routing core validation
+        env:
+          XRAY_LOCATION_ASSET: ${{ github.workspace }}/corebundle/core
+        run: python3 test_unit/transport-settings-config-check.py corebundle/core/amd64/xray
+      - name: AmneziaWG kernel 3.1 integration
+        if: runner.os == 'Linux'
+        env:
+          VPN_AIO_KERNEL_TEST: '1'
+        run: |
+          if modinfo amneziawg >/dev/null 2>&1; then
+            sudo -E go test -timeout 5m -v ./web/service -run 'TestAWGKernel(CapabilitiesRequire3xParameters|HandshakeAndPeerRemoval)$'
+          else
+            echo 'AmneziaWG kernel module is not installed on this hosted runner; kernel integration is exercised on the Ubuntu test server.'
+          fi
       - name: Compile panel with sqlite support
         env:
           CGO_ENABLED: '1'
         run: go build -o build/out/VPN-AIO-check .
+      - name: Build disposable lifecycle test image
+        run: |
+          context="$RUNNER_TEMP/vpn-aio-lifecycle-context"
+          mkdir -p "$context/build/out" "$context/test_unit"
+          cp build/out/VPN-AIO-check "$context/build/out/"
+          cp test_unit/Containerfile test_unit/container-lifecycle.py \
+             test_unit/native-core-smoke.py test_unit/xdrive-config-check.py \
+             test_unit/finalmask-config-check.py test_unit/transport-settings-config-check.py \
+             "$context/test_unit/"
+          docker build -f "$context/test_unit/Containerfile" \
+            -t vpn-aio-lifecycle-test "$context"
+      - name: Exercise startup, native protocols and uninstall in isolation
+        env:
+          VPN_AIO_CONTAINER_LIFECYCLE_ACK: 'yes'
+        run: docker run --rm --network none --cap-add=NET_ADMIN -e VPN_AIO_CONTAINER_LIFECYCLE_ACK vpn-aio-lifecycle-test
       # This is not a release build: the full static VPN daemon and geo bundles
       # are built by build.sh before an installable artifact is published.

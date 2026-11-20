@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/mhsanaei/3x-ui/v2/xray"
 )
 
 func TestUnwrapXrayTemplateConfig(t *testing.T) {
@@ -73,6 +75,36 @@ func TestUnwrapXrayTemplateConfig(t *testing.T) {
 			t.Fatalf("unexpected tail: %s", got)
 		}
 	})
+}
+
+func TestCheckXrayConfigPreservesDnsAndRoutingRawSections(t *testing.T) {
+	input := `{"inbounds":[],"outbounds":[],"dns":{"servers":[{"address":"1.1.1.1","domains":["domain:example.test"],"timeoutMs":1500,"futureServerOption":{"keep":true}}],"queryStrategy":"UseIPv4","futureDnsOption":[1,2]},"routing":{"domainStrategy":"IPIfNonMatch","rules":[{"type":"field","domain":["domain:example.test"],"outboundTag":"direct","futureRuleOption":"keep"}],"futureRoutingOption":{"enabled":true}}}`
+	var settings XraySettingService
+	if err := settings.CheckXrayConfig(input); err != nil {
+		t.Fatalf("CheckXrayConfig rejected DNS/routing template: %v", err)
+	}
+
+	var config xray.Config
+	if err := json.Unmarshal([]byte(input), &config); err != nil {
+		t.Fatal(err)
+	}
+	encoded, err := json.Marshal(&config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var before, after map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(input), &before); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(encoded, &after); err != nil {
+		t.Fatal(err)
+	}
+	for _, section := range []string{"dns", "routing"} {
+		if !equalJSON(t, string(after[section]), string(before[section])) {
+			t.Fatalf("raw %s template changed across the config representation: before=%s after=%s",
+				section, before[section], after[section])
+		}
+	}
 }
 
 func equalJSON(t *testing.T, a, b string) bool {

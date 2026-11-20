@@ -187,6 +187,9 @@ var uiSettingsBlobs = map[model.Protocol]string{
   "jmax": 80,
   "s1": 77,
   "s2": 90,
+  "s3": 0,
+  "s4": 0,
+  "awg31": {},
   "h1": "",
   "h2": "",
   "h3": "",
@@ -271,6 +274,15 @@ var uiSettingsBlobs = map[model.Protocol]string{
     "string": ""
   }
 }`,
+
+	model.MASQUE: `{
+  "clients": [],
+  "address": [
+    "10.14.0.1/24",
+    "fd14::1/64"
+  ],
+  "mtu": 1280
+}`,
 }
 
 // randomSettingKeys lists the fields minted per inbound, which can only be compared by
@@ -286,7 +298,7 @@ var randomSettingKeys = map[model.Protocol]map[string]int{
 var vpnDefaultProtocols = []model.Protocol{
 	model.L2TP, model.PPTP, model.OPENVPN, model.OPENCONNECT, model.SSTP, model.IKEV2,
 	model.WGC, model.AWG, model.GRE, model.MTPROTO, model.SSH,
-	model.ANYTLS, model.TUIC, model.NAIVE,
+	model.ANYTLS, model.TUIC, model.NAIVE, model.MASQUE,
 }
 
 func TestDefaultSettingsForMatchesTheBrowserModel(t *testing.T) {
@@ -515,6 +527,17 @@ func TestDefaultSettingsForRoundTripsIntoTheProtocolStruct(t *testing.T) {
 		if *s.Jc != 4 || *s.Jmin != 8 || *s.Jmax != 80 || *s.S1 != 77 || *s.S2 != 90 {
 			t.Errorf("obfuscation params: jc=%d jmin=%d jmax=%d s1=%d s2=%d", *s.Jc, *s.Jmin, *s.Jmax, *s.S1, *s.S2)
 		}
+		defaults, err := DefaultSettingsFor(model.AWG)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var root map[string]any
+		if err = json.Unmarshal([]byte(defaults), &root); err != nil {
+			t.Fatal(err)
+		}
+		if _, ok := root["awg31"]; !ok {
+			t.Fatal("nested AWG 3.1 defaults were dropped during protocol-default materialization")
+		}
 	})
 
 	t.Run("gre", func(t *testing.T) {
@@ -738,6 +761,10 @@ func TestValidateProtocolSettings(t *testing.T) {
 
 		{"awg jmin above jmax", model.AWG, `{"jmin":90,"jmax":10}`, `"jmin"`},
 		{"awg negative junk count", model.AWG, `{"jc":-1}`, `"jc"`},
+		{"awg padding above module limit", model.AWG, `{"s4":1281}`, `"s4"`},
+		{"awg 3.1 booleans type checked", model.AWG, `{"randomTrailers":"true"}`, `"randomTrailers"`},
+		{"awg header key has correct size", model.AWG, `{"headerProtectionKey":"short"}`, `"headerProtectionKey"`},
+		{"awg time range is checked", model.AWG, `{"rekeyTimeout":"9-x"}`, `"rekeyTimeout"`},
 
 		{"tuic congestion typo", model.TUIC, `{"congestionControl":"cubik"}`, `"congestionControl"`},
 		{"tuic negative timeout", model.TUIC, `{"udpTimeout":-5}`, `"udpTimeout"`},
@@ -810,6 +837,45 @@ func TestValidateProtocolSettingsAcceptsTheExistingApiClientsBodies(t *testing.T
 				t.Fatalf("rejected a body an existing API client sends today: %v", err)
 			}
 		})
+	}
+}
+
+func TestMasqueSettingsValidationRejectsInvalidPoolAndCredentials(t *testing.T) {
+	valid := `{"address":["198.18.70.1/24","fd00::1/64"],"mtu":1280,"clients":[{"email":"alice","password":"secret"}]}`
+	if err := ValidateProtocolSettings(model.MASQUE, valid); err != nil {
+		t.Fatal(err)
+	}
+	for _, bad := range []string{
+		`{"address":[],"clients":[]}`,
+		`{"address":["198.18.70.1/24","198.19.0.1/24"],"clients":[]}`,
+		`{"address":["198.18.70.0/24"],"clients":[]}`,
+		`{"address":["198.18.70.255/24"],"clients":[]}`,
+		`{"address":["198.18.70.1/24"],"clients":[{"email":"alice","password":""}]}`,
+	} {
+		if err := ValidateProtocolSettings(model.MASQUE, bad); err == nil {
+			t.Errorf("accepted invalid MASQUE settings: %s", bad)
+		}
+	}
+}
+
+func TestMasquePortClaimsMatchALPN(t *testing.T) {
+	for _, tc := range []struct {
+		alpn string
+		want string
+	}{
+		{`[]`, "udp"},
+		{`["h2","http/1.1"]`, "tcp"},
+		{`["h3"]`, "udp"},
+		{`["h2","h3"]`, "tcpudp"},
+	} {
+		inbound := &model.Inbound{Protocol: model.MASQUE, Port: 443, StreamSettings: `{"network":"masque","security":"tls","tlsSettings":{"alpn":` + tc.alpn + `}}`}
+		var got string
+		for _, claim := range inboundPortClaims(inbound) {
+			got += claim.network
+		}
+		if got != tc.want {
+			t.Errorf("ALPN %s claims %q, want %q", tc.alpn, got, tc.want)
+		}
 	}
 }
 

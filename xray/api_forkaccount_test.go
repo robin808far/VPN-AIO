@@ -2,6 +2,7 @@ package xray
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -106,6 +107,24 @@ func TestNaiveAccountFieldNumbersMatchTheCore(t *testing.T) {
 	}
 }
 
+func TestMasqueAccountPasswordFieldMatchesTheCore(t *testing.T) {
+	src, err := os.ReadFile(filepath.Join("..", "third_party", "Xray-core", "proxy", "masque", "config.pb.go"))
+	if err != nil {
+		t.Skip("core submodule not checked out:", err)
+	}
+	fieldRe := regexp.MustCompile(`protobuf:"bytes,(\d+),opt,name=(\w+),proto3"`)
+	for _, match := range fieldRe.FindAllStringSubmatch(string(src), -1) {
+		if match[2] != "password" {
+			continue
+		}
+		if match[1] != fmt.Sprint(masqueAccountPasswordField) {
+			t.Fatalf("core MASQUE password field = %s, panel encodes %d", match[1], masqueAccountPasswordField)
+		}
+		return
+	}
+	t.Fatal("MASQUE Account password protobuf field not found")
+}
+
 // The type URLs are the only link between the panel and the core's proto registry: a
 // mismatch is not a compile error, it is an AlterInbound that fails at runtime. Pinned
 // so a rename in the core has to be made here too.
@@ -114,6 +133,7 @@ func TestForkAccountTypeURLs(t *testing.T) {
 		anytlsAccountType: "xray.proxy.anytls.Account",
 		tuicAccountType:   "xray.proxy.tuic.Account",
 		naiveAccountType:  "xray.proxy.naive.Account",
+		masqueAccountType: "xray.proxy.masque.Account",
 	} {
 		if got != want {
 			t.Errorf("account type URL = %q, want %q", got, want)

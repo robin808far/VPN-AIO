@@ -287,9 +287,8 @@ func protocolSettingDefaults(protocol model.Protocol) []settingDefault {
 		}
 
 	case model.AWG:
-		// Inbound.AwgSettings: WgcSettings plus the AWG 1.0 obfuscation parameters.
-		// Jc/Jmin/Jmax/S1/S2 are the AmneziaWG defaults; the magic headers H1-H4 are
-		// minted by AwgService (like serverPubKey) and start empty.
+		// Inbound.AwgSettings: WgcSettings plus the compatible AWG 1.0 profile and
+		// optional AWG 3.x parameters. New 3.x fields stay disabled for legacy peers.
 		return []settingDefault{
 			def("dns1", "1.1.1.1"),
 			def("dns2", "1.0.0.1"),
@@ -299,6 +298,9 @@ func protocolSettingDefaults(protocol model.Protocol) []settingDefault {
 			def("jmax", 80),
 			def("s1", 77),
 			def("s2", 90),
+			def("s3", 0),
+			def("s4", 0),
+			def("awg31", map[string]any{}),
 			def("h1", ""),
 			def("h2", ""),
 			def("h3", ""),
@@ -428,6 +430,13 @@ func protocolSettingDefaults(protocol model.Protocol) []settingDefault {
 				"url":    "",
 				"string": "",
 			}),
+		}
+
+	case model.MASQUE:
+		return []settingDefault{
+			def("clients", noClients()),
+			def("address", []string{"10.14.0.1/24", "fd14::1/64"}),
+			def("mtu", 1280),
 		}
 	}
 	return nil

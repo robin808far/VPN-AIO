@@ -1,6 +1,7 @@
 package sub
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -10,11 +11,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/goccy/go-yaml"
 	"github.com/op/go-logging"
 
 	"github.com/mhsanaei/3x-ui/v2/database"
 	"github.com/mhsanaei/3x-ui/v2/database/model"
 	"github.com/mhsanaei/3x-ui/v2/logger"
+	"github.com/mhsanaei/3x-ui/v2/web/service"
 	"github.com/mhsanaei/3x-ui/v2/xray"
 )
 
@@ -42,6 +45,49 @@ func newSubTestDB(t *testing.T) {
 	subTestLoggerOnce.Do(func() { logger.InitLogger(logging.ERROR) })
 	if err := database.InitDB(filepath.Join(t.TempDir(), "sub-test.db")); err != nil {
 		t.Fatalf("InitDB: %v", err)
+	}
+}
+
+func TestClashSubscriptionExportsEveryAwg31Option(t *testing.T) {
+	key := base64.StdEncoding.EncodeToString(make([]byte, 32))
+	inbound := &model.Inbound{
+		UserId: 1, Tag: "inbound-51838", Port: 51838, Remark: "AWG 3.1", Protocol: model.AWG, Enable: true,
+		Settings: `{"ipRanges":["10.8.38.2-10.8.38.254"],"userLimit":1,"awg31":{"s3":12,"s4":24,"i1":"<r 32>","i2":"<r 16>","i3":"<r 8>","i4":"<r 4>","i5":"<r 2>","headerProtectionKey":"` + key + `","contentPaddingAddition":"8-16","rekeyAfterTime":"100-120","rekeyTimeout":"3-6","rejectAfterTime":"160-200","keepaliveTimeout":"8-16","maxHandshakeAttempts":"15-25","randomTrailers":true,"disableCookies":true},"clients":[{"email":"awg31@x","enable":true,"subId":"sub-awg31"}]}`,
+	}
+	var awgService service.AwgService
+	if _, err := awgService.ReconcileKeys(inbound); err != nil {
+		t.Fatalf("ReconcileKeys: %v", err)
+	}
+	clashService := &SubClashService{SubService: subSvc(), awgService: awgService}
+	proxies := clashService.buildWireguardProxies(inbound, model.Client{Email: "awg31@x"}, "vpn.example", true)
+	clash, err := yaml.Marshal(proxies)
+	if err != nil {
+		t.Fatalf("marshal Clash proxies: %v", err)
+	}
+	var config []map[string]any
+	if err := yaml.Unmarshal(clash, &config); err != nil {
+		t.Fatalf("parse Clash output: %v\n%s", err, clash)
+	}
+	if len(config) != 1 {
+		t.Fatalf("Clash proxies = %d, want 1: %s", len(config), clash)
+	}
+	option, ok := config[0]["amnezia-wg-option"].(map[string]any)
+	if !ok {
+		t.Fatalf("missing structured AWG options in Clash proxy: %#v", config[0])
+	}
+	for name, want := range map[string]string{
+		"s3": "12", "s4": "24", "i1": "<r 32>", "i2": "<r 16>", "i3": "<r 8>", "i4": "<r 4>", "i5": "<r 2>",
+		"headerProtectionKey": key, "contentPaddingAddition": "8-16", "rekeyAfterTime": "100-120", "rekeyTimeout": "3-6",
+		"rejectAfterTime": "160-200", "keepaliveTimeout": "8-16", "maxHandshakeAttempts": "15-25",
+	} {
+		if got := fmt.Sprint(option[name]); got != want {
+			t.Errorf("Clash AWG %s = %v, want %s", name, option[name], want)
+		}
+	}
+	for name := range map[string]bool{"randomTrailers": true, "disableCookies": true} {
+		if option[name] != true {
+			t.Errorf("Clash AWG %s = %v, want true", name, option[name])
+		}
 	}
 }
 

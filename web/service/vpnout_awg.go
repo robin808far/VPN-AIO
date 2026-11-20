@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -46,22 +47,42 @@ type awgOutSettings struct {
 
 	// AWG 1.0 obfuscation, taken verbatim from the server's issued config. Pointers
 	// so "the operator left it blank" stays distinguishable from an explicit 0.
-	Jc   *int   `json:"jc"`
-	Jmin *int   `json:"jmin"`
-	Jmax *int   `json:"jmax"`
-	S1   *int   `json:"s1"`
-	S2   *int   `json:"s2"`
-	H1   string `json:"h1"`
-	H2   string `json:"h2"`
-	H3   string `json:"h3"`
-	H4   string `json:"h4"`
+	Jc                     *int   `json:"jc"`
+	Jmin                   *int   `json:"jmin"`
+	Jmax                   *int   `json:"jmax"`
+	S1                     *int   `json:"s1"`
+	S2                     *int   `json:"s2"`
+	S3                     *int   `json:"s3"`
+	S4                     *int   `json:"s4"`
+	I1                     string `json:"i1"`
+	I2                     string `json:"i2"`
+	I3                     string `json:"i3"`
+	I4                     string `json:"i4"`
+	I5                     string `json:"i5"`
+	HeaderProtectionKey    string `json:"headerProtectionKey"`
+	ContentPaddingAddition string `json:"contentPaddingAddition"`
+	RekeyAfterTime         string `json:"rekeyAfterTime"`
+	RekeyTimeout           string `json:"rekeyTimeout"`
+	RejectAfterTime        string `json:"rejectAfterTime"`
+	KeepaliveTimeout       string `json:"keepaliveTimeout"`
+	MaxHandshakeAttempts   string `json:"maxHandshakeAttempts"`
+	RandomTrailers         *bool  `json:"randomTrailers"`
+	DisableCookies         *bool  `json:"disableCookies"`
+	H1                     string `json:"h1"`
+	H2                     string `json:"h2"`
+	H3                     string `json:"h3"`
+	H4                     string `json:"h4"`
 }
 
 func (o *awgOutSettings) mtu() int {
 	if o.Mtu > 0 {
 		return o.Mtu
 	}
-	return wgDefaultMTU
+	s4 := 0
+	if o.S4 != nil {
+		s4 = *o.S4
+	}
+	return max(1280, wgDefaultMTU-s4)
 }
 
 func (o *awgOutSettings) keepalive() time.Duration {
@@ -96,6 +117,11 @@ func (o *awgOutSettings) obfs() awgObfs {
 	return awgObfs{
 		Jc: pick(o.Jc), Jmin: pick(o.Jmin), Jmax: pick(o.Jmax),
 		S1: pick(o.S1), S2: pick(o.S2),
+		S3: pick(o.S3), S4: pick(o.S4),
+		I1: o.I1, I2: o.I2, I3: o.I3, I4: o.I4, I5: o.I5, HeaderProtectionKey: o.HeaderProtectionKey,
+		ContentPaddingAddition: o.ContentPaddingAddition, RekeyAfterTime: o.RekeyAfterTime, RekeyTimeout: o.RekeyTimeout,
+		RejectAfterTime: o.RejectAfterTime, KeepaliveTimeout: o.KeepaliveTimeout, MaxHandshakeAttempts: o.MaxHandshakeAttempts,
+		RandomTrailers: o.RandomTrailers, DisableCookies: o.DisableCookies,
 		H1: strings.TrimSpace(o.H1), H2: strings.TrimSpace(o.H2),
 		H3: strings.TrimSpace(o.H3), H4: strings.TrimSpace(o.H4),
 	}
@@ -166,7 +192,26 @@ func (d *awgOutDriver) settings(cfg VpnOutboundConfig) (*awgOutSettings, error) 
 	if len(cfg.Settings) == 0 {
 		return st, errors.New("this AmneziaWG outbound has no settings")
 	}
-	if err := json.Unmarshal([]byte(cfg.Settings), st); err != nil {
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(cfg.Settings), &raw); err != nil {
+		return st, fmt.Errorf("bad AmneziaWG outbound settings: %w", err)
+	}
+	if nested := raw["awg31"]; len(nested) > 0 && string(nested) != "null" {
+		var options map[string]json.RawMessage
+		if err := json.Unmarshal(nested, &options); err != nil {
+			return st, fmt.Errorf("bad awg31 settings: %w", err)
+		}
+		for key, value := range options {
+			if _, exists := raw[key]; !exists {
+				raw[key] = value
+			}
+		}
+	}
+	merged, err := json.Marshal(raw)
+	if err != nil {
+		return st, err
+	}
+	if err := json.Unmarshal(merged, st); err != nil {
 		return st, fmt.Errorf("bad AmneziaWG outbound settings: %w", err)
 	}
 	return st, nil
@@ -222,6 +267,25 @@ func (o *awgOutSettings) validate() error {
 	}
 
 	b := o.obfs()
+	if b.S3 < 0 || b.S3 > 1280 || b.S4 < 0 || b.S4 > 1280 {
+		return errors.New("s3 and s4 must be between 0 and 1280")
+	}
+	if b.HeaderProtectionKey != "" {
+		raw, err := base64.StdEncoding.DecodeString(b.HeaderProtectionKey)
+		if err != nil {
+			raw, err = base64.RawStdEncoding.DecodeString(b.HeaderProtectionKey)
+		}
+		if err != nil || len(raw) != 32 {
+			return errors.New("headerProtectionKey must encode exactly 32 bytes")
+		}
+	}
+	for name, value := range map[string]string{"contentPaddingAddition": b.ContentPaddingAddition, "rekeyAfterTime": b.RekeyAfterTime, "rekeyTimeout": b.RekeyTimeout, "rejectAfterTime": b.RejectAfterTime, "keepaliveTimeout": b.KeepaliveTimeout, "maxHandshakeAttempts": b.MaxHandshakeAttempts} {
+		if value != "" {
+			if _, err := wgtypes.ParseUintRange(value); err != nil {
+				return fmt.Errorf("invalid %s: %w", name, err)
+			}
+		}
+	}
 	// Junk packets are only emitted when Jc > 0, and then their size is drawn from
 	// [Jmin, Jmax]. An inverted or empty range is a config the module cannot honour.
 	if b.Jc > 0 && (b.Jmax <= 0 || b.Jmin > b.Jmax) {

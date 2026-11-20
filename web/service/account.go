@@ -292,6 +292,9 @@ func validateChangedClientIdentities(protocol model.Protocol, clients []model.Cl
 
 	for i := range clients {
 		client := &clients[i]
+		if protocol == model.MASQUE && (strings.TrimSpace(client.Email) == "" || strings.Contains(client.Email, ":") || strings.TrimSpace(client.Password) == "") {
+			return common.NewError("MASQUE requires a password and a nonempty email without a colon")
+		}
 		if _, exempt := unchanged[clientIdentityTuple(client)]; exempt {
 			continue
 		}

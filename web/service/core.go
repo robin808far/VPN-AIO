@@ -398,7 +398,7 @@ func coreInstalled(name string, installed map[string]bool, installedNames []stri
 // starts and stops (see corecatalog.go), and none of that is true here - a card on
 // the Core Settings page offering to stop AnyTLS would be offering to stop
 // something that does not exist as a process.
-var xrayServedProtocols = []string{"anytls", "tuic", "naive"}
+var xrayServedProtocols = []string{"anytls", "tuic", "naive", "masque"}
 
 // xrayProtocolInbounds counts the inbounds of each Xray-served protocol, so the
 // Overview can tell "serving accounts" from "available but unused" without

@@ -166,7 +166,7 @@ func (s *SubJsonService) getConfig(inbound *model.Inbound, client model.Client, 
 	// element of the array is a standalone config, so the blast radius is that profile
 	// alone. naive stays out because it has no Xray outbound at all.
 	switch inbound.Protocol {
-	case "vmess", "vless", "trojan", "shadowsocks", "hysteria", "hysteria2", "anytls", "tuic":
+	case "vmess", "vless", "trojan", "shadowsocks", "hysteria", "hysteria2", "anytls", "tuic", "masque":
 	default:
 		return nil
 	}
@@ -191,7 +191,7 @@ func (s *SubJsonService) getConfig(inbound *model.Inbound, client model.Client, 
 		extPrxy := ep.(map[string]any)
 		inbound.Listen = extPrxy["dest"].(string)
 		inbound.Port = int(extPrxy["port"].(float64))
-		newStream := stream
+		newStream := maps.Clone(stream)
 		switch extPrxy["forceTls"].(string) {
 		case "tls":
 			if newStream["security"] != "tls" {
@@ -222,6 +222,11 @@ func (s *SubJsonService) getConfig(inbound *model.Inbound, client model.Client, 
 			newOutbounds = append(newOutbounds, s.genHy(inbound, newStream, client))
 		case "tuic":
 			newOutbounds = append(newOutbounds, s.genTuic(inbound, newStream, client))
+		case "masque":
+			if newStream["security"] != "tls" || client.Email == "" || client.Password == "" {
+				continue
+			}
+			newOutbounds = append(newOutbounds, genMasqueOutbound(inbound, newStream, client))
 		}
 
 		newOutbounds = append(newOutbounds, s.defaultOutbounds...)
@@ -244,7 +249,8 @@ func (s *SubJsonService) streamData(stream string) map[string]any {
 	security, _ := streamSettings["security"].(string)
 	switch security {
 	case "tls":
-		streamSettings["tlsSettings"] = s.tlsData(streamSettings["tlsSettings"].(map[string]any))
+		tls, _ := streamSettings["tlsSettings"].(map[string]any)
+		streamSettings["tlsSettings"] = s.tlsData(tls)
 	case "reality":
 		streamSettings["realitySettings"] = s.realityData(streamSettings["realitySettings"].(map[string]any))
 	}
@@ -417,11 +423,24 @@ func (s *SubJsonService) genServer(inbound *model.Inbound, streamSettings json_u
 	return result
 }
 
-// genTuic builds the Xray-JSON outbound for a TUIC account. It does not go through
-// genServer because a TUIC account is a uuid AND a password, and the outbound's
-// congestion control has to match the server's or the two disagree on the QUIC
-// algorithm. The transport name is likewise fixed: the core selects its QUIC transport
-// off `network: tuic`, and TLS is not optional.
+func genMasqueOutbound(inbound *model.Inbound, stream map[string]any, client model.Client) json_util.RawMessage {
+	transport, _ := stream["masqueSettings"].(map[string]any)
+	clientTransport := map[string]any{"user": client.Email, "pass": client.Password}
+	if path, ok := transport["path"].(string); ok && path != "" {
+		clientTransport["path"] = path
+	}
+	stream["network"] = "masque"
+	stream["masqueSettings"] = clientTransport
+	outbound, _ := json.Marshal(map[string]any{
+		"protocol":       "masque",
+		"tag":            "proxy",
+		"settings":       map[string]any{"address": inbound.Listen, "port": inbound.Port},
+		"streamSettings": stream,
+	})
+	return outbound
+}
+
+// genTuic preserves TUIC's UUID, password and QUIC congestion control settings.
 func (s *SubJsonService) genTuic(inbound *model.Inbound, newStream map[string]any, client model.Client) json_util.RawMessage {
 	outbound := Outbound{}
 

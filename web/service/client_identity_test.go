@@ -42,6 +42,7 @@ func TestClientIdentityKeyPerProtocol(t *testing.T) {
 		// renameable, so the password stays the addressable field.
 		model.ANYTLS: "password",
 		model.NAIVE:  "password",
+		model.MASQUE: "email",
 
 		model.Shadowsocks: "email",
 		model.Hysteria:    "auth",

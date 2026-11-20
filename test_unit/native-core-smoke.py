@@ -38,12 +38,12 @@ def receive(s, n):
     return data
 
 
-def socks(proxy, target, command=1):
+def socks(proxy, target, command=1, target_host="127.0.0.1"):
     s = socket.create_connection(("127.0.0.1", proxy), timeout=8)
     try:
         s.sendall(b"\x05\x01\x00")
         assert receive(s, 2) == b"\x05\x00"
-        s.sendall(bytes([5, command, 0, 1]) + socket.inet_aton("127.0.0.1") + struct.pack("!H", target))
+        s.sendall(bytes([5, command, 0, 1]) + socket.inet_aton(target_host) + struct.pack("!H", target))
         header = receive(s, 4)
         assert header[:2] == b"\x05\x00", header
         assert header[3] == 1, header
@@ -67,8 +67,8 @@ class HTTP(http.server.BaseHTTPRequestHandler):
         pass
 
 
-def tcp_check(proxy, target):
-    s, _ = socks(proxy, target)
+def tcp_check(proxy, target, target_host="127.0.0.1"):
+    s, _ = socks(proxy, target, target_host=target_host)
     with s:
         s.sendall(b"GET / HTTP/1.0\r\nHost: localhost\r\n\r\n")
         data = b""
@@ -82,12 +82,12 @@ def tcp_check(proxy, target):
         assert b"VPN-AIO-core-smoke-ok" in data, data
 
 
-def udp_check(proxy, target):
+def udp_check(proxy, target, target_host="127.0.0.1"):
     control, relay = socks(proxy, 0, 3)
     with control, socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp:
         udp.settimeout(8)
         payload = secrets.token_bytes(128)
-        frame = b"\x00\x00\x00\x01" + socket.inet_aton("127.0.0.1") + struct.pack("!H", target) + payload
+        frame = b"\x00\x00\x00\x01" + socket.inet_aton(target_host) + struct.pack("!H", target) + payload
         udp.sendto(frame, relay)
         response = udp.recv(4096)
         assert response[:4] == b"\x00\x00\x00\x01" and response[10:] == payload
@@ -154,7 +154,7 @@ def main():
                             "-subj", "/CN=localhost", "-addext", "subjectAltName=DNS:localhost",
                             "-keyout", str(key), "-out", str(crt)], check=True, capture_output=True)
             cert_pin = hashlib.sha256(ssl.PEM_cert_to_DER_cert(crt.read_text())).hexdigest()
-            for protocol, mode in [("anytls", "tcp"), ("tuic", "native"), ("tuic", "quic"), ("naive", "tcp"), ("naive", "udp")]:
+            for protocol, mode in [("anytls", "tcp"), ("tuic", "native"), ("tuic", "quic"), ("naive", "tcp"), ("naive", "udp"), ("masque", "h2"), ("masque", "h3")]:
                 server_port, proxy, api_port = port(), port(), port()
                 password, email, uid = secrets.token_hex(16), "smoke@vpn-aio", str(uuid.uuid4())
                 account = {"email": email, "password": password, "id": uid}
@@ -172,29 +172,54 @@ def main():
                                  "security": "tls", "tlsSettings": {"serverName": "localhost", "pinnedPeerCertSha256": cert_pin,
                                  "alpn": ["h2"] if protocol == "naive" and mode == "tcp" else ["h3"]}}
                 settings = {**account, "address": "127.0.0.1", "port": server_port}
+                target_host = "127.0.0.1"
                 if protocol == "tuic":
                     settings["udpRelayMode"] = mode
                 if protocol == "naive":
                     settings["network"] = mode
+                if protocol == "masque":
+                    # A tunnel's userspace IP stack treats 127/8 as its own
+                    # loopback. Use a test address and redirect at server egress.
+                    target_host = "192.0.2.1"
+                    server["routing"] = {"rules": [
+                        {"type": "field", "network": "tcp", "outboundTag": "tcp"},
+                        {"type": "field", "network": "udp", "outboundTag": "udp"},
+                    ]}
+                    server["outbounds"] = [
+                        {"tag": tag, "protocol": "freedom", "settings": {
+                            "redirect": f"127.0.0.1:{dest}", "finalRules": [{"action": "allow"}],
+                        }} for tag, dest in [("tcp", webserver.server_address[1]), ("udp", udp.getsockname()[1])]
+                    ]
+                    server["inbounds"][0]["settings"] = {
+                        "clients": [{"email": email, "pass": password}],
+                        "address": ["198.18.70.1/24"], "mtu": 1280,
+                    }
+                    stream["masqueSettings"] = {}
+                    stream["tlsSettings"]["alpn"] = [mode]
+                    client_stream["tlsSettings"]["alpn"] = [mode]
+                    client_stream["masqueSettings"] = {"user": email, "pass": password}
+                    settings = {"address": "127.0.0.1", "port": server_port, "remoteDNS": []}
                 client = {"log": {"loglevel": "warning"}, "inbounds": [{"listen": "127.0.0.1", "port": proxy,
                           "protocol": "socks", "settings": {"auth": "noauth", "udp": True}}],
                           "outbounds": [{"protocol": protocol, "settings": settings, "streamSettings": client_stream}]}
                 with core(binary, directory, "server", server):
                     with core(binary, directory, "client", client) as proc:
                         wait_proxy(proc, proxy)
-                        tcp_check(proxy, webserver.server_address[1])
+                        tcp_check(proxy, webserver.server_address[1], target_host)
                         if protocol != "naive":
-                            udp_check(proxy, udp.getsockname()[1])
+                            udp_check(proxy, udp.getsockname()[1], target_host)
                         result = subprocess.run([binary, "api", "statsquery", f"--server=127.0.0.1:{api_port}",
                                                  f"-pattern=user>>>{email}>>>traffic"], check=True, capture_output=True, text=True)
                         counters = json.loads(result.stdout).get("stat", [])
                         for direction in ("uplink", "downlink"):
                             assert any(c["name"].endswith(">>>" + direction) and int(c.get("value", 0)) > 0 for c in counters), counters
                     settings["password"] = "wrong-" + password
+                    if protocol == "masque":
+                        client_stream["masqueSettings"]["pass"] = "wrong-" + password
                     with core(binary, directory, "wrong-client", client) as proc:
                         wait_proxy(proc, proxy)
                         try:
-                            tcp_check(proxy, webserver.server_address[1])
+                            tcp_check(proxy, webserver.server_address[1], target_host)
                         except (OSError, AssertionError):
                             pass
                         else:

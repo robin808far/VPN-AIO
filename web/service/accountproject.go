@@ -62,7 +62,7 @@ func applyAccountCredential(entry map[string]any, account *model.Account, inboun
 		entry["security"] = account.Security
 	case model.VLESS:
 		entry["id"] = account.UUID
-	case model.Trojan, model.ANYTLS:
+	case model.Trojan, model.ANYTLS, model.MASQUE:
 		entry["password"] = account.Password
 	case model.Shadowsocks:
 		// The one protocol whose password is not free text. A 2022-blake3 cipher
@@ -675,7 +675,7 @@ func overwriteAccountCredential(account *model.Account, entry map[string]any, pr
 		set(&account.Security, str("security"))
 	case model.VLESS:
 		set(&account.UUID, str("id"))
-	case model.Trojan, model.Shadowsocks, model.ANYTLS:
+	case model.Trojan, model.Shadowsocks, model.ANYTLS, model.MASQUE:
 		set(&account.Password, str("password"))
 	case model.NAIVE:
 		set(&account.Password, str("password"))
@@ -1430,7 +1430,7 @@ func (s *AccountService) ensureCredentialsFor(tx *gorm.DB, accountId int, inboun
 		need(&account.Security, func() string { return "auto" })
 	case model.VLESS:
 		need(&account.UUID, dashed)
-	case model.Trojan, model.ANYTLS, model.NAIVE:
+	case model.Trojan, model.ANYTLS, model.NAIVE, model.MASQUE:
 		need(&account.Password, dashless)
 	case model.Shadowsocks:
 		// A 2022-blake3 cipher does not take an arbitrary string: the user PSK must
@@ -1526,6 +1526,11 @@ func (s *AccountService) ProjectAccount(tx *gorm.DB, accountId int) ([]int, erro
 			settings, err := projectAccountOntoInbound(inbound, &account, m)
 			if err != nil {
 				return nil, err
+			}
+			if inbound.Protocol == model.MASQUE {
+				if err := ValidateProtocolSettings(inbound.Protocol, settings); err != nil {
+					return nil, err
+				}
 			}
 			if settings == inbound.Settings {
 				continue

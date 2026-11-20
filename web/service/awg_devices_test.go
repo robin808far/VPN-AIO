@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"net"
 	"strings"
@@ -8,6 +9,69 @@ import (
 
 	"github.com/mhsanaei/3x-ui/v2/database/model"
 )
+
+func TestAwgClientConfigIncludesAll31Options(t *testing.T) {
+	key := base64.StdEncoding.EncodeToString(make([]byte, 32))
+	settings := map[string]any{
+		"ipRanges": []string{"10.8.31.2-10.8.31.254"}, "userLimit": 1,
+		"serverPrivKey": "", "serverPubKey": "",
+		"awg31": map[string]any{
+			"s3": 12, "s4": 24, "i1": "<r 32>", "i2": "<r 16>", "i3": "<r 8>", "i4": "<r 4>", "i5": "<r 2>",
+			"headerProtectionKey": key, "contentPaddingAddition": "8-16", "rekeyAfterTime": "100-120",
+			"rekeyTimeout": "3-6", "rejectAfterTime": "160-200", "keepaliveTimeout": "8-16",
+			"maxHandshakeAttempts": "15-25", "randomTrailers": true, "disableCookies": true,
+		},
+		"clients": []map[string]any{{"email": "export31@t", "enable": true}},
+	}
+	raw, err := json.Marshal(settings)
+	if err != nil {
+		t.Fatal(err)
+	}
+	inbound := &model.Inbound{Id: 31, Protocol: model.AWG, Port: 51831, Enable: true, Settings: string(raw)}
+	var s AwgService
+	if _, err := s.ReconcileKeys(inbound); err != nil {
+		t.Fatalf("ReconcileKeys: %v", err)
+	}
+	configs, err := s.RenderClientConfigs(inbound, "export31@t", "example.test")
+	if err != nil {
+		t.Fatalf("RenderClientConfigs: %v", err)
+	}
+	if len(configs) != 1 {
+		t.Fatalf("configs = %d, want 1", len(configs))
+	}
+	for _, want := range []string{
+		"S3 = 12", "S4 = 24", "I1 = <r 32>", "I2 = <r 16>", "I3 = <r 8>", "I4 = <r 4>", "I5 = <r 2>",
+		"HeaderProtectionKey = " + key, "ContentPaddingAddition = 8-16", "RekeyAfterTime = 100-120",
+		"RekeyTimeout = 3-6", "RejectAfterTime = 160-200", "KeepaliveTimeout = 8-16", "MaxHandshakeAttempts = 15-25",
+		"RandomTrailers = on", "DisableCookies = on",
+	} {
+		if !strings.Contains(configs[0].Config, want) {
+			t.Errorf("export missing %q\n%s", want, configs[0].Config)
+		}
+	}
+	params, err := s.RenderClientParams(inbound, "export31@t", "example.test")
+	if err != nil {
+		t.Fatalf("RenderClientParams: %v", err)
+	}
+	if len(params) != 1 || params[0].HeaderProtectionKey != key || params[0].ContentPaddingAddition != "8-16" ||
+		params[0].RekeyAfterTime != "100-120" || params[0].RekeyTimeout != "3-6" ||
+		params[0].RejectAfterTime != "160-200" || params[0].KeepaliveTimeout != "8-16" ||
+		params[0].MaxHandshakeAttempts != "15-25" || !params[0].RandomTrailers || !params[0].DisableCookies {
+		t.Fatalf("structured AWG export lost 3.1 settings: %+v", params)
+	}
+	// Upstream Linux awg parses booleans as on/off or 0/1, not true/false.
+	inbound.Settings = strings.ReplaceAll(inbound.Settings, `"randomTrailers":true`, `"randomTrailers":false`)
+	inbound.Settings = strings.ReplaceAll(inbound.Settings, `"disableCookies":true`, `"disableCookies":false`)
+	falseConfigs, err := s.RenderClientConfigs(inbound, "export31@t", "example.test")
+	if err != nil || len(falseConfigs) != 1 {
+		t.Fatalf("RenderClientConfigs with false AWG booleans: configs=%d err=%v", len(falseConfigs), err)
+	}
+	for _, want := range []string{"RandomTrailers = off", "DisableCookies = off"} {
+		if !strings.Contains(falseConfigs[0].Config, want) {
+			t.Errorf("export missing client-compatible false value %q", want)
+		}
+	}
+}
 
 // User Limit K must yield K SEPARATE configs: K keypairs and K distinct tunnel IPs.
 //

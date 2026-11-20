@@ -3,6 +3,7 @@
 package service
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net"
 	"os"
@@ -13,6 +14,48 @@ import (
 	wgctrl "github.com/Jipok/wgctrl-go"
 	"github.com/Jipok/wgctrl-go/wgtypes"
 )
+
+func TestAWGKernelCapabilitiesRequire3xParameters(t *testing.T) {
+	if os.Getenv("VPN_AIO_KERNEL_TEST") != "1" {
+		t.Skip("set VPN_AIO_KERNEL_TEST=1 on a disposable Linux host")
+	}
+	if os.Geteuid() != 0 {
+		t.Fatal("requires root")
+	}
+	if err := exec.Command("modprobe", "amneziawg").Run(); err != nil {
+		t.Fatalf("AmneziaWG kernel module unavailable: %v", err)
+	}
+	cl, err := wgctrl.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cl.Close()
+	device := "awgcaps"
+	if err := exec.Command("ip", "link", "add", device, "type", "amneziawg").Run(); err != nil {
+		t.Fatal(err)
+	}
+	defer exec.Command("ip", "link", "del", device).Run()
+	priv, err := wgtypes.GeneratePrivateKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	key, _ := wgtypes.GenerateKey()
+	obfs := (&awgSettings{S1: intPtr(16), S2: intPtr(20), S3: intPtr(12), S4: intPtr(12), HeaderProtectionKey: base64.StdEncoding.EncodeToString(key[:]),
+		RandomTrailers: awgBoolPtr(true), DisableCookies: awgBoolPtr(true)}).resolveObfs()
+	var cfg wgtypes.Config
+	cfg.PrivateKey = &priv
+	obfs.apply(&cfg)
+	if err := cl.ConfigureDevice(device, cfg); err != nil {
+		t.Fatalf("current kernel rejected AWG 3.1 netlink attributes: %v", err)
+	}
+	got, err := cl.Device(device)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !got.IsAmnezia || got.AmneziaVersion < wgtypes.AWG31 || !got.RandomTrailers || !got.DisableCookies || got.S3 != 12 || got.S4 != 12 || got.HeaderProtectionKey == nil {
+		t.Fatalf("kernel didn't retain AWG 3.1 parameters: %+v", got)
+	}
+}
 
 // Opt-in integration test for the actual kernel ABI, not a mock. Both UDP sockets
 // are born in the host namespace; moving the client link isolates its inner route
@@ -52,7 +95,13 @@ func TestAWGKernelHandshakeAndPeerRemoval(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	obfs := (&awgSettings{H1: "11111111", H2: "22222222", H3: "33333333", H4: "44444444"}).resolveObfs()
+	protection, _ := wgtypes.GenerateKey()
+	obfs := (&awgSettings{H1: "11111111", H2: "22222222", H3: "33333333", H4: "44444444",
+		S1: intPtr(16), S2: intPtr(20), S3: intPtr(12), S4: intPtr(12),
+		HeaderProtectionKey:    base64.StdEncoding.EncodeToString(protection[:]),
+		ContentPaddingAddition: "8-16", RekeyAfterTime: "100-120", RekeyTimeout: "3-6", RejectAfterTime: "160-200",
+		KeepaliveTimeout: "8-16", MaxHandshakeAttempts: "15-25", RandomTrailers: awgBoolPtr(true), DisableCookies: awgBoolPtr(true),
+	}).resolveObfs()
 	scfg := wgtypes.Config{PrivateKey: &serverKey, ReplacePeers: true, Peers: []wgtypes.PeerConfig{{
 		PublicKey: clientKey.PublicKey(), ReplaceAllowedIPs: true,
 		AllowedIPs: []net.IPNet{{IP: net.ParseIP("198.18.55.2"), Mask: net.CIDRMask(32, 32)}},
@@ -93,6 +142,12 @@ func TestAWGKernelHandshakeAndPeerRemoval(t *testing.T) {
 	if p.LastHandshakeTime.IsZero() || p.ReceiveBytes == 0 || p.TransmitBytes == 0 {
 		t.Fatalf("missing handshake or traffic counters: %+v", p)
 	}
+	if got := sdev.S3; got != 12 {
+		t.Errorf("kernel S3=%d, want 12", got)
+	}
+	if got := sdev.S4; got != 12 {
+		t.Errorf("kernel S4=%d, want 12", got)
+	}
 	if err := ctl.ConfigureDevice(server, wgtypes.Config{Peers: []wgtypes.PeerConfig{{PublicKey: clientKey.PublicKey(), Remove: true}}}); err != nil {
 		t.Fatal(err)
 	}
@@ -101,3 +156,5 @@ func TestAWGKernelHandshakeAndPeerRemoval(t *testing.T) {
 	}
 	t.Logf("kernel handshake, bidirectional counters (%d/%d) and peer removal verified", p.ReceiveBytes, p.TransmitBytes)
 }
+
+func awgBoolPtr(v bool) *bool { return &v }

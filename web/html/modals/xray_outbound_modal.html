@@ -123,6 +123,7 @@
         cm: null,
         duplicateTag: false,
         isValid: true,
+        invalidFinalMask: false,
         activeKey: '1',
         tags: [],
         // Live state of the VPN tunnel behind the outbound being edited.
@@ -157,7 +158,8 @@
                 ? (outbound instanceof Outbound ? outbound : Outbound.fromJson(outbound))
                 : new Outbound();
             this.isEdit = isEdit;
-            this.tags = tags;
+        this.tags = tags;
+            this.invalidFinalMask = false;
             this.vpnStatusText = '';
             this.vpnStatusDetail = '';
             this.vpnStatusUp = false;
@@ -210,13 +212,9 @@
             outModal.confirmLoading = loading;
         },
         check(){
-            if(outModal.outbound.tag == '' || outModal.tags.includes(outModal.outbound.tag)){
-                this.duplicateTag = true;
-                this.isValid = false;
-            } else {
-                this.duplicateTag = false;
-                this.isValid = true;
-            }
+            this.duplicateTag = outModal.outbound.tag == '' || outModal.tags.includes(outModal.outbound.tag);
+            this.invalidFinalMask = outModal.outbound.hasInvalidFinalMaskItem();
+            this.isValid = !this.duplicateTag && !this.invalidFinalMask;
         },
         toggleJson(jsonTab) {
             textAreaObj = document.getElementById('outboundJson');
@@ -224,7 +222,7 @@
                 if(this.cm != null) {
                         this.cm.toTextArea();
                         this.cm=null;
-                }
+        }
                 textAreaObj.value = JSON.stringify(this.outbound.toJson(), null, 2);
                 this.cm = CodeMirror.fromTextArea(textAreaObj, app.cmOptions);
                 this.cm.on('change',editor => {
@@ -562,6 +560,12 @@
                     this.$message.error('Wrong Link!');
                     outModal.link = '';
                 }
+            },
+        },
+        watch: {
+            "outModal.outbound": {
+                deep: true,
+                handler() { outModal.check(); },
             },
         },
     });

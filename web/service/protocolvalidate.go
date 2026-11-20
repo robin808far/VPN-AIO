@@ -1,12 +1,15 @@
 package service
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"math"
 	"net/netip"
+	"slices"
 	"strings"
 
+	"github.com/Jipok/wgctrl-go/wgtypes"
 	"github.com/mhsanaei/3x-ui/v2/database/model"
 	"github.com/mhsanaei/3x-ui/v2/util/common"
 )
@@ -68,6 +71,7 @@ var protocolSettingValidators = map[model.Protocol]func(map[string]any) error{
 	model.ANYTLS:      validateAnytlsSettings,
 	model.TUIC:        validateTuicSettings,
 	model.NAIVE:       validateNaiveSettings,
+	model.MASQUE:      validateMasqueSettings,
 }
 
 // --- per-protocol validators -------------------------------------------------------
@@ -213,15 +217,28 @@ func validateAwgSettings(m map[string]any) error {
 	if err := validateWireguardFamily(m); err != nil {
 		return err
 	}
+	if nested, ok := m["awg31"]; ok && nested != nil {
+		options, ok := nested.(map[string]any)
+		if !ok {
+			return common.NewError(`"awg31" must be an object`)
+		}
+		for key, value := range options {
+			// Match parseSettings: validate the value that the device will receive.
+			m[key] = value
+		}
+	}
 	// AWG 1.0 obfuscation. Jc is a packet COUNT and Jmin/Jmax a byte range, so
 	// Jmin > Jmax is not a preference, it is a range the generator cannot satisfy.
-	for _, key := range []string{"jc", "jmin", "jmax", "s1", "s2"} {
+	for _, key := range []string{"jc", "jmin", "jmax", "s1", "s2", "s3", "s4"} {
 		v, present, err := optInt(m, key)
 		if err != nil {
 			return err
 		}
 		if present && v < 0 {
 			return common.NewErrorf("%q must not be negative (got %d)", key, v)
+		}
+		if present && (key == "s3" || key == "s4") && v > 1280 {
+			return common.NewErrorf("%q must not exceed 1280", key)
 		}
 	}
 	jmin, hasMin, err := optInt(m, "jmin")
@@ -237,6 +254,33 @@ func validateAwgSettings(m map[string]any) error {
 	}
 	for _, key := range []string{"h1", "h2", "h3", "h4"} {
 		if _, _, err := optString(m, key); err != nil {
+			return err
+		}
+	}
+	for _, key := range []string{"i1", "i2", "i3", "i4", "i5", "headerProtectionKey", "contentPaddingAddition", "rekeyAfterTime", "rekeyTimeout", "rejectAfterTime", "keepaliveTimeout", "maxHandshakeAttempts"} {
+		if _, _, err := optString(m, key); err != nil {
+			return err
+		}
+	}
+	if key, _, _ := optString(m, "headerProtectionKey"); key != "" {
+		decoded, err := base64.StdEncoding.DecodeString(key)
+		if err != nil {
+			decoded, err = base64.RawStdEncoding.DecodeString(key)
+		}
+		if err != nil || len(decoded) != 32 {
+			return common.NewErrorf("%q must be base64 encoding of exactly 32 bytes", "headerProtectionKey")
+		}
+	}
+	for _, key := range []string{"contentPaddingAddition", "rekeyAfterTime", "rekeyTimeout", "rejectAfterTime", "keepaliveTimeout", "maxHandshakeAttempts"} {
+		raw, _, _ := optString(m, key)
+		if raw != "" {
+			if _, err := wgtypes.ParseUintRange(raw); err != nil {
+				return common.NewErrorf("invalid %q range", key)
+			}
+		}
+	}
+	for _, key := range []string{"randomTrailers", "disableCookies"} {
+		if _, _, err := optBool(m, key); err != nil {
 			return err
 		}
 	}
@@ -457,6 +501,122 @@ func validateNaiveSettings(m map[string]any) error {
 		if v, _, _ := optString(masq, "string"); strings.TrimSpace(v) == "" {
 			return common.NewError(`"masquerade.string" is required when "masquerade.type" is "string"`)
 		}
+	}
+	return nil
+}
+
+type masqueStream struct {
+	Network  string `json:"network"`
+	Security string `json:"security"`
+	TLS      struct {
+		ALPN         []string `json:"alpn"`
+		Certificates []struct {
+			Usage           string   `json:"usage"`
+			CertificateFile string   `json:"certificateFile"`
+			KeyFile         string   `json:"keyFile"`
+			Certificate     []string `json:"certificate"`
+			Key             []string `json:"key"`
+		} `json:"certificates"`
+	} `json:"tlsSettings"`
+}
+
+func (s masqueStream) versions() (h2, h3 bool) {
+	h2 = slices.Contains(s.TLS.ALPN, "h2")
+	return h2, slices.Contains(s.TLS.ALPN, "h3") || !h2
+}
+
+func validateMasqueStream(raw string) error {
+	var stream masqueStream
+	if err := json.Unmarshal([]byte(raw), &stream); err != nil {
+		return common.NewErrorf("invalid MASQUE stream settings: %v", err)
+	}
+	if stream.Network != "masque" || stream.Security != "tls" {
+		return common.NewError("MASQUE requires the masque transport and TLS")
+	}
+	for _, cert := range stream.TLS.Certificates {
+		hasCert := cert.CertificateFile != "" || strings.TrimSpace(strings.Join(cert.Certificate, "")) != ""
+		hasKey := cert.KeyFile != "" || strings.TrimSpace(strings.Join(cert.Key, "")) != ""
+		if (cert.Usage == "" || cert.Usage == "encipherment") && hasCert && hasKey {
+			return nil
+		}
+	}
+	return common.NewError("MASQUE requires a TLS server certificate and private key")
+}
+
+func validateMasqueSettings(m map[string]any) error {
+	addresses, ok := m["address"]
+	if !ok {
+		return common.NewError(`"address" is required`)
+	}
+	list, ok := addresses.([]any)
+	if !ok || len(list) == 0 {
+		return common.NewError(`"address" must contain an IPv4 and/or IPv6 prefix`)
+	}
+	var v4, v6 bool
+	for _, raw := range list {
+		s, ok := raw.(string)
+		if !ok {
+			return common.NewError(`"address" entries must be strings`)
+		}
+		prefix, err := netip.ParsePrefix(s)
+		if err != nil {
+			return common.NewErrorf(`invalid "address": %v`, err)
+		}
+		addr := prefix.Addr()
+		if addr.Is4In6() || addr == prefix.Masked().Addr() ||
+			(addr.Is4() && (prefix.Bits() > 30 || !prefix.Contains(addr.Next()))) ||
+			(addr.Is6() && prefix.Bits() > 126) {
+			return common.NewErrorf(`"address" %q must be a usable server address with room for clients`, s)
+		}
+		if prefix.Addr().Is4() {
+			if v4 {
+				return common.NewError(`only one IPv4 address pool is allowed`)
+			}
+			v4 = true
+		}
+		if prefix.Addr().Is6() {
+			if v6 {
+				return common.NewError(`only one IPv6 address pool is allowed`)
+			}
+			v6 = true
+		}
+	}
+	mtu, present, err := optInt(m, "mtu")
+	if err != nil {
+		return err
+	}
+	if present && (mtu < 1280 || mtu > 65535) {
+		return common.NewError(`"mtu" must be between 1280 and 65535`)
+	}
+	clients, ok := m["clients"].([]any)
+	if !ok {
+		return common.NewError(`"clients" must be an array`)
+	}
+	seen := map[string]bool{}
+	for i, raw := range clients {
+		client, ok := raw.(map[string]any)
+		if !ok {
+			return common.NewErrorf(`"clients[%d]" must be an object`, i)
+		}
+		email, _, err := optString(client, "email")
+		if err != nil {
+			return err
+		}
+		pass, _, err := optString(client, "password")
+		if err != nil {
+			return err
+		}
+		if strings.TrimSpace(email) == "" || strings.Contains(email, ":") {
+			return common.NewErrorf(`"clients[%d].email" is required and cannot contain a colon`, i)
+		}
+		if strings.TrimSpace(pass) == "" {
+			return common.NewErrorf(`"clients[%d].password" is required`, i)
+		}
+		key := strings.ToLower(email)
+		if seen[key] {
+			return common.NewErrorf("duplicate MASQUE email %q", email)
+		}
+		seen[key] = true
 	}
 	return nil
 }
