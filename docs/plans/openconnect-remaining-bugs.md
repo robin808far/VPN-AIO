@@ -193,8 +193,9 @@ threshold, or verify manually on the live box.
   Revert to `false` before committing config, or leave for post-mortem.
 - Kept VMs `vpnt0-srv / -cla / -clb / -clc` may still be running — `incus delete
   --force <name>` to clean, or let the next run's startup sweep clear them.
-- Untracked scratch/plan docs in repo root: `openconnect-plan.md`, `flowchart*.md`,
-  `table.md`, `.\*.kate-swp` (editor swaps — safe to delete).
+- The plan and supporting architecture/reference documents are now organized under
+  `docs/plans/`, `docs/architecture/`, and `docs/reference/`. This historical note
+  describes their earlier location; editor swap files, if present, are separate scratch files.
 
 ---
 

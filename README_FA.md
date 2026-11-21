@@ -6,7 +6,7 @@
 
 **VPN-AIO نسخهٔ 3.0.0** بر پایهٔ [Sir-MmD/vpn-ui](https://github.com/Sir-MmD/vpn-ui) و [3X-UI](https://github.com/MHSanaei/3x-ui) ساخته شده است. مجوزها و حقوق سازندگان اصلی حفظ شده‌اند.
 
-هدف این نسخه **Ubuntu 24.04 amd64** است. هستهٔ Xray **26.11.9**، پروتکل‌های بومی AnyTLS، TUIC، NaiveProxy و MASQUE، انتقال XDRIVE و AmneziaWG **3.1.20261113-02** با کنترل‌ها و خروجی‌های ۳.۱ در دسترس‌اند. نسخهٔ ۳.۰.۰ [مدیریت Hosts](HOSTS.md) را به رابط Vue اضافه می‌کند. پیش از ارتقا، [یادداشت انتشار](RELEASE-3.0.0.md) و [گزارش آزمون و بازگشت](VPN-AIO-3.0.0.md) را بخوانید؛ ماتریس VM/کرنل بین‌توزیعی طبق توافق اجرا نشده است.
+هدف این نسخه **Ubuntu 24.04 amd64** است. هستهٔ Xray **26.11.9**، پروتکل‌های بومی AnyTLS، TUIC، NaiveProxy و MASQUE، انتقال XDRIVE و AmneziaWG **3.1.20261113-02** با کنترل‌ها و خروجی‌های ۳.۱ در دسترس‌اند. نسخهٔ ۳.۰.۰ [مدیریت Hosts](docs/guides/HOSTS.md) را به رابط Vue اضافه می‌کند. پیش از ارتقا، [یادداشت انتشار](docs/releases/RELEASE-3.0.0.md) و [گزارش آزمون و بازگشت](docs/releases/validation/VPN-AIO-3.0.0.md) را بخوانید؛ ماتریس VM/کرنل بین‌توزیعی طبق توافق اجرا نشده است. برای فهرست و دسته‌بندی مستندات پروژه، [راهنمای مستندات](docs/README.md) را ببینید.
 
 ![نمای کلی](https://raw.githubusercontent.com/Sir-MmD/vpn-ui/refs/heads/main/media/overview.png)
 

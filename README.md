@@ -6,7 +6,9 @@
 
 **VPN-AIO 3.0.0** is based on [Sir-MmD/vpn-ui](https://github.com/Sir-MmD/vpn-ui) and **[3X-UI](https://github.com/MHSanaei/3x-ui)**. Original licenses and credits are preserved.
 
-This version targets **Ubuntu 24.04 amd64** installations. It integrates Xray **26.11.9**, native AnyTLS/TUIC/NaiveProxy and MASQUE, XDRIVE, and AmneziaWG **3.1.20261113-02** with the 3.1 controls and exports. Version 3.0.0 adds [managed Hosts](HOSTS.md) in the existing Vue panel. Read the [release notes](RELEASE-3.0.0.md) and [validation/rollback record](VPN-AIO-3.0.0.md) before upgrading; the cross-distribution VM/kernel matrix remains explicitly waived.
+This version targets **Ubuntu 24.04 amd64** installations. It integrates Xray **26.11.9**, native AnyTLS/TUIC/NaiveProxy and MASQUE, XDRIVE, and AmneziaWG **3.1.20261113-02** with the 3.1 controls and exports. Version 3.0.0 adds [managed Hosts](docs/guides/HOSTS.md) in the existing Vue panel. Read the [release notes](docs/releases/RELEASE-3.0.0.md) and [validation/rollback record](docs/releases/validation/VPN-AIO-3.0.0.md) before upgrading; the cross-distribution VM/kernel matrix remains explicitly waived.
+
+Project documentation is organized under [`docs/`](docs/README.md).
 
 ![Overview](https://raw.githubusercontent.com/Sir-MmD/vpn-ui/refs/heads/main/media/overview.png)
 

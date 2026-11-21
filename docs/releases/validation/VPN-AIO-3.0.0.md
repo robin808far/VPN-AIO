@@ -14,7 +14,7 @@ only the computed Latest selection changes.
 ## Feature validation
 
 Implementation commit: `dd89f19` (`feature/hosts-v3.0.0`). The full implementation
-and pre-release validation are recorded in `hosts-plan.md` and `HOSTS.md`.
+and pre-release validation are recorded in [`hosts-plan.md`](../../plans/hosts-plan.md) and [`HOSTS.md`](../../guides/HOSTS.md).
 The development binary is not the release asset.
 
 The full Go suite, pinned-core Host JSON acceptance, three Node scripts, browser

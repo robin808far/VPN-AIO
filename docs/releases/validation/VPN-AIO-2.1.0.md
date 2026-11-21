@@ -145,7 +145,7 @@ Target: fresh installation and upgrade from 2.0.0 on Ubuntu 24.04 amd64.
 
 ## Release record
 
-- `RELEASE-2.1.0.md` contains the release notes, installation/rollback requirements,
+- `../RELEASE-2.1.0.md` contains the release notes, installation/rollback requirements,
   final checksum and exact validation limits. GitHub PR #2 carries the integration;
   public publication is a separate operation from this validation record.
 - The release asset is built from commit `bd467e0`; subsequent release notes and

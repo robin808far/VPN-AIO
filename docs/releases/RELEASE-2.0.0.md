@@ -21,7 +21,7 @@ checksum using `sha256sum -c SHA256SUMS` in the download directory.
 
 **Scope:** This 2.0.0 release uses the compatibility AWG profile. AWG 3.1 UI
 controls are being developed for 2.1.0. Only Ubuntu 24.04 amd64 was validated.
-See [validation record](VPN-AIO-2.0.0.md) for exact test coverage. Existing
+See [validation record](validation/VPN-AIO-2.0.0.md) for exact test coverage. Existing
 upstream daemon paths remain; do not install alongside vpn-ui on the same host.
 
 Based on Sir-MmD/vpn-ui and 3x-ui; upstream licenses and credits are retained.

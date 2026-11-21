@@ -36,7 +36,7 @@ the pinned Xray 26.11.9 core.
   Ubuntu 24.04 amd64 is the real-host validation target. AWG desktop/mobile clients
   were not tested; Linux upstream tools and the matching 3.1 kernel were tested.
 - XDRIVE cloud settings were parser-validated; this record does not claim live
-  Google Drive or S3 transfers. See `VPN-AIO-2.1.0.md` for the exact validation history.
+  Google Drive or S3 transfers. See `validation/VPN-AIO-2.1.0.md` for the exact validation history.
 
 ## Installation and rollback
 

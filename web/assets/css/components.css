@@ -6,7 +6,7 @@
  * Everything here is `bo-` prefixed and consumes only the semantic tokens from
  * tokens.css, never a raw colour and never a legacy --dark-color-* name.
  *
- * Deliberate divergences from the mockups, all reasoned in redesign-plan.md:
+ * Deliberate divergences from the mockups, all reasoned in docs/plans/redesign-plan.md:
  *
  *   - Theme selectors are body.dark, not :root[data-theme="dark"]. The mockups
  *     stamp data-theme on <html>; the panel puts the theme class on <body>

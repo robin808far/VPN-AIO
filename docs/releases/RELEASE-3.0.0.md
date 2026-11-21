@@ -11,8 +11,8 @@ Managed Hosts add reusable, per-inbound endpoint policies to the existing Vue pa
 - Native client exports and inbound backup/import integration.
 - Admin/inbound authorization on all Host management routes.
 
-See `HOSTS.md` for semantics, API, compatibility and rollback behavior, and
-`hosts-plan.md` for the implementation and validation record.
+See [HOSTS.md](../guides/HOSTS.md) for semantics, API, compatibility and rollback behavior, and
+[`hosts-plan.md`](../plans/hosts-plan.md) for the implementation and validation record.
 
 ### Upgrade and rollback
 
@@ -34,7 +34,7 @@ exact rollback is required. Published v2.0.0 and v2.1.0 assets are retained.
 
 Release assets include `VPN-AIO-amd64`, `SHA256SUMS`, `BUILD-MANIFEST.json` and the
 embedded-input checksum inventory. Verify the downloaded binary with SHA-256
-before installation. See `VPN-AIO-3.0.0.md` for build provenance and release gates.
+before installation. See [the validation record](validation/VPN-AIO-3.0.0.md) for build provenance and release gates.
 
 `VPN-AIO-amd64`: **354,573,744 bytes**
 

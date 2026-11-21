@@ -308,7 +308,7 @@ type Inbound struct {
 	//
 	// It counts ADDRESSES, not devices: devices behind one NAT share one source address
 	// and count as one. That undercount is irreducible rather than a defect (see
-	// ip-limiter-plan.md), which is exactly why the name says IP and must keep saying IP.
+	// docs/plans/ip-limiter-plan.md), which is exactly why the name says IP and must keep saying IP.
 	IPLimit int `json:"ipLimit" form:"ipLimit" gorm:"default:0"`
 
 	// IP Limit Strategy: what happens when an account already at its IP Limit is seen
@@ -623,7 +623,7 @@ type Account struct {
 	// Email is the identity, and is matched case-insensitively after trimming (see
 	// AccountKey). uniqueIndex here mirrors xray.ClientTraffic.Email's own unique
 	// constraint; relaxing either was rejected twice before (see
-	// multi-inbound-client-plan.md section 8b).
+	// docs/plans/multi-inbound-client-plan.md section 8b).
 	Email string `json:"email" gorm:"uniqueIndex;not null"`
 
 	// SubID is the subscription key, and is now INDEXED. It was previously free

@@ -1211,7 +1211,7 @@ config writer and `GetXrayConfig` working unchanged.
 > **What this section is not.** It is the wire contract only. What the upgrade does to a
 > live panel, which cases the backfill handles, what it fixes on the way, why the
 > projection cannot lose your WireGuard keys, the three rollback levels and the known
-> limits are all in **[accounts-upgrade-guide.md](accounts-upgrade-guide.md)**. Read that
+> limits are all in **[accounts-upgrade-guide.md](../guides/accounts-upgrade-guide.md)**. Read that
 > before you turn this on; none of it is repeated here.
 
 ### Account fields (`accounts` table)
@@ -1625,5 +1625,5 @@ oddity. `localIp` is the one that is genuinely Go-only.
 
 The authenticated `/panel/api/hosts` API manages scoped Host groups, bulk state,
 ordering and the numeric Host IDs used by account `hostRuleIds`. See
-[HOSTS.md](HOSTS.md#api) for routes, request examples, format-specific behavior,
+[HOSTS.md](../guides/HOSTS.md#api) for routes, request examples, format-specific behavior,
 permissions and migration/rollback semantics.
