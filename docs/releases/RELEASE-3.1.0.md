@@ -18,3 +18,8 @@ loaded when the subscription server starts; restart the panel after changing the
 This release continues to target Ubuntu 24.04 amd64. This note does not claim a
 fresh validation of every distribution in the inherited upstream support matrix.
 See [the 3.1.0 validation record](validation/VPN-AIO-3.1.0.md) for checks performed.
+
+The committed source passed the complete Linux Go suite and Ubuntu CI; the exact
+asset passed 53 HTTP contract checks and 30 isolated lifecycle checks. Windows
+Happ import/refresh of subscription metadata was checked separately with a safe
+test profile. Global client overrides and Android/iOS were not exercised.
