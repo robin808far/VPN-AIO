@@ -4,9 +4,9 @@
   <img src="web/assets/img/vpn-aio.svg" alt="VPN-AIO" width="260">
 </p>
 
-**VPN-AIO 3.0.0** is based on [Sir-MmD/vpn-ui](https://github.com/Sir-MmD/vpn-ui) and **[3X-UI](https://github.com/MHSanaei/3x-ui)**. Original licenses and credits are preserved.
+**VPN-AIO 3.1.0** is based on [Sir-MmD/vpn-ui](https://github.com/Sir-MmD/vpn-ui) and **[3X-UI](https://github.com/MHSanaei/3x-ui)**. Original licenses and credits are preserved.
 
-This version targets **Ubuntu 24.04 amd64** installations. It integrates Xray **26.11.9**, native AnyTLS/TUIC/NaiveProxy and MASQUE, XDRIVE, and AmneziaWG **3.1.20261113-02** with the 3.1 controls and exports. Version 3.0.0 adds [managed Hosts](docs/guides/HOSTS.md) in the existing Vue panel. Read the [release notes](docs/releases/RELEASE-3.0.0.md) and [validation/rollback record](docs/releases/validation/VPN-AIO-3.0.0.md) before upgrading; the cross-distribution VM/kernel matrix remains explicitly waived.
+This version targets **Ubuntu 24.04 amd64** installations. It integrates Xray **26.11.9**, native AnyTLS/TUIC/NaiveProxy and MASQUE, XDRIVE, and AmneziaWG **3.1.20261113-02** with the 3.1 controls and exports. Version 3.1.0 adds native Happ subscription settings; version 3.0.0 added [managed Hosts](docs/guides/HOSTS.md). Read the [3.1.0 release notes](docs/releases/RELEASE-3.1.0.md) and [validation record](docs/releases/validation/VPN-AIO-3.1.0.md) before upgrading; the cross-distribution VM/kernel matrix remains explicitly waived.
 
 Project documentation is organized under [`docs/`](docs/README.md).
 
@@ -37,6 +37,7 @@ the core rather than by a daemon, and they work as **inbounds and outbounds**:
 ## New Features
 
 - **Managed Hosts**: reusable endpoint groups, TLS/SNI/transport overrides, CIDR and SNI pools, per-account selection, format exclusions and scoped management APIs
+- **Happ subscription management**: routing presets and app-specific subscription headers for appearance, expiry, networking, auto-connect, per-app proxy, Provider ID and fallback URLs
 - **Multi-Admin** with per-inbound access, so each admin only sees the inbounds you assign it
 - **Reseller** accounts with a metered traffic balance an admin recharges, spent only on the inbounds it was given
 - **Client to Client** support, even as **Cross Inbound** (an internal connection between an L2TP user and an OpenVPN user)
@@ -60,7 +61,7 @@ the core rather than by a daemon, and they work as **inbounds and outbounds**:
 
 ## Upstream Operating System Matrix
 
-The table below records the original project's support matrix. VPN-AIO 3.0.0 validation targets Ubuntu 24.04; it does not claim a fresh test of every upstream platform.
+The table below records the original project's support matrix. VPN-AIO 3.1.0 validation targets Ubuntu 24.04; it does not claim a fresh test of every upstream platform.
 
 
 | | Distribution |Version |Version |

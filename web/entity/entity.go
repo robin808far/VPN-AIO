@@ -3,10 +3,13 @@ package entity
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"math"
 	"net"
+	"net/url"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/mhsanaei/3x-ui/v2/util/common"
 )
@@ -54,14 +57,39 @@ type AllSetting struct {
 	TwoFactorToken  string `json:"twoFactorToken" form:"twoFactorToken"`   // Two-factor authentication token
 
 	// Subscription server settings
-	SubEnable                   bool   `json:"subEnable" form:"subEnable"`                                     // Enable subscription server
-	SubJsonEnable               bool   `json:"subJsonEnable" form:"subJsonEnable"`                             // Enable JSON subscription endpoint
-	SubTitle                    string `json:"subTitle" form:"subTitle"`                                       // Subscription title
-	SubSupportUrl               string `json:"subSupportUrl" form:"subSupportUrl"`                             // Subscription support URL
-	SubProfileUrl               string `json:"subProfileUrl" form:"subProfileUrl"`                             // Subscription profile URL
-	SubAnnounce                 string `json:"subAnnounce" form:"subAnnounce"`                                 // Subscription announce
-	SubEnableRouting            bool   `json:"subEnableRouting" form:"subEnableRouting"`                       // Enable routing for subscription
-	SubRoutingRules             string `json:"subRoutingRules" form:"subRoutingRules"`                         // Subscription global routing rules (Only for Happ)
+	SubEnable                   bool   `json:"subEnable" form:"subEnable"`               // Enable subscription server
+	SubJsonEnable               bool   `json:"subJsonEnable" form:"subJsonEnable"`       // Enable JSON subscription endpoint
+	SubTitle                    string `json:"subTitle" form:"subTitle"`                 // Subscription title
+	SubSupportUrl               string `json:"subSupportUrl" form:"subSupportUrl"`       // Subscription support URL
+	SubProfileUrl               string `json:"subProfileUrl" form:"subProfileUrl"`       // Subscription profile URL
+	SubAnnounce                 string `json:"subAnnounce" form:"subAnnounce"`           // Subscription announce
+	SubEnableRouting            bool   `json:"subEnableRouting" form:"subEnableRouting"` // Enable routing for subscription
+	SubRoutingRules             string `json:"subRoutingRules" form:"subRoutingRules"`   // Subscription global routing rules (Only for Happ)
+	SubHappAutoDetect           bool   `json:"subHappAutoDetect" form:"subHappAutoDetect"`
+	SubHappProviderId           string `json:"subHappProviderId" form:"subHappProviderId"`
+	SubHappNewUrl               string `json:"subHappNewUrl" form:"subHappNewUrl"`
+	SubHappFallbackUrl          string `json:"subHappFallbackUrl" form:"subHappFallbackUrl"`
+	SubHappSubInfoColor         string `json:"subHappSubInfoColor" form:"subHappSubInfoColor"`
+	SubHappSubInfoText          string `json:"subHappSubInfoText" form:"subHappSubInfoText"`
+	SubHappSubInfoButtonText    string `json:"subHappSubInfoButtonText" form:"subHappSubInfoButtonText"`
+	SubHappSubInfoButtonLink    string `json:"subHappSubInfoButtonLink" form:"subHappSubInfoButtonLink"`
+	SubHappSubExpire            bool   `json:"subHappSubExpire" form:"subHappSubExpire"`
+	SubHappSubExpireButtonLink  string `json:"subHappSubExpireButtonLink" form:"subHappSubExpireButtonLink"`
+	SubHappNotificationExpire   bool   `json:"subHappNotificationExpire" form:"subHappNotificationExpire"`
+	SubHappNoLimit              bool   `json:"subHappNoLimit" form:"subHappNoLimit"`
+	SubHappHideSettings         bool   `json:"subHappHideSettings" form:"subHappHideSettings"`
+	SubHappAlwaysHwid           bool   `json:"subHappAlwaysHwid" form:"subHappAlwaysHwid"`
+	SubHappTunMode              string `json:"subHappTunMode" form:"subHappTunMode"`
+	SubHappTunType              string `json:"subHappTunType" form:"subHappTunType"`
+	SubHappExcludeRoutes        string `json:"subHappExcludeRoutes" form:"subHappExcludeRoutes"`
+	SubHappExcludeApns          bool   `json:"subHappExcludeApns" form:"subHappExcludeApns"`
+	SubHappColorProfile         string `json:"subHappColorProfile" form:"subHappColorProfile"`
+	SubHappPingType             string `json:"subHappPingType" form:"subHappPingType"`
+	SubHappAutoConnect          bool   `json:"subHappAutoConnect" form:"subHappAutoConnect"`
+	SubHappAutoConnectType      string `json:"subHappAutoConnectType" form:"subHappAutoConnectType"`
+	SubHappPerAppMode           string `json:"subHappPerAppMode" form:"subHappPerAppMode"`
+	SubHappPerAppList           string `json:"subHappPerAppList" form:"subHappPerAppList"`
+	SubHappLocalProxyAuth       string `json:"subHappLocalProxyAuth" form:"subHappLocalProxyAuth"`
 	SubListen                   string `json:"subListen" form:"subListen"`                                     // Subscription server listen IP
 	SubPort                     int    `json:"subPort" form:"subPort"`                                         // Subscription server port
 	SubPath                     string `json:"subPath" form:"subPath"`                                         // Base path for subscription URLs
@@ -131,6 +159,52 @@ func (s *AllSetting) CheckValid() error {
 
 	if s.SubPort <= 0 || s.SubPort > math.MaxUint16 {
 		return common.NewError("Sub port is not a valid port:", s.SubPort)
+	}
+
+	if utf8.RuneCountInString(s.SubHappSubInfoText) > 200 {
+		return common.NewErrorf("Happ subscription info text must be at most 200 characters")
+	}
+	if utf8.RuneCountInString(s.SubHappSubInfoButtonText) > 25 {
+		return common.NewErrorf("Happ subscription info button text must be at most 25 characters")
+	}
+	if value := strings.ToLower(strings.TrimSpace(s.SubHappSubInfoColor)); value != "" && value != "blue" && value != "green" && value != "red" {
+		return common.NewErrorf("Happ subscription info color must be blue, green, or red: %s", s.SubHappSubInfoColor)
+	}
+	if value := strings.ToLower(strings.TrimSpace(s.SubHappTunMode)); value != "" && value != "system" && value != "gvisor" {
+		return common.NewErrorf("Happ TUN mode must be system or gvisor: %s", s.SubHappTunMode)
+	}
+	if value := strings.ToLower(strings.TrimSpace(s.SubHappTunType)); value != "" && value != "default" && value != "singbox" && value != "tun2proxy" && value != "xray" {
+		return common.NewErrorf("Happ TUN type is not supported: %s", s.SubHappTunType)
+	}
+	if value := strings.ToLower(strings.TrimSpace(s.SubHappPingType)); value != "" && value != "proxy" && value != "proxy-head" && value != "tcp" && value != "icmp" {
+		return common.NewErrorf("Happ ping type is not supported: %s", s.SubHappPingType)
+	}
+	if value := strings.ToLower(strings.TrimSpace(s.SubHappAutoConnectType)); value != "" && value != "lowestdelay" && value != "lastused" && value != "random" {
+		return common.NewErrorf("Happ auto-connect type is not supported: %s", s.SubHappAutoConnectType)
+	}
+	if value := strings.ToLower(strings.TrimSpace(s.SubHappPerAppMode)); value != "" && value != "off" && value != "on" && value != "bypass" {
+		return common.NewErrorf("Happ per-app proxy mode must be off, on, or bypass: %s", s.SubHappPerAppMode)
+	}
+	if value := strings.ToLower(strings.TrimSpace(s.SubHappLocalProxyAuth)); value != "" && value != "auto" && value != "disable" {
+		return common.NewErrorf("Happ local proxy auth must be auto or disabled: %s", s.SubHappLocalProxyAuth)
+	}
+	for _, entry := range []struct{ name, value string }{
+		{"replacement", s.SubHappNewUrl},
+		{"fallback", s.SubHappFallbackUrl},
+	} {
+		if value := strings.TrimSpace(entry.value); value != "" {
+			parsed, err := url.Parse(value)
+			if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") ||
+				parsed.Hostname() == "" || parsed.User != nil || parsed.Opaque != "" {
+				return common.NewErrorf("Happ %s URL must be an absolute HTTP(S) URL without credentials", entry.name)
+			}
+		}
+	}
+	if value := strings.TrimSpace(s.SubHappColorProfile); value != "" && value != "resetcolors" {
+		var profile map[string]json.RawMessage
+		if err := json.Unmarshal([]byte(value), &profile); err != nil || profile == nil {
+			return common.NewErrorf("Happ color profile must be a JSON object or resetcolors")
+		}
 	}
 
 	if (s.SubPort == s.WebPort) && (s.WebListen == s.SubListen) {

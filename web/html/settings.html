@@ -304,6 +304,8 @@
         xudpConcurrency: 16,
         xudpProxyUDP443: "reject"
       },
+      happRoutePreset: 'iran-bypass',
+      happIncludeAdblock: false,
       defaultRules: [
         {
           type: "field",
@@ -373,6 +375,44 @@
     methods: {
       loading(spinning = true) {
         this.loadingStates.spinning = spinning;
+      },
+      applyHappRoutePreset() {
+        const blockSites = this.happIncludeAdblock ? ['geosite:category-ads-all'] : [];
+        const profiles = {
+          'iran-bypass': {
+            Name: 'Iran Bypass', GlobalProxy: 'true', RouteOrder: 'block-proxy-direct',
+            DirectSites: ['geosite:private', 'domain:ir', 'geosite:category-ir'],
+            DirectIp: ['geoip:ir', 'geoip:private', '127.0.0.0/8', '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16', '169.254.0.0/16', '224.0.0.0/4', '255.255.255.255'],
+            BlockSites: blockSites, BlockIp: [], ProxySites: [], ProxyIp: [], DomainStrategy: 'IPIfNonMatch'
+          },
+          'china-direct': {
+            Name: 'Bypass-CN', GlobalProxy: 'true', RouteOrder: 'block-proxy-direct',
+            RemoteDNSType: 'DoH', RemoteDNSDomain: 'https://cloudflare-dns.com/dns-query', RemoteDNSIP: '1.1.1.1',
+            DomesticDNSType: 'DoH', DomesticDNSDomain: 'https://dns.alidns.com/dns-query', DomesticDNSIP: '223.5.5.5',
+            DnsHosts: { 'cloudflare-dns.com': '1.1.1.1', 'dns.alidns.com': '223.5.5.5' },
+            DirectSites: ['geosite:private', 'geosite:cn', 'geosite:geolocation-cn'],
+            DirectIp: ['geoip:cn', 'geoip:private', '127.0.0.0/8', '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16', '169.254.0.0/16', '224.0.0.0/4', '255.255.255.255'],
+            ProxySites: [], ProxyIp: [], BlockSites: blockSites, BlockIp: [], DomainStrategy: 'IPIfNonMatch', FakeDNS: 'false', UseChunkFiles: 'true'
+          },
+          global: {
+            Name: 'Global Proxy', GlobalProxy: 'true', DirectSites: [], DirectIp: [], BlockSites: blockSites,
+            BlockIp: [], ProxySites: [], ProxyIp: [], DomainStrategy: 'AsIs'
+          },
+          'lan-bypass': {
+            Name: 'Global Bypass Local Network', GlobalProxy: 'true', DirectSites: ['geosite:private'],
+            DirectIp: ['geoip:private'], BlockSites: blockSites, BlockIp: [], ProxySites: [], ProxyIp: [], DomainStrategy: 'AsIs'
+          }
+        };
+        if (this.happRoutePreset === 'off') {
+          this.allSetting.subRoutingRules = 'happ://routing/off';
+          this.allSetting.subEnableRouting = false;
+          return;
+        }
+        const profile = profiles[this.happRoutePreset];
+        if (profile) {
+          this.allSetting.subRoutingRules = 'happ://routing/onadd/' + btoa(JSON.stringify(profile));
+          this.allSetting.subEnableRouting = true;
+        }
       },
       _isIp(h) {
         if (typeof h !== "string") return false;

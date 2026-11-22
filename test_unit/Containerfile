@@ -9,7 +9,7 @@ RUN mkdir -p /opt/VPN-AIO /checks
 COPY build/out/VPN-AIO-check /opt/VPN-AIO/VPN-AIO-amd64
 COPY test_unit/container-lifecycle.py test_unit/native-core-smoke.py \
      test_unit/xdrive-config-check.py test_unit/finalmask-config-check.py \
-     test_unit/transport-settings-config-check.py /checks/
+     test_unit/transport-settings-config-check.py test_unit/happ-subscription-check.py /checks/
 RUN chmod 0755 /opt/VPN-AIO/VPN-AIO-amd64
 
 ENTRYPOINT ["python3", "/checks/container-lifecycle.py"]

@@ -177,14 +177,38 @@ func (s *Server) initRouter() (*gin.Engine, error) {
 		SubAnnounce = ""
 	}
 
-	SubEnableRouting, err := s.settingService.GetSubEnableRouting()
+	allSettings, err := s.settingService.GetAllSetting()
 	if err != nil {
 		return nil, err
 	}
-
-	SubRoutingRules, err := s.settingService.GetSubRoutingRules()
-	if err != nil {
-		SubRoutingRules = ""
+	SubEnableRouting := allSettings.SubEnableRouting
+	SubRoutingRules := allSettings.SubRoutingRules
+	happConfig := HappConfig{
+		AutoDetect:          allSettings.SubHappAutoDetect,
+		ProviderID:          allSettings.SubHappProviderId,
+		NewURL:              allSettings.SubHappNewUrl,
+		FallbackURL:         allSettings.SubHappFallbackUrl,
+		SubInfoColor:        allSettings.SubHappSubInfoColor,
+		SubInfoText:         allSettings.SubHappSubInfoText,
+		SubInfoButtonText:   allSettings.SubHappSubInfoButtonText,
+		SubInfoButtonLink:   allSettings.SubHappSubInfoButtonLink,
+		SubExpire:           allSettings.SubHappSubExpire,
+		SubExpireButtonLink: allSettings.SubHappSubExpireButtonLink,
+		NotificationExpire:  allSettings.SubHappNotificationExpire,
+		NoLimit:             allSettings.SubHappNoLimit,
+		HideSettings:        allSettings.SubHappHideSettings,
+		AlwaysHWID:          allSettings.SubHappAlwaysHwid,
+		TunMode:             allSettings.SubHappTunMode,
+		TunType:             allSettings.SubHappTunType,
+		ExcludeRoutes:       allSettings.SubHappExcludeRoutes,
+		ExcludeAPNs:         allSettings.SubHappExcludeApns,
+		ColorProfile:        allSettings.SubHappColorProfile,
+		PingType:            allSettings.SubHappPingType,
+		AutoConnect:         allSettings.SubHappAutoConnect,
+		AutoConnectType:     allSettings.SubHappAutoConnectType,
+		PerAppMode:          allSettings.SubHappPerAppMode,
+		PerAppList:          allSettings.SubHappPerAppList,
+		LocalProxyAuth:      allSettings.SubHappLocalProxyAuth,
 	}
 
 	// set per-request localizer from headers/cookies
@@ -266,7 +290,7 @@ func (s *Server) initRouter() (*gin.Engine, error) {
 	s.sub = NewSUBController(
 		g, LinksPath, JsonPath, ClashPath, subJsonEnable, subClashEnable, Encrypt, ShowInfo, RemarkModel, SubUpdates,
 		SubJsonFragment, SubJsonNoises, SubJsonMux, SubJsonRules, SubTitle, SubSupportUrl,
-		SubProfileUrl, SubAnnounce, SubEnableRouting, SubRoutingRules)
+		SubProfileUrl, SubAnnounce, SubEnableRouting, SubRoutingRules, happConfig)
 
 	return engine, nil
 }

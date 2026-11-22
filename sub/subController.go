@@ -19,6 +19,7 @@ type SUBController struct {
 	subAnnounce      string
 	subEnableRouting bool
 	subRoutingRules  string
+	happConfig       HappConfig
 	subPath          string
 	subJsonPath      string
 	subClashPath     string
@@ -54,6 +55,7 @@ func NewSUBController(
 	subAnnounce string,
 	subEnableRouting bool,
 	subRoutingRules string,
+	happConfig HappConfig,
 ) *SUBController {
 	sub := NewSubService(showInfo, rModel)
 	a := &SUBController{
@@ -63,6 +65,7 @@ func NewSUBController(
 		subAnnounce:      subAnnounce,
 		subEnableRouting: subEnableRouting,
 		subRoutingRules:  subRoutingRules,
+		happConfig:       happConfig,
 		subPath:          subPath,
 		subJsonPath:      jsonPath,
 		subClashPath:     clashPath,
@@ -271,4 +274,5 @@ func (a *SUBController) ApplyCommonHeaders(
 	if profileRoutingRules != "" {
 		c.Writer.Header().Set("Routing", profileRoutingRules)
 	}
+	applyHappHeaders(c, a.happConfig)
 }

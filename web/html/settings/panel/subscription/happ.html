@@ -1,0 +1,210 @@
+{{define "settings/panel/subscription/happ"}}
+<a-collapse>
+    <a-collapse-panel key="happ" header='{{ i18n "pages.settings.happSettings" }}'>
+        <p style="padding: 0 20px; opacity: .75">{{ i18n "pages.settings.happSettingsDesc" }}</p>
+        <a-setting-list-item paddings="small">
+            <template #title>{{ i18n "pages.settings.happAutoDetect" }}</template>
+            <template #description>{{ i18n "pages.settings.happAutoDetectDesc" }}</template>
+            <template #control>
+                <a-switch v-model="allSetting.subHappAutoDetect"></a-switch>
+            </template>
+        </a-setting-list-item>
+        <a-tabs default-active-key="routing">
+            <a-tab-pane key="routing" tab='{{ i18n "pages.settings.happRoutingTab" }}'>
+                <a-setting-list-item paddings="small">
+                    <template #title>{{ i18n "pages.settings.subEnableRouting" }}</template>
+                    <template #description>{{ i18n "pages.settings.subEnableRoutingDesc" }}</template>
+                    <template #control>
+                        <a-switch v-model="allSetting.subEnableRouting"></a-switch>
+                    </template>
+                </a-setting-list-item>
+                <a-setting-list-item paddings="small">
+                    <template #title>{{ i18n "pages.settings.happRoutePreset" }}</template>
+                    <template #description>{{ i18n "pages.settings.happRoutePresetDesc" }}</template>
+                    <template #control>
+                        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px">
+                            <a-select v-model="happRoutePreset" style="min-width: 180px">
+                                <a-select-option value="iran-bypass">{{ i18n "pages.settings.happPresetIran" }}</a-select-option>
+                                <a-select-option value="china-direct">{{ i18n "pages.settings.happPresetChina" }}</a-select-option>
+                                <a-select-option value="global">{{ i18n "pages.settings.happPresetGlobal" }}</a-select-option>
+                                <a-select-option value="lan-bypass">{{ i18n "pages.settings.happPresetLAN" }}</a-select-option>
+                                <a-select-option value="off">{{ i18n "pages.settings.happPresetOff" }}</a-select-option>
+                            </a-select>
+                            <a-checkbox v-model="happIncludeAdblock" :disabled="happRoutePreset === 'off'">{{ i18n "pages.settings.happIncludeAdblock" }}</a-checkbox>
+                            <a-button type="primary" @click="applyHappRoutePreset">{{ i18n "pages.settings.happApplyPreset" }}</a-button>
+                        </div>
+                    </template>
+                </a-setting-list-item>
+                <a-setting-list-item paddings="small">
+                    <template #title>{{ i18n "pages.settings.subRoutingRules" }}</template>
+                    <template #description>{{ i18n "pages.settings.subRoutingRulesDesc" }}</template>
+                    <template #control>
+                        <a-textarea v-model="allSetting.subRoutingRules" :rows="4"
+                            placeholder="happ://routing/onadd/... or happ://routing/off"></a-textarea>
+                    </template>
+                </a-setting-list-item>
+                <a-setting-list-item paddings="small">
+                    <template #title>{{ i18n "pages.settings.happNoLimit" }}</template>
+                    <template #description>{{ i18n "pages.settings.happNoLimitDesc" }}</template>
+                    <template #control><a-switch v-model="allSetting.subHappNoLimit"></a-switch></template>
+                </a-setting-list-item>
+                <a-setting-list-item paddings="small">
+                    <template #title>{{ i18n "pages.settings.happHideSettings" }}</template>
+                    <template #description>{{ i18n "pages.settings.happHideSettingsDesc" }}</template>
+                    <template #control><a-switch v-model="allSetting.subHappHideSettings"></a-switch></template>
+                </a-setting-list-item>
+            </a-tab-pane>
+            <a-tab-pane key="appearance" tab='{{ i18n "pages.settings.happAppearanceTab" }}' :disabled="!allSetting.subHappAutoDetect">
+                <a-setting-list-item paddings="small">
+                    <template #title>{{ i18n "pages.settings.happSubInfoText" }}</template>
+                    <template #description>{{ i18n "pages.settings.happSubInfoTextDesc" }}</template>
+                    <template #control><a-input v-model="allSetting.subHappSubInfoText" :maxlength="200"></a-input></template>
+                </a-setting-list-item>
+                <a-setting-list-item paddings="small">
+                    <template #title>{{ i18n "pages.settings.happSubInfoColor" }}</template>
+                    <template #control>
+                        <a-select v-model="allSetting.subHappSubInfoColor" style="width: 100%">
+                            <a-select-option value="blue">{{ i18n "pages.settings.happBlue" }}</a-select-option>
+                            <a-select-option value="green">{{ i18n "pages.settings.happGreen" }}</a-select-option>
+                            <a-select-option value="red">{{ i18n "pages.settings.happRed" }}</a-select-option>
+                        </a-select>
+                    </template>
+                </a-setting-list-item>
+                <a-setting-list-item paddings="small">
+                    <template #title>{{ i18n "pages.settings.happSubInfoButtonText" }}</template>
+                    <template #control><a-input v-model="allSetting.subHappSubInfoButtonText" :maxlength="25"></a-input></template>
+                </a-setting-list-item>
+                <a-setting-list-item paddings="small">
+                    <template #title>{{ i18n "pages.settings.happSubInfoButtonLink" }}</template>
+                    <template #control><a-input v-model="allSetting.subHappSubInfoButtonLink" placeholder="https:// or app link"></a-input></template>
+                </a-setting-list-item>
+                <a-setting-list-item paddings="small">
+                    <template #title>{{ i18n "pages.settings.happSubExpire" }}</template>
+                    <template #description>{{ i18n "pages.settings.happSubExpireDesc" }}</template>
+                    <template #control><a-switch v-model="allSetting.subHappSubExpire"></a-switch></template>
+                </a-setting-list-item>
+                <a-setting-list-item paddings="small">
+                    <template #title>{{ i18n "pages.settings.happSubExpireButtonLink" }}</template>
+                    <template #control><a-input v-model="allSetting.subHappSubExpireButtonLink" placeholder="https:// or app link"></a-input></template>
+                </a-setting-list-item>
+                <a-setting-list-item paddings="small">
+                    <template #title>{{ i18n "pages.settings.happNotificationExpire" }}</template>
+                    <template #description>{{ i18n "pages.settings.happNotificationExpireDesc" }}</template>
+                    <template #control><a-switch v-model="allSetting.subHappNotificationExpire"></a-switch></template>
+                </a-setting-list-item>
+                <a-setting-list-item paddings="small">
+                    <template #title>{{ i18n "pages.settings.happColorProfile" }}</template>
+                    <template #description>{{ i18n "pages.settings.happColorProfileDesc" }}</template>
+                    <template #control><a-textarea v-model="allSetting.subHappColorProfile" :rows="3" placeholder='{"serverRowBackgroundColor":"#21003D67"}'></a-textarea></template>
+                </a-setting-list-item>
+            </a-tab-pane>
+            <a-tab-pane key="network" tab='{{ i18n "pages.settings.happNetworkTab" }}' :disabled="!allSetting.subHappAutoDetect">
+                <a-setting-list-item paddings="small">
+                    <template #title>{{ i18n "pages.settings.happTunMode" }}</template>
+                    <template #control>
+                        <a-select v-model="allSetting.subHappTunMode" style="width: 100%">
+                            <a-select-option value="">{{ i18n "pages.settings.happUnchanged" }}</a-select-option>
+                            <a-select-option value="system">System</a-select-option>
+                            <a-select-option value="gvisor">gVisor</a-select-option>
+                        </a-select>
+                    </template>
+                </a-setting-list-item>
+                <a-setting-list-item paddings="small">
+                    <template #title>{{ i18n "pages.settings.happTunType" }}</template>
+                    <template #control>
+                        <a-select v-model="allSetting.subHappTunType" style="width: 100%">
+                            <a-select-option value="">{{ i18n "pages.settings.happUnchanged" }}</a-select-option>
+                            <a-select-option value="default">{{ i18n "pages.settings.happDefaultTun" }}</a-select-option>
+                            <a-select-option value="singbox">sing-box</a-select-option>
+                            <a-select-option value="tun2proxy">tun2proxy</a-select-option>
+                            <a-select-option value="xray">Xray</a-select-option>
+                        </a-select>
+                    </template>
+                </a-setting-list-item>
+                <a-setting-list-item paddings="small">
+                    <template #title>{{ i18n "pages.settings.happExcludeRoutes" }}</template>
+                    <template #description>{{ i18n "pages.settings.happExcludeRoutesDesc" }}</template>
+                    <template #control><a-input v-model="allSetting.subHappExcludeRoutes" placeholder="192.168.0.0/16, 10.0.0.0/8"></a-input></template>
+                </a-setting-list-item>
+                <a-setting-list-item paddings="small">
+                    <template #title>{{ i18n "pages.settings.happExcludeApns" }}</template>
+                    <template #control><a-switch v-model="allSetting.subHappExcludeApns"></a-switch></template>
+                </a-setting-list-item>
+                <a-setting-list-item paddings="small">
+                    <template #title>{{ i18n "pages.settings.happPingType" }}</template>
+                    <template #control>
+                        <a-select v-model="allSetting.subHappPingType" style="width: 100%">
+                            <a-select-option value="">{{ i18n "pages.settings.happUnchanged" }}</a-select-option>
+                            <a-select-option value="proxy">Proxy (GET)</a-select-option>
+                            <a-select-option value="proxy-head">Proxy (HEAD)</a-select-option>
+                            <a-select-option value="tcp">TCP</a-select-option>
+                            <a-select-option value="icmp">ICMP</a-select-option>
+                        </a-select>
+                    </template>
+                </a-setting-list-item>
+                <a-setting-list-item paddings="small">
+                    <template #title>{{ i18n "pages.settings.happAutoConnect" }}</template>
+                    <template #control><a-switch v-model="allSetting.subHappAutoConnect"></a-switch></template>
+                </a-setting-list-item>
+                <a-setting-list-item paddings="small" v-if="allSetting.subHappAutoConnect">
+                    <template #title>{{ i18n "pages.settings.happAutoConnectType" }}</template>
+                    <template #control>
+                        <a-select v-model="allSetting.subHappAutoConnectType" style="width: 100%">
+                            <a-select-option value="lowestdelay">{{ i18n "pages.settings.happLowestDelay" }}</a-select-option>
+                            <a-select-option value="lastused">{{ i18n "pages.settings.happLastUsed" }}</a-select-option>
+                            <a-select-option value="random">{{ i18n "pages.settings.happRandom" }}</a-select-option>
+                        </a-select>
+                    </template>
+                </a-setting-list-item>
+                <a-setting-list-item paddings="small">
+                    <template #title>{{ i18n "pages.settings.happPerAppMode" }}</template>
+                    <template #control>
+                        <a-select v-model="allSetting.subHappPerAppMode" style="width: 100%">
+                            <a-select-option value="off">{{ i18n "disabled" }}</a-select-option>
+                            <a-select-option value="on">{{ i18n "pages.settings.happProxySelected" }}</a-select-option>
+                            <a-select-option value="bypass">{{ i18n "pages.settings.happBypassSelected" }}</a-select-option>
+                        </a-select>
+                    </template>
+                </a-setting-list-item>
+                <a-setting-list-item paddings="small" v-if="allSetting.subHappPerAppMode !== 'off'">
+                    <template #title>{{ i18n "pages.settings.happPerAppList" }}</template>
+                    <template #description>{{ i18n "pages.settings.happPerAppListDesc" }}</template>
+                    <template #control><a-textarea v-model="allSetting.subHappPerAppList" :rows="3" placeholder="com.example.app, org.example.client"></a-textarea></template>
+                </a-setting-list-item>
+                <a-setting-list-item paddings="small">
+                    <template #title>{{ i18n "pages.settings.happLocalProxyAuth" }}</template>
+                    <template #control>
+                        <a-select v-model="allSetting.subHappLocalProxyAuth" style="width: 100%">
+                            <a-select-option value="auto">{{ i18n "pages.settings.happAutomatic" }}</a-select-option>
+                            <a-select-option value="disable">{{ i18n "disabled" }}</a-select-option>
+                            <a-select-option value="">{{ i18n "pages.settings.happUnchanged" }}</a-select-option>
+                        </a-select>
+                    </template>
+                </a-setting-list-item>
+            </a-tab-pane>
+            <a-tab-pane key="failover" tab='{{ i18n "pages.settings.happFailoverTab" }}' :disabled="!allSetting.subHappAutoDetect">
+                <a-setting-list-item paddings="small">
+                    <template #title>{{ i18n "pages.settings.happProviderId" }}</template>
+                    <template #description>{{ i18n "pages.settings.happProviderIdDesc" }}</template>
+                    <template #control><a-input v-model="allSetting.subHappProviderId"></a-input></template>
+                </a-setting-list-item>
+                <a-setting-list-item paddings="small">
+                    <template #title>{{ i18n "pages.settings.happNewUrl" }}</template>
+                    <template #description>{{ i18n "pages.settings.happNewUrlDesc" }}</template>
+                    <template #control><a-input v-model="allSetting.subHappNewUrl" placeholder="https://new.example/sub"></a-input></template>
+                </a-setting-list-item>
+                <a-setting-list-item paddings="small">
+                    <template #title>{{ i18n "pages.settings.happFallbackUrl" }}</template>
+                    <template #description>{{ i18n "pages.settings.happFallbackUrlDesc" }}</template>
+                    <template #control><a-input v-model="allSetting.subHappFallbackUrl" placeholder="https://backup.example/sub"></a-input></template>
+                </a-setting-list-item>
+                <a-setting-list-item paddings="small">
+                    <template #title>{{ i18n "pages.settings.happAlwaysHwid" }}</template>
+                    <template #description>{{ i18n "pages.settings.happAlwaysHwidDesc" }}</template>
+                    <template #control><a-switch v-model="allSetting.subHappAlwaysHwid"></a-switch></template>
+                </a-setting-list-item>
+            </a-tab-pane>
+        </a-tabs>
+    </a-collapse-panel>
+</a-collapse>
+{{end}}

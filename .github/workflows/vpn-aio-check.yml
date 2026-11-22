@@ -25,12 +25,13 @@ jobs:
           for file in deploy.sh vpn-ui.sh build.sh build/core/build.sh; do
             bash -n "$file"
           done
-          python3 -c 'import ast,pathlib; [ast.parse(pathlib.Path(p).read_text()) for p in ("test_unit/finalmask-config-check.py", "test_unit/native-core-smoke.py", "test_unit/transport-settings-config-check.py")]'
+          python3 -c 'import ast,pathlib; [ast.parse(pathlib.Path(p).read_text()) for p in ("test_unit/finalmask-config-check.py", "test_unit/native-core-smoke.py", "test_unit/transport-settings-config-check.py", "test_unit/happ-subscription-check.py")]'
       - name: Check GUI model round trips
         run: |
           node test_unit/export_test/core-webgui.test.js
           node test_unit/export_test/hosts.test.js
           node test_unit/export_test/routing-modal-roundtrip.test.js
+          node test_unit/export_test/happ-settings.test.js
       - name: Build pinned Xray and fetch geodata
         run: GEO_LEAN=1 bash build/core/build.sh amd64
       - name: Test panel integration
@@ -71,12 +72,15 @@ jobs:
           cp test_unit/Containerfile test_unit/container-lifecycle.py \
              test_unit/native-core-smoke.py test_unit/xdrive-config-check.py \
              test_unit/finalmask-config-check.py test_unit/transport-settings-config-check.py \
+             test_unit/happ-subscription-check.py \
              "$context/test_unit/"
           docker build -f "$context/test_unit/Containerfile" \
             -t vpn-aio-lifecycle-test "$context"
       - name: Exercise startup, native protocols and uninstall in isolation
         env:
           VPN_AIO_CONTAINER_LIFECYCLE_ACK: 'yes'
-        run: docker run --rm --network none --cap-add=NET_ADMIN -e VPN_AIO_CONTAINER_LIFECYCLE_ACK vpn-aio-lifecycle-test
+        run: docker run --rm --network none --cap-add=NET_ADMIN -e VPN_AIO_CONTAINER_LIFECYCLE_ACK -e VPN_AIO_EXPECTED_VERSION="$(cat config/version)" vpn-aio-lifecycle-test
+      - name: Exercise Happ subscription HTTP contract in isolation
+        run: docker run --rm --network none --cap-add=NET_ADMIN -e VPN_AIO_HAPP_CHECK_ACK=yes --entrypoint python3 vpn-aio-lifecycle-test /checks/happ-subscription-check.py
       # This is not a release build: the full static VPN daemon and geo bundles
       # are built by build.sh before an installable artifact is published.

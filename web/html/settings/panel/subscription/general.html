@@ -125,26 +125,6 @@
                 <a-textarea v-model="allSetting.subAnnounce"></a-textarea>
             </template>
         </a-setting-list-item>
-        <a-divider>{{ i18n "pages.xray.advancedTemplate"}} (Happ)</a-divider>
-        <a-setting-list-item paddings="small">
-            <template #title>{{ i18n
-                "pages.settings.subEnableRouting"}}</template>
-            <template #description>{{ i18n
-                "pages.settings.subEnableRoutingDesc"}}</template>
-            <template #control>
-                <a-switch v-model="allSetting.subEnableRouting"></a-switch>
-            </template>
-        </a-setting-list-item>
-        <a-setting-list-item paddings="small">
-            <template #title>{{ i18n
-                "pages.settings.subRoutingRules"}}</template>
-            <template #description>{{ i18n
-                "pages.settings.subRoutingRulesDesc"}}</template>
-            <template #control>
-                <a-textarea v-model="allSetting.subRoutingRules"
-                    placeholder="happ://routing/add/..."></a-textarea>
-            </template>
-        </a-setting-list-item>
     </a-collapse-panel>
     <a-collapse-panel key="3" header='{{ i18n "pages.settings.certs" }}'>
         <a-setting-list-item paddings="small">
@@ -176,4 +156,5 @@
         </a-setting-list-item>
     </a-collapse-panel>
 </a-collapse>
+{{ template "settings/panel/subscription/happ" . }}
 {{end}}

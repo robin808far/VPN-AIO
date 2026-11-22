@@ -10,5 +10,7 @@ The repository root keeps the main README, its translations, and the local
 - [Releases](releases/) — release notes and version-specific validation records.
 - [History](history/) — repository history and migration records.
 
+Feature guide: [Happ subscription management](guides/HAPP.md).
+
 Release notes are in `releases/`; their corresponding validation and provenance
 records are in `releases/validation/`.

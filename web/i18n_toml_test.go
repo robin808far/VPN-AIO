@@ -208,6 +208,41 @@ var knownMissing = keySet(
 	// set of inbounds (component/bulkOpsModal).
 	"pages.inbounds.opAddInbounds", "pages.inbounds.opRemoveInbounds",
 	"pages.inbounds.bulkMembershipDesc", "pages.inbounds.bulkMembershipNoInbound",
+
+	// Happ 3.1.0 ships English and Persian labels; other locales intentionally
+	// use the existing English fallback until their translations are supplied.
+	"pages.settings.happAlwaysHwid", "pages.settings.happAlwaysHwidDesc",
+	"pages.settings.happAppearanceTab", "pages.settings.happApplyPreset",
+	"pages.settings.happAutoConnect", "pages.settings.happAutoConnectType",
+	"pages.settings.happAutoDetect", "pages.settings.happAutoDetectDesc",
+	"pages.settings.happAutomatic", "pages.settings.happBlue",
+	"pages.settings.happBypassSelected", "pages.settings.happColorProfile",
+	"pages.settings.happColorProfileDesc", "pages.settings.happDefaultTun",
+	"pages.settings.happExcludeApns", "pages.settings.happExcludeRoutes",
+	"pages.settings.happExcludeRoutesDesc", "pages.settings.happFailoverTab",
+	"pages.settings.happFallbackUrl", "pages.settings.happFallbackUrlDesc",
+	"pages.settings.happGreen", "pages.settings.happHideSettings",
+	"pages.settings.happHideSettingsDesc", "pages.settings.happIncludeAdblock",
+	"pages.settings.happLastUsed", "pages.settings.happLocalProxyAuth",
+	"pages.settings.happLowestDelay", "pages.settings.happNetworkTab",
+	"pages.settings.happNewUrl", "pages.settings.happNewUrlDesc",
+	"pages.settings.happNoLimit", "pages.settings.happNoLimitDesc",
+	"pages.settings.happNotificationExpire", "pages.settings.happNotificationExpireDesc",
+	"pages.settings.happPerAppList", "pages.settings.happPerAppListDesc",
+	"pages.settings.happPerAppMode", "pages.settings.happPingType",
+	"pages.settings.happPresetChina", "pages.settings.happPresetGlobal",
+	"pages.settings.happPresetIran", "pages.settings.happPresetLAN",
+	"pages.settings.happPresetOff", "pages.settings.happProviderId",
+	"pages.settings.happProviderIdDesc", "pages.settings.happProxySelected",
+	"pages.settings.happRandom", "pages.settings.happRed",
+	"pages.settings.happRoutePreset", "pages.settings.happRoutePresetDesc",
+	"pages.settings.happRoutingTab", "pages.settings.happSettings",
+	"pages.settings.happSettingsDesc", "pages.settings.happSubExpire",
+	"pages.settings.happSubExpireButtonLink", "pages.settings.happSubExpireDesc",
+	"pages.settings.happSubInfoButtonLink", "pages.settings.happSubInfoButtonText",
+	"pages.settings.happSubInfoColor", "pages.settings.happSubInfoText",
+	"pages.settings.happSubInfoTextDesc", "pages.settings.happTunMode",
+	"pages.settings.happTunType", "pages.settings.happUnchanged",
 )
 
 // flattenKeys collapses nested TOML tables into dotted keys (e.g. "pages.core.title").
