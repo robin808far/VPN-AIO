@@ -5,7 +5,8 @@ Last updated: 2026-11-22
 ## Current status
 
 - The GitHub recovery for `robin808far/VPN-AIO` is complete, including its three public releases.
-- The working copy is on `main` and tracks `origin/main`. Happ 3.1.0 implementation is committed/pushed in `272ab016f8a30fe8b590ecf18560df6525275faf`; release publication is in progress.
+- Happ 3.1.0 is committed/pushed and publicly released as Latest: https://github.com/robin808far/VPN-AIO/releases/tag/v3.1.0.
+- The working copy is on `main` and tracks `origin/main`; this final documentation-only checkpoint is committed/pushed after publication.
 - Feature request: add native Happ subscription management and set VPN-AIO version to 3.1.0.
 
 ## Completed work
@@ -13,18 +14,19 @@ Last updated: 2026-11-22
 - Confirmed releases `v2.0.0`, `v2.1.0`, and `v3.0.0` already existed on GitHub; did not recreate them.
 - Verified all three releases are public (not drafts or prereleases) and their release pages return HTTP 200.
 - Compared release asset counts, sizes, and SHA-256 digests against the local recovery backup; all matched.
-- Confirmed `v3.0.0` is the public Latest release.
+- Recovery initially confirmed `v3.0.0` as Latest; it remains available and has now been superseded by `v3.1.0`.
 - Implemented the 3.1.0 Happ subscription settings/UI and client-specific response headers; release files are drafted locally and not published.
 
 ## Release links
 
 - `v2.0.0` — 2 assets: https://github.com/robin808far/VPN-AIO/releases/tag/v2.0.0
 - `v2.1.0` — 4 assets: https://github.com/robin808far/VPN-AIO/releases/tag/v2.1.0
-- `v3.0.0` — 4 assets, Latest: https://github.com/robin808far/VPN-AIO/releases/tag/v3.0.0
+- `v3.0.0` — 4 assets: https://github.com/robin808far/VPN-AIO/releases/tag/v3.0.0
+- `v3.1.0` — 4 verified assets, Latest: https://github.com/robin808far/VPN-AIO/releases/tag/v3.1.0
 
 ## Checks and caveats
 
-- Git status: implementation is committed and pushed; this handoff is being updated during release finalization (2026-11-22).
+- Implementation and release documentation are committed/pushed; final handoff records completed publication (2026-11-22).
 - Release visibility, release metadata, asset counts/sizes/digests, and Latest selection passed verification.
 - No sensitive credentials or tokens are recorded here.
 
@@ -35,7 +37,7 @@ Last updated: 2026-11-22
 - Updated affected links in English/Persian READMEs, release notes, API reference, validation records, plan notes, and code comments.
 - Verification: local Markdown-link check passed; `git diff --check` passed. No test suite run (changes are documentation/path references and comments only).
 - Documentation reorganization and the initial `HANDOFF.md` were pushed to GitHub in `6f8ad6d2`; later Happ work remains local.
-- The release version file now reads `3.1.0`; the existing GitHub release remains v3.0.0 Latest until a release is intentionally published.
+- The version file reads `3.1.0`; GitHub Latest is now `v3.1.0`. Older recovered releases remain available.
 
 ## Happ subscription integration review
 
@@ -62,11 +64,11 @@ Last updated: 2026-11-22
 - Real-device validation: user authorized adding a separate test subscription to the already-open Windows Happ 4.8.3 (640). The app imported `VPN-AIO 3.1.0 TEST`, displayed its 1 GiB quota, 2026-11-29 expiry, 24-hour update interval, and the panel-generated information banner. Updating the disposable fixture banner and clicking that subscription's Refresh displayed the new text in Happ.
 - Scope: real app requests were logged with User-Agent `Happ/4.8.3/Windows/2611171045601`. A private test relay allowed only subscription metadata/banner headers and stripped routing, TUN, auto-connect, proxy-auth, Provider ID and all other global controls to preserve the user's app settings. Global overrides, connections, Android/iOS behavior and Provider-ID-dependent functionality were not exercised.
 - Cleanup: removed only the device-test Docker container/network and stopped its dedicated SSH tunnel. Logs remain in `build/out/happ-device-check.log` and `happ-device-panel.log` on `sweden`; window captures remain in the approved local temp directory. The imported test profile remains in Happ for the user to inspect; its temporary URL is now offline and it is not a real VPN service.
-- Feature commit `272ab016f8a30fe8b590ecf18560df6525275faf` has been pushed. A release tag has not yet been created.
+- Feature commit `272ab016f8a30fe8b590ecf18560df6525275faf` and documentation commit `07d75f88f02f1e4005865c77a2ffd454c20ca209` have been pushed. Annotated tag `v3.1.0` points to the documentation commit; its diff from the build source contains only three Markdown files.
 
 ## Next step
 
-The user explicitly approved commit, push, and publication of GitHub Release v3.1.0. Review and commit the implementation, rebuild and verify the exact release asset from committed source, then publish and verify public access. Do not upgrade the live `sweden` panel or alter global Happ options. Real Windows Happ import, quota/expiry/banner display and refresh are verified; broader global/platform-specific controls remain untested. Update this file after each significant milestone.
+Release finalization is complete. Await the next user-requested change or separately authorized server upgrade. Do not upgrade the live `sweden` panel or alter global Happ options without approval. Real Windows Happ import, quota/expiry/banner display and refresh are verified; broader global/platform-specific controls remain untested. The retained test profile's temporary URL is offline. Update this file after each significant milestone.
 
 ## Release finalization
 
@@ -79,4 +81,6 @@ The user explicitly approved commit, push, and publication of GitHub Release v3.
 - Exact asset passed 53/53 isolated Happ HTTP checks and 30/30 disposable Ubuntu startup/native-protocol/uninstall lifecycle checks. All test containers were removed after saving logs.
 - Browser login, Subscription/Happ navigation, and its enable switch worked on the exact asset's disposable panel. Desktop browser disconnected before completing the tab interactions. The UI container/network/tunnel were removed; the browser test tab may still point to the now-offline fixture.
 - Four assets retrieved and SHA-256/size verified locally in `C:\Users\mef\AppData\Local\Temp\opencode\vpn-aio-release-3.1.0-272ab016`: binary, manifest, checksums, embedded-input inventory. No secrets included.
-- Next milestone: commit these documentation-only validation records, tag v3.1.0, upload/verify the four assets as a draft, publish as Latest, and confirm public access.
+- Uploaded all four assets as a draft and compared every uploaded name, size, SHA-256 digest and state with the verified local files; all matched.
+- Published `v3.1.0` as a non-draft, non-prerelease Latest release. Unauthenticated latest API and release page succeeded; all four download URLs returned data, and the binary download begins with the ELF signature.
+- Final outcome: https://github.com/robin808far/VPN-AIO/releases/tag/v3.1.0. No live-server deployment or global Happ setting change was performed.
