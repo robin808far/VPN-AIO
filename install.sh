@@ -11,10 +11,35 @@ set -euo pipefail
 REPO="robin808far/VPN-AIO"
 BRANCH="main"
 
+usage() {
+    cat <<EOF
+VPN-AIO installer
+
+Usage:
+  bash <(curl -Ls https://raw.githubusercontent.com/$REPO/$BRANCH/install.sh)              # latest release
+  bash <(curl -Ls https://raw.githubusercontent.com/$REPO/$BRANCH/install.sh) v3.1.0       # a specific release
+
+Argument:
+  version    Optional release tag to install (v prefix optional), e.g. v3.1.0.
+             Without it the latest release is installed.
+  --help     Show this help.
+
+Examples:
+  bash <(curl -Ls https://raw.githubusercontent.com/$REPO/$BRANCH/install.sh) v2.0.0
+
+Exit codes:
+  0  success    1  install failure    2  usage error (bad version, --help with extra args)
+EOF
+}
+
 if (( $# > 1 )); then
     printf 'usage: bash <(curl -Ls https://raw.githubusercontent.com/%s/%s/install.sh) [ vX.Y.Z ]\n' "$REPO" "$BRANCH" >&2
     exit 2
 fi
+
+case "${1:-}" in
+    -h|--help) usage; exit 0 ;;
+esac
 
 VERSION="${1:-latest}"
 if [[ "$VERSION" != "latest" ]]; then
