@@ -1,0 +1,257 @@
+{{ template "page/head_start" .}}
+{{ template "page/head_end" .}}
+
+{{ template "page/body_start" .}}
+{{template "page/shell_start" . }}
+      <a-spin :spinning="spinning" :delay="300" tip='{{ i18n "loading"}}' size="large">
+        <transition name="list" appear>
+          <a-row :gutter="[16, 16]" :style="{ margin: 0 }">
+            <a-col :span="24">
+              <a-card hoverable :style="{ marginBottom: '16px' }">
+                <div :style="{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px' }">
+                  <a-button type="primary" icon="plus" @click="openAdd()">
+                    {{ i18n "pages.nodes.add" }}
+                  </a-button>
+                  <a-button icon="reload" @click="loadNodes(true)"></a-button>
+                  <a-button icon="key" @click="tokenModal.visible = true">
+                    {{ i18n "pages.nodes.tokens" }}
+                  </a-button>
+                </div>
+              </a-card>
+
+              <!-- One card per registered remote panel. Status is refreshed by the
+                   heartbeat job and on demand with Probe. -->
+              <div class="bo-cards" v-if="nodes.length">
+                <article class="bo-tile" v-for="node in nodes" :key="node.id">
+                  <div :style="{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }">
+                    <div :style="{ minWidth: 0 }">
+                      <div :style="{ fontWeight: 600 }">[[ node.name ]]</div>
+                      <div class="bo-muted">[[ node.scheme ]]://[[ node.address ]]:[[ node.port ]][[ node.basePath ]]</div>
+                    </div>
+                    <a-tag :color="statusColor(node.status)" :style="{ marginInlineEnd: 0 }">[[ node.status ]]</a-tag>
+                  </div>
+                  <dl :style="{ margin: '12px 0 0', display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '4px 12px', fontSize: '13px' }">
+                    <dt class="bo-muted">{{ i18n "pages.nodes.version" }}</dt><dd :style="{ margin: 0 }">[[ node.version || '-' ]]</dd>
+                    <dt class="bo-muted">{{ i18n "pages.nodes.inbounds" }}</dt><dd :style="{ margin: 0 }">[[ node.inbounds ]]</dd>
+                    <dt class="bo-muted">{{ i18n "pages.nodes.lastSeen" }}</dt><dd :style="{ margin: 0 }">[[ fmtTime(node.lastSeen) ]]</dd>
+                    <dt class="bo-muted">{{ i18n "pages.nodes.syncMode" }}</dt><dd :style="{ margin: 0 }">[[ node.syncMode ]]</dd>
+                  </dl>
+                  <div :style="{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '8px' }">
+                    <a-button size="small" icon="sync" @click="probe(node)">{{ i18n "pages.nodes.probe" }}</a-button>
+                    <a-button size="small" icon="unordered-list" @click="showInbounds(node)">{{ i18n "pages.nodes.inbounds" }}</a-button>
+                    <a-button size="small" icon="edit" @click="openEdit(node)">{{ i18n "pages.nodes.edit" }}</a-button>
+                    <a-button size="small" type="danger" icon="delete" @click="delNode(node)">{{ i18n "pages.nodes.delete" }}</a-button>
+                  </div>
+                </article>
+              </div>
+              <a-card hoverable v-else>
+                <a-empty :description="`{{ i18n "noData" }}`"></a-empty>
+              </a-card>
+            </a-col>
+          </a-row>
+        </transition>
+      </a-spin>
+
+      <a-modal id="node-form-modal"
+        :title="form.isEdit ? '{{ i18n "pages.nodes.edit" }}' : '{{ i18n "pages.nodes.add" }}'"
+        :visible="form.visible"
+        :confirm-loading="form.loading"
+        ok-text='{{ i18n "confirm" }}'
+        cancel-text='{{ i18n "close" }}'
+        :closable="true"
+        :mask-closable="false"
+        @ok="() => submitForm()"
+        @cancel="() => form.visible = false">
+        <a-form :colon="false" layout="vertical">
+          <a-form-item label='{{ i18n "pages.nodes.name" }}'>
+            <a-input v-model="form.node.name"></a-input>
+          </a-form-item>
+          <a-form-item label='{{ i18n "pages.nodes.scheme" }}'>
+            <a-select v-model="form.node.scheme">
+              <a-select-option value="http">http</a-select-option>
+              <a-select-option value="https">https</a-select-option>
+            </a-select>
+          </a-form-item>
+          <a-form-item label='{{ i18n "pages.nodes.address" }}'>
+            <a-input v-model="form.node.address"></a-input>
+          </a-form-item>
+          <a-form-item label='{{ i18n "pages.nodes.port" }}'>
+            <a-input-number v-model.number="form.node.port" :min="1" :max="65535" :style="{ width: '100%' }"></a-input-number>
+          </a-form-item>
+          <a-form-item label='{{ i18n "pages.nodes.basePath" }}'>
+            <a-input v-model="form.node.basePath" placeholder="/"></a-input>
+          </a-form-item>
+          <a-form-item label='{{ i18n "pages.nodes.token" }}'>
+            <a-input-password v-model="form.node.token" :placeholder="form.isEdit ? '(unchanged)' : ''"></a-input-password>
+          </a-form-item>
+          <a-form-item label='{{ i18n "pages.nodes.syncMode" }}'>
+            <a-select v-model="form.node.syncMode">
+              <a-select-option value="all">all</a-select-option>
+              <a-select-option value="selected">selected</a-select-option>
+            </a-select>
+          </a-form-item>
+          <a-form-item>
+            <a-checkbox v-model="form.node.enabled">{{ i18n "enabled" }}</a-checkbox>
+          </a-form-item>
+        </a-form>
+      </a-modal>
+
+      <a-modal id="node-inbounds-modal"
+        :title="'{{ i18n "pages.nodes.inbounds" }} - ' + inbounds.name"
+        :visible="inbounds.visible"
+        ok-text='{{ i18n "close" }}'
+        :closable="true"
+        @ok="() => inbounds.visible = false"
+        @cancel="() => inbounds.visible = false">
+        <a-empty v-if="!inbounds.list.length" :description="`{{ i18n "noData" }}`"></a-empty>
+        <a-table v-else :columns="inboundColumns" :data-source="inbounds.list" row-key="id" size="small"
+          :pagination="{ pageSize: 8 }">
+        </a-table>
+      </a-modal>
+
+      <a-modal id="node-tokens-modal"
+        title='{{ i18n "pages.nodes.tokens" }}'
+        :visible="tokenModal.visible"
+        ok-text='{{ i18n "close" }}'
+        :closable="true"
+        :width="'640px'"
+        @ok="() => tokenModal.visible = false"
+        @cancel="() => tokenModal.visible = false">
+        <a-alert v-if="tokenModal.plaintext" type="success" show-icon
+          :message="'{{ i18n "pages.nodes.copyHint" }}'"
+          :description="tokenModal.plaintext" :style="{ marginBottom: '12px' }"></a-alert>
+        <div :style="{ marginBottom: '12px', display: 'flex', gap: '8px' }">
+          <a-input v-model="tokenModal.name" :placeholder="'{{ i18n "pages.nodes.name" }}'" :style="{ width: '50%' }"></a-input>
+          <a-select v-model="tokenModal.scopes" :style="{ flex: 1 }">
+            <a-select-option value="node-sync">node-sync</a-select-option>
+            <a-select-option value="node-sync,node-admin">node-sync + node-admin</a-select-option>
+          </a-select>
+          <a-button type="primary" icon="plus" @click="createToken">{{ i18n "pages.nodes.newToken" }}</a-button>
+        </div>
+        <a-table :columns="tokenColumns" :data-source="tokens" row-key="id" size="small" :pagination="false">
+          <template slot="actions" slot-scope="text, token">
+            <a-button size="small" type="danger" @click="revokeToken(token)">{{ i18n "pages.nodes.revoke" }}</a-button>
+          </template>
+        </a-table>
+      </a-modal>
+
+{{template "page/shell_end" . }}
+
+{{template "page/body_scripts" .}}
+{{template "component/aSidebar" .}}
+{{template "component/aThemeSwitch" .}}
+
+<script>
+  const app = new Vue({
+    delimiters: ['[[', ']]'],
+    mixins: [MediaQueryMixin],
+    el: '#app',
+    data: {
+      themeSwitcher,
+      pageTitle: '{{ i18n "pages.nodes.title" }}',
+      pageClass: '',
+      spinning: false,
+      nodes: [],
+      tokens: [],
+      form: {
+        visible: false, loading: false, isEdit: false,
+        node: { id: 0, name: '', scheme: 'http', address: '', port: 2053, basePath: '/', token: '', syncMode: 'all', enabled: true },
+      },
+      inbounds: { visible: false, name: '', list: [] },
+      tokenModal: { visible: false, name: '', scopes: 'node-sync', plaintext: '' },
+      inboundColumns: [
+        { title: 'ID', dataIndex: 'id', width: 60 },
+        { title: '{{ i18n "pages.inbounds.remark" }}', dataIndex: 'remark' },
+        { title: 'Protocol', dataIndex: 'protocol', width: 100 },
+        { title: 'Port', dataIndex: 'port', width: 80 },
+        { title: 'Up', dataIndex: 'up', width: 100 },
+        { title: 'Down', dataIndex: 'down', width: 100 },
+      ],
+      tokenColumns: [
+        { title: 'ID', dataIndex: 'id', width: 60 },
+        { title: '{{ i18n "pages.nodes.name" }}', dataIndex: 'name' },
+        { title: '{{ i18n "pages.nodes.scopes" }}', dataIndex: 'scopes' },
+        { title: '', key: 'actions', scopedSlots: { customRender: 'actions' }, width: 100 },
+      ],
+    },
+    methods: {
+      statusColor(status) {
+        return status === 'online' ? 'green' : (status === 'down' ? 'red' : 'blue');
+      },
+      fmtTime(ts) {
+        if (!ts) return '-';
+        return new Date(ts * 1000).toLocaleString();
+      },
+      async loadNodes(showSpin) {
+        if (showSpin) this.spinning = true;
+        const msg = await HttpUtil.get('/panel/nodes/list');
+        this.spinning = false;
+        if (!msg || !msg.success) return;
+        this.nodes = msg.obj || [];
+      },
+      async loadTokens() {
+        const msg = await HttpUtil.get('/panel/nodes/tokens');
+        if (msg && msg.success) this.tokens = msg.obj || [];
+      },
+      openAdd() {
+        this.form.node = { id: 0, name: '', scheme: 'http', address: '', port: 2053, basePath: '/', token: '', syncMode: 'all', enabled: true };
+        this.form.isEdit = false;
+        this.form.visible = true;
+      },
+      openEdit(node) {
+        this.form.node = Object.assign({}, node, { token: '' });
+        this.form.isEdit = true;
+        this.form.visible = true;
+      },
+      async submitForm() {
+        this.form.loading = true;
+        const url = this.form.isEdit ? '/panel/nodes/update' : '/panel/nodes/add';
+        const msg = await HttpUtil.post(url, this.form.node);
+        this.form.loading = false;
+        if (msg && msg.success) {
+          this.form.visible = false;
+          await this.loadNodes();
+        }
+      },
+      async probe(node) {
+        const msg = await HttpUtil.get('/panel/nodes/probe/' + node.id);
+        if (msg && msg.success) await this.loadNodes();
+      },
+      async showInbounds(node) {
+        this.inbounds = { visible: true, name: node.name, list: [] };
+        const msg = await HttpUtil.get('/panel/nodes/inbounds/' + node.id);
+        if (msg && msg.success) this.inbounds.list = msg.obj || [];
+      },
+      delNode(node) {
+        Modal.confirm({
+          title: '{{ i18n "pages.nodes.delete" }} - ' + node.name,
+          content: '{{ i18n "pages.nodes.delete" }}?',
+          okText: '{{ i18n "confirm" }}',
+          cancelText: '{{ i18n "close" }}',
+          onOk: async () => {
+            const msg = await HttpUtil.post('/panel/nodes/del/' + node.id);
+            if (msg && msg.success) await this.loadNodes();
+          },
+        });
+      },
+      async createToken() {
+        const msg = await HttpUtil.post('/panel/nodes/tokens', { name: this.tokenModal.name, scopes: this.tokenModal.scopes });
+        if (msg && msg.success) {
+          // The plaintext comes back as the message; it is never retrievable again.
+          this.tokenModal.plaintext = msg.msg;
+          this.tokenModal.name = '';
+          await this.loadTokens();
+        }
+      },
+      async revokeToken(token) {
+        const msg = await HttpUtil.post('/panel/nodes/tokens/del/' + token.id);
+        if (msg && msg.success) await this.loadTokens();
+      },
+    },
+    async mounted() {
+      await this.loadNodes(true);
+      await this.loadTokens();
+    },
+  });
+</script>
+{{ template "page/body_end" .}}

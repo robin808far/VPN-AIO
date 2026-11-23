@@ -304,6 +304,7 @@ func (s *Server) initRouter() (*gin.Engine, error) {
 	s.index = controller.NewIndexController(g)
 	s.panel = controller.NewXUIController(g)
 	s.api = controller.NewAPIController(g, s.customGeoService)
+	controller.NewNodeController(g)
 
 	// Initialize WebSocket hub
 	s.wsHub = websocket.NewHub()
@@ -442,6 +443,9 @@ func (s *Server) startTask() {
 
 	// check client ips from log file every 10 sec
 	s.cron.AddJob("@every 10s", job.NewCheckClientIpJob())
+
+	// probe registered multi-panel nodes so their status stays current
+	s.cron.AddJob("@every 30s", &job.NodeHeartbeatJob{})
 
 	// check client ips from log file every day
 	s.cron.AddJob("@daily", job.NewClearLogsJob())

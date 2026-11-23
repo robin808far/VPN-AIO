@@ -1,10 +1,28 @@
 # HANDOFF
 
-Last updated: 2026-11-22
+Last updated: 2026-11-23
 
 ## Current status
 
+- **Version is now `4.0.0`** (`config/version`), carrying the new multi-panel Nodes feature (below). Not yet committed/pushed or released.
 - The GitHub recovery for `robin808far/VPN-AIO` is complete, including its three public releases.
+- Happ 3.1.0 is committed/pushed and publicly released as Latest: https://github.com/robin808far/VPN-AIO/releases/tag/v3.1.0.
+
+## Nodes (multi-panel) — implemented in 4.0.0
+
+Master–worker like 3X-UI's Nodes tab: this panel (master) registers other VPN-AIO panels (nodes) and manages/probes them; the node side exposes a bearer-token API for the master.
+
+- Data model (`database/model/node.go`): `ApiToken` (SHA-256 hashed bearer token, scopes `node-sync`/`node-admin`, plaintext shown once) and `Node` (name, scheme http/https, address, port, base path, token of the remote, sync mode `all|selected`, enabled, status/version/inbounds/lastSeen). Both auto-migrated in `database/db.go`.
+- Node-side API (`web/controller/node.go`, under `<base_path>/nodeapi/*`, Bearer auth with scope check): `GET status` (version, Xray running, inbound/client/traffic counts), `GET inbounds`, `GET traffic`.
+- Master-side API (`/panel/nodes/*`, session + super admin): list/add/update/del, `probe/:id`, `inbounds/:id` (remote inbounds), plus token management `tokens`/`tokens/del/:id`.
+- Services (`web/service/node_service.go`, `apitoken_service.go`): probe updates status/version/lastSeen (unreachable → `down`), heartbeat over all enabled nodes; add/update probe immediately; empty token on update keeps the stored secret.
+- Heartbeat job (`web/job/node_heartbeat_job.go`) scheduled `@every 30s` in `web/web.go`.
+- Frontend: new `web/html/nodes.html` (node cards with status tag, probe/edit/delete, remote-inbound table, API-token modal with one-time plaintext alert), sidebar entry (super admin only) in `web/html/component/aSidebar.html`, `pages.nodes.*` i18n keys added to ALL translate.*.toml locales (enforced by `TestTranslationKeyParity`).
+- Tests: `web/service/node_service_test.go` (token create/verify/revoke/scope, URL+normalize defaults, add-probes-unreachable → down). All pass.
+- Not yet implemented (next steps): inbound/client management on remote nodes and traffic sync pull (map of `node-admin` scope), mTLS/pinned-TLS node security options, sub-node trees.
+
+## Completed work
+
 - Happ 3.1.0 is committed/pushed and publicly released as Latest: https://github.com/robin808far/VPN-AIO/releases/tag/v3.1.0.
 - The working copy is on `main` and tracks `origin/main`; this final documentation-only checkpoint is committed/pushed after publication.
 - Feature request: add native Happ subscription management and set VPN-AIO version to 3.1.0.
@@ -84,3 +102,25 @@ Release finalization is complete. Await the next user-requested change or separa
 - Uploaded all four assets as a draft and compared every uploaded name, size, SHA-256 digest and state with the verified local files; all matched.
 - Published `v3.1.0` as a non-draft, non-prerelease Latest release. Unauthenticated latest API and release page succeeded; all four download URLs returned data, and the binary download begins with the ELF signature.
 - Final outcome: https://github.com/robin808far/VPN-AIO/releases/tag/v3.1.0. No live-server deployment or global Happ setting change was performed.
+
+## Nodes (multi-panel) research — 2026-11-23
+
+Request: add a 3x-ui-style "Nodes" tab to VPN-AIO so one panel can manage other VPN-AIO panels (inbounds, clients, traffic) over the API. This section records the research; nothing was implemented yet.
+
+### How 3x-ui Nodes works (upstream, available since v3.0.2)
+
+- Master–Worker star topology: the master panel keeps users/subscriptions/settings and commands worker panels through a node API (`/panel/api/nodes/*`); client online state and traffic stats are synced back periodically.
+- A node is another 3x-ui panel registered on the master with: unique name, scheme (http/https), address, port, base path, Bearer API token minted on the node, TLS verify mode (`verify` default, `skip`, `pin` with SHA-256 fingerprint, or `mtls`), inbound sync mode (`all` or `selected` by tag), and an optional `outbound_tag` bridging traffic to the node through a named outbound.
+- The master probes reachability (`ensureReachable`) on create/update before persisting a node, then heartbeats every few seconds, keeping `online`/`offline` status and publishing `node.up`/`node.down` events (consumed by the Telegram/Discord bots).
+- Nodes are identified by a stable per-panel GUID across restarts; a node can itself manage others (shown as read-only transitive sub-nodes); deleting a node does not auto-migrate its inbounds.
+- Master-side UI: node list with online status, CPU/RAM/uptime, Xray version, per-node traffic this month; add/edit/pause/probe/delete; per-node metric history; remote panel self-updater trigger; mTLS CA exchange (`nodes/mtls/ca` + trusted-CA setting on the node). mTLS-only nodes need a `node-admin` scoped token for remote panel updates.
+- Upstream code map: `internal/web/controller/node.go`, `internal/web/service/node*.go` (contract, mtls, tree, reset queue), `internal/web/job/node_heartbeat_job.go`, `node_traffic_sync_job.go`, `internal/crypto/nodetoken`, `internal/database/model/node_client_ip.go` / `node_client_traffic.go` / `node_pending_reset.go`, plus a React `NodesPage` frontend and docs at `docs/content/docs/{en,fa}/operations/multi-node.mdx` and `.../reference/api/nodes.mdx`.
+
+### What VPN-AIO needs before this can be built
+
+- API tokens: VPN-AIO's panel API is session-cookie auth only (docs/reference/api-reference.md section 1); 3x-ui added Bearer API tokens (Settings → Security → API Token) in v3.3.0 and Nodes depends on them. This is the first prerequisite.
+- Node-side node-API endpoints on every VPN-AIO instance (accept master commands), plus master-side registration/probe/heartbeat/sync jobs in `web/job/`, a nodes controller/service in `web/controller/` and `web/service/`, and a Nodes tab in the Vue UI (`web/html`, `web/assets`).
+- Mapping to this fork: "inbound sync" must cover the 19 protocols and the accounts/membership layer, not only Xray inbounds; `xray_traffic_job.go` is the pattern for the traffic-sync job; native protocols (Libreswan/StrongSwan/pppd/SSTP backends) need a decision on how per-node management maps onto them.
+- Recommended phases: (1) API tokens with scopes (`node-sync`, `node-admin`); (2) node-side API; (3) master-side Nodes tab (list/add/probe/heartbeat/status); (4) inbound/client management on remote nodes + traffic sync; (5) mTLS and sub-node tree (optional parity extras).
+
+Sources: https://github.com/MHSanaei/3x-ui (tree + raw files, fetched 2026-11-23), https://www.zoio.net/2026/08/3x-ui-multi-node.html, https://library.tf/providers/batonogov/threexui/latest/docs/resources/node. Upstream reference commit locally: `5297fd3` (read-only) predates the Nodes feature; upstream `main` was used instead.

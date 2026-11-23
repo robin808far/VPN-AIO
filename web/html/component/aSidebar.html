@@ -113,6 +113,13 @@
                         title: '{{ i18n "menu.resellers"}}'
                     },
                     {{ end }}
+                    {{ if .perms.superAdmin }}
+                    {
+                        key: '{{ .base_path }}panel/nodes',
+                        icon: 'cloud',
+                        title: '{{ i18n "pages.nodes.title"}}'
+                    },
+                    {{ end }}
                     {
                         key: '{{ .base_path }}logout/',
                         icon: 'logout',

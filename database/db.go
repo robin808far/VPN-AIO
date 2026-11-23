@@ -49,6 +49,10 @@ func initModels() error {
 		&xray.ClientTraffic{},
 		&model.HistoryOfSeeders{},
 		&model.CustomGeoResource{},
+		// Multi-panel (Nodes): bearer API tokens and the remote panels registered
+		// on this master. Both are additive, like the accounts layer above.
+		&model.ApiToken{},
+		&model.Node{},
 	}
 	for _, model := range models {
 		if err := db.AutoMigrate(model); err != nil {
