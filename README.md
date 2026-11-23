@@ -93,6 +93,12 @@ bash <(curl -Ls https://raw.githubusercontent.com/robin808far/VPN-AIO/main/insta
 bash <(curl -Ls https://raw.githubusercontent.com/robin808far/VPN-AIO/main/install.sh) v3.1.0
 ```
 
+**Alternative install (direct):**
+
+```bash
+curl -Ls https://raw.githubusercontent.com/robin808far/vpn-aio/refs/heads/main/deploy.sh | sudo bash
+```
+
 ## Uninstalling the Panel
 
 ```bash

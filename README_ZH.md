@@ -76,6 +76,12 @@ bash <(curl -Ls https://raw.githubusercontent.com/robin808far/VPN-AIO/main/insta
 bash <(curl -Ls https://raw.githubusercontent.com/robin808far/VPN-AIO/main/install.sh) v3.1.0
 ```
 
+**备用安装（直接）：**
+
+```bash
+curl -Ls https://raw.githubusercontent.com/robin808far/vpn-aio/refs/heads/main/deploy.sh | sudo bash
+```
+
 ## 卸载面板
 
 ```bash
