@@ -26,7 +26,19 @@
       unicode-range: U+0600-06FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE80-FEFC, U+0030-0039;
     }
     body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Vazirmatn', 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      font-family: 'Vazirmatn', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    }
+    /* antd.min.css re-declares font-family on html and on every .ant-* component,
+       all without Vazirmatn — that is what actually kept Persian text on the OS
+       fallback font. The @font-face above carries a Persian/Arabic unicode-range,
+       so listing Vazirmatn first only claims those glyphs; Latin text still falls
+       through to the system faces. The attribute selectors must stay in this
+       inline block: it loads after antd.min.css, so at equal specificity it wins. */
+    html, [class^="ant-"], [class*=" ant-"] {
+      font-family: 'Vazirmatn', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    }
+    code, kbd, pre, samp, .terminal-wrapper, [class*="terminal"] {
+      font-family: var(--font-mono, ui-monospace, SFMono-Regular, Consolas, monospace);
     }
     
     /* mobile touch scrolling for tabs */
