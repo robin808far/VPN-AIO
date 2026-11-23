@@ -70,6 +70,9 @@
         var m = document.cookie.match(/(?:^|;\s*)lang=([^;]*)/);
         if (m && decodeURIComponent(m[1]).indexOf('fa') === 0) {
           document.documentElement.classList.add('lang-fa');
+          document.documentElement.setAttribute('dir', 'rtl');
+        } else {
+          document.documentElement.setAttribute('dir', 'ltr');
         }
       } catch (e) {}
     })();
@@ -235,6 +238,10 @@
       <div class="bo-topbar-inner">
         <div class="bo-topbar-left">
           <h1 class="bo-topbar-title" v-text="pageTitle"></h1>
+        </div>
+        <div class="bo-topbar-right">
+          <a-lang-switch></a-lang-switch>
+          <a-theme-switch></a-theme-switch>
         </div>
       </div>
     </header>

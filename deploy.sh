@@ -3,7 +3,16 @@
 set -euo pipefail
 
 REPO="robin808far/VPN-AIO"
-ASSET="VPN-AIO-amd64"
+# Auto-detect the machine architecture: x86_64 → VPN-AIO-amd64,
+# aarch64/arm64 → VPN-AIO-arm64. VPN_AIO_ARCH can override (amd64|arm64).
+case "${VPN_AIO_ARCH:-$(uname -m)}" in
+    x86_64|amd64)  ASSET="VPN-AIO-amd64" ;;
+    aarch64|arm64) ASSET="VPN-AIO-arm64" ;;
+    *)
+        printf 'Unsupported architecture: %s (supported: amd64, arm64)\n' "$(uname -m)" >&2
+        exit 2
+        ;;
+esac
 DEST_DIR="/opt/VPN-AIO"
 DEST="$DEST_DIR/$ASSET"
 # The DEFAULT systemd unit name, and ONLY a fallback. The operator can rename the

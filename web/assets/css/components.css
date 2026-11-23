@@ -201,6 +201,16 @@
 .bo-topbar-left {
   display:flex; align-items:center; gap:10px; flex-wrap:wrap; min-width:0;
 }
+.bo-topbar-right {
+  display:flex; align-items:center; gap:6px; margin-inline-start:auto;
+}
+.bo-lang-btn {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:32px; height:32px; border:1px solid var(--border);
+  border-radius:var(--radius-sm, 6px); background:transparent;
+  color:var(--text, inherit); cursor:pointer; font-size:15px;
+}
+.bo-lang-btn:hover { border-color:var(--primary, currentColor); color:var(--primary, currentColor); }
 
 .bo-host-chip,
 .bo-health-pill {

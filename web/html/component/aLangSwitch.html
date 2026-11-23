@@ -1,0 +1,37 @@
+{{define "component/aLangSwitch"}}
+<script>
+    Vue.component('a-lang-switch', {
+        template: `
+        <a-dropdown :trigger="['click']" placement="bottomRight">
+            <button type="button" class="bo-lang-btn" :title="currentName"
+                aria-label='{{ i18n "pages.settings.language"}}'>
+                <a-icon type="global"></a-icon>
+            </button>
+            <a-menu slot="overlay" :selected-keys="[current]" @click="onChange">
+                <a-menu-item v-for="lang in languages" :key="lang.value">
+                    <span v-text="lang.icon + '  ' + lang.name"></span>
+                </a-menu-item>
+            </a-menu>
+        </a-dropdown>`,
+        data() {
+            return {
+                languages: LanguageManager.supportedLanguages,
+                current: LanguageManager.getLanguage(),
+            };
+        },
+        computed: {
+            currentName() {
+                const found = this.languages.filter(l => l.value === this.current);
+                return found.length ? found[0].name : 'Language';
+            },
+        },
+        methods: {
+            onChange({ key }) {
+                if (key !== this.current) {
+                    LanguageManager.setLanguage(key);
+                }
+            },
+        },
+    });
+</script>
+{{end}}

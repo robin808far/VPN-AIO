@@ -1,5 +1,26 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="260" height="64" viewBox="0 0 260 64" role="img" aria-label="VPN-AIO">
-  <rect x="2" y="7" width="50" height="50" rx="14" fill="#14b8a6"/>
-  <path d="M16 21l11 25 11-25" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="66" y="43" font-family="system-ui,sans-serif" font-size="32" font-weight="750" fill="#14b8a6">VPN-AIO</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="84" viewBox="0 0 260 84" role="img" aria-label="VPN-AIO — By Farashiani">
+  <defs>
+    <linearGradient id="petrol" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0A7CA4"/>
+      <stop offset="1" stop-color="#00445C"/>
+    </linearGradient>
+  </defs>
+
+  <!-- badge -->
+  <rect x="2" y="12" width="56" height="56" rx="16" fill="url(#petrol)"/>
+
+  <!-- shield (VPN security), centered in the badge -->
+  <path d="M30 21 L45 26.5 V37.5 C45 47.5 39 54.8 30 59 C21 54.8 15 47.5 15 37.5 V26.5 Z"
+        fill="#ffffff" opacity="0.96"/>
+
+  <!-- F monogram (Farashiani) -->
+  <g stroke="#00445C" stroke-width="4" stroke-linecap="round" fill="none">
+    <path d="M26 30 V50"/>
+    <path d="M26 30 H38"/>
+    <path d="M26 39 H35"/>
+  </g>
+
+  <!-- wordmark, both lines centered on the same axis -->
+  <text x="145" y="42" text-anchor="middle" font-family="system-ui,sans-serif" font-size="30" font-weight="750" letter-spacing="0.5" fill="#005F73">VPN-AIO</text>
+  <text x="145" y="63" text-anchor="middle" font-family="system-ui,sans-serif" font-size="13" font-weight="500" letter-spacing="1.5" fill="#5B7A8A">BY FARASHIANI</text>
 </svg>
