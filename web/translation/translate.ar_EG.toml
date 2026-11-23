@@ -126,10 +126,13 @@
 "configSaved" = "تم حفظ الإعداد"
 
 [pages.login]
+"signIn" = "Sign in"
 "hello" = "أهلا"
 "title" = "أهلاً وسهلاً"
 "loginAgain" = "انتهت صلاحية الجلسة، سجل دخول تاني"
 "showPassword" = "إظهار الباسورد"
+"introText" = "All-in-one VPN panel: Xray inbounds, traffic stats, subscription links and multi-node management — secured and in one place."
+"introFeats" = "Full traffic analytics, IP limiting, Telegram bot, multi-node and SSL — everything from one dashboard."
 "hidePassword" = "إخفاء الباسورد"
 
 [pages.login.toasts]

@@ -126,10 +126,13 @@
 "configSaved" = "設定を保存しました"
 
 [pages.login]
+"signIn" = "Sign in"
 "hello" = "こんにちは"
 "title" = "ようこそ"
 "loginAgain" = "ログインセッションが切れました。再度ログインしてください。"
 "showPassword" = "パスワードを表示"
+"introText" = "All-in-one VPN panel: Xray inbounds, traffic stats, subscription links and multi-node management — secured and in one place."
+"introFeats" = "Full traffic analytics, IP limiting, Telegram bot, multi-node and SSL — everything from one dashboard."
 "hidePassword" = "パスワードを非表示"
 
 [pages.login.toasts]

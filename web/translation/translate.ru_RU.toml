@@ -126,10 +126,13 @@
 "configSaved" = "Конфигурация сохранена"
 
 [pages.login]
+"signIn" = "Sign in"
 "hello" = "Привет!"
 "title" = "Добро пожаловать!"
 "loginAgain" = "Сессия истекла. Войдите в систему снова"
 "showPassword" = "Показать пароль"
+"introText" = "All-in-one VPN panel: Xray inbounds, traffic stats, subscription links and multi-node management — secured and in one place."
+"introFeats" = "Full traffic analytics, IP limiting, Telegram bot, multi-node and SSL — everything from one dashboard."
 "hidePassword" = "Скрыть пароль"
 
 [pages.login.toasts]

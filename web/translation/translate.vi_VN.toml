@@ -126,10 +126,13 @@
 "configSaved" = "Đã lưu cấu hình"
 
 [pages.login]
+"signIn" = "Sign in"
 "hello" = "Xin chào"
 "title" = "Chào mừng"
 "loginAgain" = "Thời hạn đăng nhập đã hết. Vui lòng đăng nhập lại."
 "showPassword" = "Hiện mật khẩu"
+"introText" = "All-in-one VPN panel: Xray inbounds, traffic stats, subscription links and multi-node management — secured and in one place."
+"introFeats" = "Full traffic analytics, IP limiting, Telegram bot, multi-node and SSL — everything from one dashboard."
 "hidePassword" = "Ẩn mật khẩu"
 
 [pages.login.toasts]

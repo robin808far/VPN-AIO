@@ -126,10 +126,13 @@
 "configSaved" = "Yapılandırma kaydedildi"
 
 [pages.login]
+"signIn" = "Sign in"
 "hello" = "Merhaba"
 "title" = "Hoş Geldiniz"
 "loginAgain" = "Oturum süreniz doldu, lütfen tekrar giriş yapın"
 "showPassword" = "Parolayı göster"
+"introText" = "All-in-one VPN panel: Xray inbounds, traffic stats, subscription links and multi-node management — secured and in one place."
+"introFeats" = "Full traffic analytics, IP limiting, Telegram bot, multi-node and SSL — everything from one dashboard."
 "hidePassword" = "Parolayı gizle"
 
 [pages.login.toasts]

@@ -126,10 +126,13 @@
 "configSaved" = "設定已儲存"
 
 [pages.login]
+"signIn" = "Sign in"
 "hello" = "你好"
 "title" = "歡迎"
 "loginAgain" = "登入時效已過，請重新登入"
 "showPassword" = "顯示密碼"
+"introText" = "All-in-one VPN panel: Xray inbounds, traffic stats, subscription links and multi-node management — secured and in one place."
+"introFeats" = "Full traffic analytics, IP limiting, Telegram bot, multi-node and SSL — everything from one dashboard."
 "hidePassword" = "隱藏密碼"
 
 [pages.login.toasts]

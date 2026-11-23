@@ -62,16 +62,48 @@ body { background:var(--bg); }
 #app.login-app .lgt-icon-18 { width:18px; height:18px; }
 
 /* ===== the ground ===== */
+/* A photographic petrol-blue ground: the image sits under a dark petrol
+   veil so white UI text keeps its contrast at every point of the photo. */
 #app.login-app .lgt-ground { position:fixed; inset:0; z-index:0; pointer-events:none; contain:layout paint; }
 #app.login-app .lgt-ground canvas { position:absolute; inset:0; width:100%; height:100%; display:block; }
+#app.login-app .lgt-ground::before {
+  content:""; position:absolute; inset:0;
+  background:url('{{ .base_path }}assets/img/login-tunnel.jpg') center / cover no-repeat;
+}
+#app.login-app .lgt-ground::after {
+  content:""; position:absolute; inset:0;
+  background:linear-gradient(160deg, rgba(6,24,38,.78) 0%, rgba(8,34,52,.66) 45%, rgba(4,16,28,.85) 100%);
+}
+@media (prefers-reduced-motion:reduce) { #app.login-app .lgt-ground canvas { display:none; } }
 
-/* ===== stage ===== */
+/* ===== stage: two panes on wide screens, stacked on phones ===== */
 #app.login-app .lgt-main {
   position:relative; z-index:1; flex:1 1 auto;
   display:flex; align-items:center; justify-content:center;
   padding:40px 20px;
 }
-#app.login-app .lgt-stage { position:relative; width:100%; max-width:412px; }
+#app.login-app .lgt-stage {
+  position:relative; width:100%; max-width:412px;
+  display:flex; align-items:center; gap:48px;
+}
+@media (min-width:960px) {
+  #app.login-app .lgt-stage { max-width:1020px; }
+  #app.login-app .lgt-intro { flex:1 1 0; }
+  #app.login-app .lgt-card { flex:0 0 412px; }
+}
+@media (max-width:959px) { #app.login-app .lgt-intro { display:none; } }
+
+/* ===== intro pane (desktop, left of the glass card) ===== */
+#app.login-app .lgt-intro { color:#eaf4f8; }
+#app.login-app .lgt-intro-logo { height:88px; width:auto; display:block; margin-bottom:28px; }
+#app.login-app .lgt-intro h2 {
+  font-size:calc(var(--fs-lg) * 1.7); line-height:1.25; font-weight:var(--fw-bold);
+  color:#fff; margin-bottom:16px; text-wrap:balance;
+}
+#app.login-app .lgt-intro p { color:rgba(234,244,248,.82); max-width:46ch; font-size:var(--fs-md); }
+#app.login-app .lgt-intro ul { list-style:none; margin-top:22px; display:grid; gap:10px; }
+#app.login-app .lgt-intro li { display:flex; align-items:center; gap:10px; color:rgba(234,244,248,.92); font-size:var(--fs-md); }
+#app.login-app .lgt-intro li .lgt-icon { color:#5fd4c8; }
 
 /* The legibility guarantee is two independent things, in this order.
    ONE: the card is solid --surface with a defined border, exactly the
@@ -85,11 +117,69 @@ body { background:var(--bg); }
    up as a faint banded outline on a dark ground. Not painting is exact. */
 #app.login-app .lgt-card {
   position:relative; z-index:1;
-  background:var(--surface); border:1px solid var(--border-strong);
-  border-radius:var(--radius-xl); box-shadow:var(--shadow-lg);
-  padding:24px;
+  /* glass: translucent plate over the photo ground */
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.28);
+  border-radius:var(--radius-xl);
+  box-shadow:0 24px 48px -20px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.25);
+  backdrop-filter:blur(6px) saturate(1.4) brightness(1.12);
+  -webkit-backdrop-filter:blur(6px) saturate(1.4) brightness(1.12);
+  padding:24px; color:#f2f8fb;
 }
+body.light #app.login-app .lgt-card {
+  background:rgba(255,255,255,.14);
+  border:1px solid rgba(255,255,255,.45);
+  color:#0c2230;
+}
+body.light #app.login-app .lgt-label { color:rgba(12,34,48,.8); }
+body.light #app.login-app .lgt-control { background:rgba(255,255,255,.35); border-color:rgba(255,255,255,.6); color:#0c2230; }
+body.light #app.login-app .lgt-control input,
+body.light #app.login-app .lgt-control input::placeholder { color:#0c2230; }
+body.light #app.login-app .lgt-control input::placeholder { color:rgba(12,34,48,.45); }
+body.light #app.login-app .lgt-control > .lgt-icon,
+body.light #app.login-app .lgt-reveal { color:rgba(12,34,48,.55); }
+body.light #app.login-app .lgt-title { color:#0c2230; }
 @media (min-width:420px) { #app.login-app .lgt-card { padding:32px; } }
+
+/* Theme coverage. All three themes keep the photographic tunnel ground — the
+   photo stays, but the veil over it changes: dark gets the petrol veil, light
+   gets a bright daylight veil so dark ink keeps its contrast, and ultra-dark
+   pushes the same photo almost to black. */
+body.light #app.login-app .lgt-ground::after {
+  background:linear-gradient(160deg, rgba(219,238,248,.88) 0%, rgba(228,243,251,.82) 45%, rgba(205,229,243,.92) 100%);
+}
+html[data-theme='ultra-dark'] body.dark #app.login-app .lgt-ground::after {
+  background:linear-gradient(160deg, rgba(2,4,10,.93) 0%, rgba(3,7,14,.9) 45%, rgba(1,2,6,.96) 100%);
+}
+
+/* light: dark ink on the light ground, intro pane included */
+body.light #app.login-app .lgt-intro { color:var(--text-2); }
+body.light #app.login-app .lgt-intro h2 { color:var(--text); }
+body.light #app.login-app .lgt-intro p,
+body.light #app.login-app .lgt-intro li { color:var(--text-2); }
+body.light #app.login-app .lgt-intro li .lgt-icon { color:var(--accent); }
+body.light #app.login-app .lgt-card {
+  background:rgba(255,255,255,.6);
+  border-color:rgba(12,34,48,.16);
+  box-shadow:0 24px 48px -22px rgba(16,24,32,.25), inset 0 1px 0 rgba(255,255,255,.6);
+}
+body.light #app.login-app .lgt-control {
+  background:rgba(12,34,48,.05); border-color:rgba(12,34,48,.22); color:#0c2230;
+}
+body.light #app.login-app .lgt-control:focus-within {
+  background:rgba(12,34,48,.08); border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-weak);
+}
+body.light #app.login-app .lgt-control:focus-within > .lgt-icon { color:var(--accent); }
+body.light #app.login-app .lgt-control.is-invalid:focus-within {
+  border-color:var(--error); box-shadow:0 0 0 3px var(--error-weak);
+}
+body.light #app.login-app .lgt-control.is-invalid:focus-within > .lgt-icon { color:var(--error); }
+
+/* ultra-dark: the glass card sits on the near-black ground instead of the photo */
+html[data-theme='ultra-dark'] body.dark #app.login-app .lgt-card {
+  background:rgba(0,0,0,.4);
+  border-color:rgba(255,255,255,.14);
+}
 
 #app.login-app .lgt-rise { animation:lgt-rise .4s cubic-bezier(.22,1,.36,1) both; }
 @keyframes lgt-rise { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
@@ -150,7 +240,7 @@ body { background:var(--bg); }
   font-size:var(--fs-sm); font-weight:var(--fw-semibold); color:var(--text-3);
   text-transform:uppercase; letter-spacing:.08em;
 }
-#app.login-app .lgt-title { font-size:var(--fs-xl); font-weight:var(--fw-bold); letter-spacing:-.01em; text-wrap:balance; }
+#app.login-app .lgt-title { font-size:calc(var(--fs-xl) * 1.6); font-weight:var(--fw-bold); letter-spacing:-.01em; text-wrap:balance; color:#fff; }
 
 /* The fetch that gates the form is one round trip and usually lands
    before the first paint is even visible, but reserving its height keeps
@@ -161,20 +251,25 @@ body { background:var(--bg); }
 }
 
 /* ===== form ===== */
+/* on the glass plate every control goes translucent-light */
 #app.login-app .lgt-form { margin-top:24px; display:flex; flex-direction:column; gap:16px; }
 #app.login-app .lgt-field { display:flex; flex-direction:column; gap:8px; }
-#app.login-app .lgt-label { font-size:var(--fs-sm); font-weight:var(--fw-semibold); color:var(--text-2); }
+#app.login-app .lgt-label { font-size:var(--fs-sm); font-weight:var(--fw-semibold); color:rgba(242,248,251,.85); }
 #app.login-app .lgt-control {
   display:flex; align-items:center; gap:10px;
-  background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius-md);
-  padding-inline:12px;
+  background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.25); border-radius:var(--radius-md);
+  padding-inline:12px; color:#f2f8fb;
   transition:border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
 }
-#app.login-app .lgt-control > .lgt-icon { color:var(--text-3); }
-#app.login-app .lgt-control:focus-within {
-  background:var(--surface); border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-weak);
+#app.login-app .lgt-control input {
+  background:transparent; border:0; outline:none; color:#f2f8fb; width:100%;
 }
-#app.login-app .lgt-control:focus-within > .lgt-icon { color:var(--accent); }
+#app.login-app .lgt-control input::placeholder { color:rgba(242,248,251,.45); }
+#app.login-app .lgt-control > .lgt-icon { color:rgba(242,248,251,.6); }
+#app.login-app .lgt-control:focus-within {
+  background:rgba(255,255,255,.16); border-color:#5fd4c8; box-shadow:0 0 0 3px rgba(95,212,200,.25);
+}
+#app.login-app .lgt-control:focus-within > .lgt-icon { color:#5fd4c8; }
 #app.login-app .lgt-control.is-invalid { border-color:var(--error); }
 /* A rejected field that regains focus stays in the error colour. Without
    these two, the :focus-within rules above win on source order and repaint
@@ -185,17 +280,17 @@ body { background:var(--bg); }
 #app.login-app .lgt-control.is-invalid:focus-within > .lgt-icon { color:var(--error); }
 #app.login-app .lgt-control input {
   flex:1 1 auto; min-width:0; height:42px;
-  border:0; background:transparent; color:var(--text);
+  border:0; background:transparent; color:#f2f8fb;
   padding:0; outline:none;
 }
-#app.login-app .lgt-control input::placeholder { color:var(--text-3); opacity:1; }
+#app.login-app .lgt-control input::placeholder { color:rgba(242,248,251,.45); opacity:1; }
 #app.login-app .lgt-reveal {
   width:30px; height:30px; flex:0 0 auto; margin-inline-end:-4px;
-  border:0; border-radius:var(--radius-sm); background:transparent; color:var(--text-3);
+  border:0; border-radius:var(--radius-sm); background:transparent; color:rgba(242,248,251,.6);
   display:flex; align-items:center; justify-content:center; cursor:pointer;
   transition:color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
 }
-#app.login-app .lgt-reveal:hover { color:var(--accent); background:var(--accent-weak); }
+#app.login-app .lgt-reveal:hover { color:#5fd4c8; background:rgba(255,255,255,.12); }
 
 /* the code is a machine string: it stays LTR and monospaced in every locale */
 #app.login-app .lgt-code input {
@@ -206,9 +301,13 @@ body { background:var(--bg); }
 
 /* ===== submit ===== */
 #app.login-app .lgt-submit {
-  position:relative; width:100%; height:44px; margin-top:4px;
+  position:relative; width:100%; height:44px;
+  /* the whitespace under the last box must read the same as the whitespace
+     between the two boxes: the flex gap (16) plus the label's line (12.5*1.5)
+     plus the field's internal gap (8) → 42.75 - 16 = 26.75 */
+  margin-top:26.75px;
   border:1px solid transparent; border-radius:var(--radius-md);
-  background:var(--accent-strong); color:var(--on-accent);
+  background:linear-gradient(135deg,#0e6e7e,#0a4f63); color:#fff;
   font-size:var(--fs-base); font-weight:var(--fw-semibold); letter-spacing:.01em; cursor:pointer;
   display:flex; align-items:center; justify-content:center; gap:10px;
   transition:filter var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
@@ -275,6 +374,17 @@ body { background:var(--bg); }
 
   <main class="lgt-main">
     <div class="lgt-stage" id="login">
+
+      <div class="lgt-intro lgt-rise" aria-hidden="true">
+        <img class="lgt-intro-logo" src="{{ .base_path }}assets/img/vpn-aio.svg" alt="" />
+        <h2>VPN-AIO</h2>
+        <p>{{ i18n "pages.login.introText" }}</p>
+        <ul>
+          <li><svg class="lgt-icon lgt-icon-18" aria-hidden="true"><use href="#lgt-i-check"></use></svg><span>Xray · Vless / Vmess / Trojan · WireGuard · L2TP · PPTP · OpenVPN · OpenConnect (Cisco) · SSTP · IKEv2 Idle · AmneziaWG · GRE · MTProto Proxy · SSH</span></li>
+          <li><svg class="lgt-icon lgt-icon-18" aria-hidden="true"><use href="#lgt-i-check"></use></svg><span>{{ i18n "pages.login.introFeats" }}</span></li>
+        </ul>
+      </div>
+
       <div class="lgt-card lgt-rise" ref="card">
 
         <div class="lgt-head">
@@ -309,8 +419,7 @@ body { background:var(--bg); }
         <template v-else>
 
           <div class="lgt-greet">
-            <p class="lgt-eyebrow">{{ i18n "pages.login.hello" }}</p>
-            <h1 class="lgt-title">{{ i18n "pages.login.title" }}</h1>
+            <h1 class="lgt-title">{{ i18n "pages.login.signIn" }}</h1>
           </div>
 
           {{/*
