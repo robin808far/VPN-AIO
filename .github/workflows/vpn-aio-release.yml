@@ -24,6 +24,20 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.27.x'
+      - name: Compute build cache key
+        id: cachekey
+        run: echo "pins=$(git submodule status | sha256sum | cut -c1-12)" >> "$GITHUB_OUTPUT"
+      - name: Cache Xray core, geo files and VPN daemon bundles
+        uses: actions/cache@v4
+        with:
+          # build.sh skips the slow Docker/Alpine daemon build and reuses the pinned
+          # Xray core when these are already populated; the geo files are still
+          # re-checked upstream on every run (not-modified check), so they stay fresh.
+          path: |
+            backend/bin
+            corebundle/core
+          key: vpn-aio-build-${{ runner.os }}-${{ steps.cachekey.outputs.pins }}
+          restore-keys: vpn-aio-build-${{ runner.os }}-
       - name: Install arm64 cross-compiler
         run: sudo apt-get update -qq && sudo apt-get install -y -qq gcc-aarch64-linux-gnu
       - name: Register qemu binfmt for arm64 containers
