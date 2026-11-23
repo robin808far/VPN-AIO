@@ -74,11 +74,13 @@ jobs:
           sudo apt-get update -qq && sudo apt-get install -y -qq gcc-aarch64-linux-gnu
           GOARCH=arm64 go build -o build/out/VPN-AIO-check-arm64 .
       - name: Smoke-test the arm64 binary under qemu
+        env:
+          QEMU_LD_PREFIX: /usr/aarch64-linux-gnu
         run: |
           sudo apt-get install -y -qq qemu-user-static
           file build/out/VPN-AIO-check-arm64 | grep -q 'ARM aarch64'
-          build/out/VPN-AIO-check-arm64 --help 2>&1 | head -5 || true
-          build/out/VPN-AIO-check-arm64 -show 2>&1 | head -5 || true
+          qemu-aarch64 build/out/VPN-AIO-check-arm64 --help 2>&1 | head -5
+          qemu-aarch64 build/out/VPN-AIO-check-arm64 -v | grep -q "$(cat config/version)"
       - name: Build disposable lifecycle test image
         run: |
           context="$RUNNER_TEMP/vpn-aio-lifecycle-context"
