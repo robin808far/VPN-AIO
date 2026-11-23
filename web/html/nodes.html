@@ -241,11 +241,12 @@
         if (msg && msg.success) this.inbounds.list = msg.obj || [];
       },
       delNode(node) {
-        Modal.confirm({
+        this.$confirm({
           title: '{{ i18n "pages.nodes.delete" }} - ' + node.name,
           content: '{{ i18n "pages.nodes.delete" }}?',
           okText: '{{ i18n "confirm" }}',
           cancelText: '{{ i18n "close" }}',
+          class: themeSwitcher.currentTheme,
           onOk: async () => {
             const msg = await HttpUtil.post('/panel/nodes/del/' + node.id);
             if (msg && msg.success) await this.loadNodes();

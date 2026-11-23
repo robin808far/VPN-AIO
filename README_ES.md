@@ -258,18 +258,3 @@ Para probar solo en un sistema operativo específico, también puedes usar el sw
 sudo ./run.sh --only ubuntu-24
 ```
 
-## Donaciones
-
-🔹USDC-Polygon: ```0xd955379bE5813F066Cb81870bfcEA6f4bb862c24```
-
-🔹USDT-BEP20: ```0xd955379bE5813F066Cb81870bfcEA6f4bb862c24```
-
-🔹USDT-TRC20: ```TE5BGUuRce6vF3F4fXSkYY635oUt3M3hzd```
-
-🔹TRX: ```TE5BGUuRce6vF3F4fXSkYY635oUt3M3hzd```
-
-🔹LTC: ```LTbdsmqt38o9bfa3pvcHTbDz6kKzQJzSLn```
-
-🔹BTC: ```bc1qjnedhmc4x85uwqn5zvh25f697n2pmn7etu69pg```
-
-🔹ETH: ```0xd955379bE5813F066Cb81870bfcEA6f4bb862c24```

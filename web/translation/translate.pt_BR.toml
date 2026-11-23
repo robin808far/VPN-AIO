@@ -141,9 +141,6 @@
 "successLogin" = "Você entrou na sua conta com sucesso."
 
 [pages.index]
-"donate" = "Doar"
-"donateTitle" = "Apoiar o VPN-UI"
-"donateIntro" = "Se o VPN-UI é útil para você, uma doação para qualquer um destes endereços ajuda a mantê-lo."
 "restore" = "Restaurar"
 "systemStatus" = "Status do sistema"
 "title" = "Visão Geral"

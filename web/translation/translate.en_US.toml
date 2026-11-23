@@ -230,9 +230,6 @@
 "successLogin" = " You have successfully logged into your account."
 
 [pages.index]
-"donate" = "Donate"
-"donateTitle" = "Support upstream VPN-UI"
-"donateIntro" = "These donation addresses belong to the upstream VPN-UI project on which VPN-AIO is based."
 "restore" = "Restore"
 "systemStatus" = "System Status"
 "title" = "Overview"

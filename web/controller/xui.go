@@ -73,10 +73,7 @@ func (a *XUIController) index(c *gin.Context) {
 	var serverService service.ServerService
 	panelName, domain := serverService.BackupNameParts(browserHost(c))
 
-	// The donate dialog on the VPN-UI tile. Rendered server-side rather than
-	// fetched: the list is static, so a round trip would only add a spinner.
 	html(c, "index.html", "pages.index.title", gin.H{
-		"donate":            donateAddresses,
 		"backup_panel_name": panelName,
 		"backup_domain":     domain,
 	})

@@ -4,7 +4,7 @@
   <img src="web/assets/img/vpn-aio.svg" alt="VPN-AIO" width="260">
 </p>
 
-**VPN-AIO نسخهٔ 4.0.0** بر پایهٔ [Sir-MmD/vpn-ui](https://github.com/Sir-MmD/vpn-ui) و [3X-UI](https://github.com/MHSanaei/3x-ui) ساخته شده است. مجوزها و حقوق سازندگان اصلی حفظ شده‌اند.
+**VPN-AIO نسخهٔ 4.1.0** بر پایهٔ [Sir-MmD/vpn-ui](https://github.com/Sir-MmD/vpn-ui) و [3X-UI](https://github.com/MHSanaei/3x-ui) ساخته شده است. مجوزها و حقوق سازندگان اصلی حفظ شده‌اند.
 
 هدف این نسخه **Ubuntu 24.04 amd64** است. هستهٔ Xray **26.11.9**، پروتکل‌های بومی AnyTLS، TUIC، NaiveProxy و MASQUE، انتقال XDRIVE و AmneziaWG **3.1.20261113-02** با کنترل‌ها و خروجی‌های ۳.۱ در دسترس‌اند. نسخهٔ ۴.۰.۰ مدیریت چند-پنلی **Nodes** را اضافه می‌کند؛ نسخهٔ ۳.۱.۰ تنظیمات بومی اشتراک Happ را اضافه می‌کند؛ نسخهٔ ۳.۰.۰ [مدیریت Hosts](docs/guides/HOSTS.md) را به پنل افزود. پیش از ارتقا، [یادداشت انتشار ۴.۰.۰](https://github.com/robin808far/VPN-AIO/releases/tag/v4.0.0) و [گزارش بررسی](docs/releases/validation/VPN-AIO-3.1.0.md) را بخوانید؛ ماتریس VM/کرنل بین‌توزیعی طبق توافق اجرا نشده است. برای فهرست و دسته‌بندی مستندات پروژه، [راهنمای مستندات](docs/README.md) را ببینید.
 
@@ -52,7 +52,7 @@
 
 ## جدول پشتیبانی پروژهٔ اصلی
 
-این جدول از پروژهٔ اصلی به ارث رسیده است؛ هدف تست نسخهٔ VPN-AIO 4.0.0، اوبونتو 24.04 است و به معنی تست مجدد همهٔ این توزیع‌ها نیست.
+این جدول از پروژهٔ اصلی به ارث رسیده است؛ هدف تست نسخهٔ VPN-AIO 4.1.0، اوبونتو 24.04 است و به معنی تست مجدد همهٔ این توزیع‌ها نیست.
 
 
 | | توزیع |نسخه |نسخه |
@@ -263,18 +263,3 @@ git clone https://github.com/robin808far/VPN-AIO.git && cd VPN-AIO
 sudo ./run.sh --only ubuntu-24
 ```
 
-## دونیت
-
-🔹USDC-Polygon: ```0xd955379bE5813F066Cb81870bfcEA6f4bb862c24```
-
-🔹USDT-BEP20: ```0xd955379bE5813F066Cb81870bfcEA6f4bb862c24```
-
-🔹USDT-TRC20: ```TE5BGUuRce6vF3F4fXSkYY635oUt3M3hzd```
-
-🔹TRX: ```TE5BGUuRce6vF3F4fXSkYY635oUt3M3hzd```
-
-🔹LTC: ```LTbdsmqt38o9bfa3pvcHTbDz6kKzQJzSLn```
-
-🔹BTC: ```bc1qjnedhmc4x85uwqn5zvh25f697n2pmn7etu69pg```
-
-🔹ETH: ```0xd955379bE5813F066Cb81870bfcEA6f4bb862c24```

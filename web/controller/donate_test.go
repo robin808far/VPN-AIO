@@ -2,6 +2,7 @@ package controller
 
 import (
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -10,69 +11,58 @@ import (
 // donateLine matches one README donate row: 🔹USDT-TRC20: ```TXEh…```
 var donateLine = regexp.MustCompile("^\\s*🔹\\s*([^:]+):\\s*`{1,3}([^`]+)`{1,3}\\s*$")
 
-// readmeDonateAddresses parses the "## Donate" section of the repo README, up to
-// the next heading. Returns nil if the section is missing, which the test treats
-// as a failure rather than an empty match.
-func readmeDonateAddresses(t *testing.T) []DonateEntry {
+// repoReadmes lists every README in the repository root, relative to this
+// package's directory.
+func repoReadmes(t *testing.T) []string {
 	t.Helper()
-	raw, err := os.ReadFile("../../README.md")
+	matches, err := filepath.Glob("../../README*.md")
 	if err != nil {
-		t.Fatalf("read README.md: %v", err)
+		t.Fatalf("glob READMEs: %v", err)
 	}
-	var out []DonateEntry
-	inSection := false
-	for _, line := range strings.Split(string(raw), "\n") {
-		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "#") {
-			// Enter on "## Donate", leave on the next heading of any level.
-			inSection = strings.EqualFold(strings.TrimSpace(strings.TrimLeft(trimmed, "# ")), "Donate")
-			continue
-		}
-		if !inSection {
-			continue
-		}
-		if m := donateLine.FindStringSubmatch(trimmed); m != nil {
-			out = append(out, DonateEntry{
-				Chain:   strings.TrimSpace(m[1]),
-				Address: strings.TrimSpace(m[2]),
-			})
-		}
+	if len(matches) == 0 {
+		t.Fatal("no README*.md found at repository root")
 	}
-	return out
+	return matches
 }
 
-// TestDonateAddressesMatchReadme pins the list the donate dialog renders to the
-// README's Donate section. These are addresses money is sent to, so a silent
-// drift between the two is the one failure mode worth a test of its own: edit
-// one and this names the mismatch instead of the panel quietly showing a stale
-// address.
-func TestDonateAddressesMatchReadme(t *testing.T) {
-	want := readmeDonateAddresses(t)
-	if len(want) == 0 {
-		t.Fatal("no donate entries parsed from README.md — has the '## Donate' section moved or changed shape?")
-	}
-	if len(want) != len(donateAddresses) {
-		t.Fatalf("README has %d donate entries, donateAddresses has %d\nREADME: %+v\ncode:   %+v",
-			len(want), len(donateAddresses), want, donateAddresses)
-	}
-	for i := range want {
-		if want[i] != donateAddresses[i] {
-			t.Errorf("entry %d differs:\n  README: %s = %s\n  code:   %s = %s",
-				i, want[i].Chain, want[i].Address,
-				donateAddresses[i].Chain, donateAddresses[i].Address)
+// TestNoDonateSectionInReadmes pins the removal of donation information: the
+// addresses belong to the upstream project, not this fork, so no README may
+// carry a "## Donate"-style section and no donate addresses may appear in any
+// of them, in any language.
+func TestNoDonateSectionInReadmes(t *testing.T) {
+	for _, path := range repoReadmes(t) {
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("read %s: %v", path, err)
+		}
+		for _, line := range strings.Split(string(raw), "\n") {
+			trimmed := strings.TrimSpace(line)
+			if donateLine.MatchString(trimmed) {
+				t.Errorf("%s still carries a donate address row: %q", path, trimmed)
+			}
+		}
+		if donateHeading.MatchString(string(raw)) {
+			t.Errorf("%s still carries a Donate heading", path)
 		}
 	}
 }
 
-// TestDonateAddressesAreWellFormed guards the copy path: a blank or whitespace
-// -carrying address would be copied verbatim into a wallet.
-func TestDonateAddressesAreWellFormed(t *testing.T) {
-	for _, e := range donateAddresses {
-		if e.Chain == "" || e.Address == "" {
-			t.Errorf("empty field in entry %+v", e)
-		}
-		if strings.ContainsAny(e.Address, " \t\n`") {
-			t.Errorf("address for %s carries whitespace or a backtick: %q", e.Chain, e.Address)
+// donateHeading matches a "## Donate"-style heading regardless of language
+// (Donaciones, دونیت, Bağış, 捐赠, …).
+var donateHeading = regexp.MustCompile(`(?m)^##\s*[^\n]*(?:[Dd]onat|تبرّع|دونیت|حمایت|Пожертвова|Bağış|捐赠)`)
+
+// TestNoDonateDialogInPanel pins the removal on the web side: the index page
+// must not render a donate button or modal, and the controller must not pass
+// donate data to it.
+func TestNoDonateDialogInPanel(t *testing.T) {
+	raw, err := os.ReadFile("../html/index.html")
+	if err != nil {
+		t.Fatalf("read index.html: %v", err)
+	}
+	html := string(raw)
+	for _, marker := range []string{"openDonateModal", "donateModal", "donateList", "donate-modal"} {
+		if strings.Contains(html, marker) {
+			t.Errorf("index.html still references %q", marker)
 		}
 	}
 }

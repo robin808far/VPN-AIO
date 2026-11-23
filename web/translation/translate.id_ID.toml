@@ -141,9 +141,6 @@
 "successLogin" = "Anda telah berhasil masuk ke akun Anda."
 
 [pages.index]
-"donate" = "Donasi"
-"donateTitle" = "Dukung VPN-UI"
-"donateIntro" = "Jika VPN-UI bermanfaat bagi Anda, donasi ke salah satu alamat ini membantu pemeliharaannya."
 "restore" = "Pulihkan"
 "systemStatus" = "Status sistem"
 "title" = "Ikhtisar"
