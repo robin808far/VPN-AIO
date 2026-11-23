@@ -2778,3 +2778,64 @@ html[data-theme-animations='off'] .log-live-dot { animation:none; }
 .bo-il-exp--error { color:var(--error); }
 .bo-il-inf { font-size:var(--fs-md); line-height:1; color:var(--text-3); }
 .bo-il-none { font-size:var(--fs-base); color:var(--text-3); }
+
+/* --- live system status bar (above every panel page) --------------- */
+/* The one memorable move of the operations-console direction: a quiet,
+   monospaced strip that always answers "is the fleet healthy?" before the
+   page's own content starts. */
+.bo-sysbar {
+  display:flex; align-items:center; gap:var(--sp-2);
+  padding:6px 20px;
+  border-block:1px solid var(--border);
+  background:var(--surface-2, transparent);
+  font-family:var(--font-mono); font-size:var(--fs-xs);
+  color:var(--text-2); min-height:32px;
+}
+.bo-sysbar:empty { display:none; }
+.bo-sysbar-dot {
+  width:8px; height:8px; border-radius:50%; flex:none;
+  background:var(--off);
+}
+.bo-sysbar-dot--ok { background:var(--ok); animation:bo-sysbar-pulse 2.4s var(--ease) infinite; }
+.bo-sysbar-dot--bad { background:var(--error); animation:bo-sysbar-pulse 1.2s var(--ease) infinite; }
+.bo-sysbar-dot--idle { background:var(--off); }
+@keyframes bo-sysbar-pulse {
+  0%, 100% { opacity:1; }
+  50% { opacity:.35; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bo-sysbar-dot--ok, .bo-sysbar-dot--bad { animation:none; }
+}
+.bo-sysbar-hb { color:var(--text-3); }
+.bo-sysbar-link { margin-inline-start:auto; color:var(--accent); text-decoration:none; }
+.bo-sysbar-link:hover { text-decoration:underline; }
+
+/* --- the operations console (Nodes page) --------------------------- */
+/* The design's hard grid: 4px corners, monospaced identity numbers, dense
+   spacing. Everything else (colors, themes) still comes from the tokens. */
+.bo-console { display:flex; flex-direction:column; gap:var(--sp-5); }
+.bo-console-eyebrow {
+  margin:0; font-family:var(--font-mono); font-size:var(--fs-xs);
+  letter-spacing:.12em; text-transform:uppercase; color:var(--accent);
+}
+.bo-console-title { margin:var(--sp-1) 0 0; font-size:var(--fs-xl); color:var(--text); }
+.bo-console-lede { margin:var(--sp-1) 0 0; color:var(--text-2); max-width:56ch; }
+.bo-console-actions { margin-top:var(--sp-4); display:flex; flex-wrap:wrap; gap:var(--sp-2); }
+.bo-console-strip {
+  display:flex; align-items:center; gap:var(--sp-2);
+  font-family:var(--font-mono); font-size:var(--fs-xs); color:var(--text-2);
+}
+.bo-console-strip .bo-sysbar-dot { width:8px; height:8px; }
+.bo-console-strip-meta { margin-inline-start:auto; color:var(--text-3); }
+.bo-console-grid .bo-tile { border-radius:4px; padding:12px 14px; }
+.bo-console-name { font-family:var(--font-mono); font-weight:600; color:var(--text); }
+.bo-console-addr {
+  font-family:var(--font-mono); font-size:var(--fs-xs); color:var(--text-3);
+  overflow-wrap:anywhere;
+}
+.bo-console-dl {
+  margin:12px 0 0; display:grid; grid-template-columns:auto 1fr;
+  gap:4px 12px; font-size:13px;
+}
+.bo-console-dl dt { font-family:var(--font-mono); font-size:var(--fs-xs); align-self:center; }
+.bo-console-dl dd { margin:0; font-family:var(--font-mono); overflow-wrap:anywhere; }

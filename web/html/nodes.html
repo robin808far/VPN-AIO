@@ -5,50 +5,57 @@
 {{template "page/shell_start" . }}
       <a-spin :spinning="spinning" :delay="300" tip='{{ i18n "loading"}}' size="large">
         <transition name="list" appear>
-          <a-row :gutter="[16, 16]" :style="{ margin: 0 }">
-            <a-col :span="24">
-              <a-card hoverable :style="{ marginBottom: '16px' }">
-                <div :style="{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px' }">
-                  <a-button type="primary" icon="plus" @click="openAdd()">
-                    {{ i18n "pages.nodes.add" }}
-                  </a-button>
-                  <a-button icon="reload" @click="loadNodes(true)"></a-button>
-                  <a-button icon="key" @click="tokenModal.visible = true">
-                    {{ i18n "pages.nodes.tokens" }}
-                  </a-button>
-                </div>
-              </a-card>
-
-              <!-- One card per registered remote panel. Status is refreshed by the
-                   heartbeat job and on demand with Probe. -->
-              <div class="bo-cards" v-if="nodes.length">
-                <article class="bo-tile" v-for="node in nodes" :key="node.id">
-                  <div :style="{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }">
-                    <div :style="{ minWidth: 0 }">
-                      <div :style="{ fontWeight: 600 }">[[ node.name ]]</div>
-                      <div class="bo-muted">[[ node.scheme ]]://[[ node.address ]]:[[ node.port ]][[ node.basePath ]]</div>
-                    </div>
-                    <a-tag :color="statusColor(node.status)" :style="{ marginInlineEnd: 0 }">[[ node.status ]]</a-tag>
-                  </div>
-                  <dl :style="{ margin: '12px 0 0', display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '4px 12px', fontSize: '13px' }">
-                    <dt class="bo-muted">{{ i18n "pages.nodes.version" }}</dt><dd :style="{ margin: 0 }">[[ node.version || '-' ]]</dd>
-                    <dt class="bo-muted">{{ i18n "pages.nodes.inbounds" }}</dt><dd :style="{ margin: 0 }">[[ node.inbounds ]]</dd>
-                    <dt class="bo-muted">{{ i18n "pages.nodes.lastSeen" }}</dt><dd :style="{ margin: 0 }">[[ fmtTime(node.lastSeen) ]]</dd>
-                    <dt class="bo-muted">{{ i18n "pages.nodes.syncMode" }}</dt><dd :style="{ margin: 0 }">[[ node.syncMode ]]</dd>
-                  </dl>
-                  <div :style="{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '8px' }">
-                    <a-button size="small" icon="sync" @click="probe(node)">{{ i18n "pages.nodes.probe" }}</a-button>
-                    <a-button size="small" icon="unordered-list" @click="showInbounds(node)">{{ i18n "pages.nodes.inbounds" }}</a-button>
-                    <a-button size="small" icon="edit" @click="openEdit(node)">{{ i18n "pages.nodes.edit" }}</a-button>
-                    <a-button size="small" type="danger" icon="delete" @click="delNode(node)">{{ i18n "pages.nodes.delete" }}</a-button>
-                  </div>
-                </article>
+          <div class="bo-console">
+            <header class="bo-console-head">
+              <p class="bo-console-eyebrow">{{ i18n "pages.nodes.consoleEyebrow" }}</p>
+              <h2 class="bo-console-title">{{ i18n "pages.nodes.consoleHeadline" }}</h2>
+              <p class="bo-console-lede">{{ i18n "pages.nodes.consoleLede" }}</p>
+              <div class="bo-console-actions">
+                <a-button type="primary" icon="plus" @click="openAdd()">
+                  {{ i18n "pages.nodes.consoleCta" }}
+                </a-button>
+                <a-button icon="reload" @click="loadNodes(true)"></a-button>
+                <a-button icon="key" @click="tokenModal.visible = true">
+                  {{ i18n "pages.nodes.tokens" }}
+                </a-button>
               </div>
-              <a-card hoverable v-else>
-                <a-empty :description="`{{ i18n "noData" }}`"></a-empty>
-              </a-card>
-            </a-col>
-          </a-row>
+            </header>
+
+            <div class="bo-console-strip" v-if="nodes.length" role="status">
+              <span class="bo-sysbar-dot" :class="downCount ? 'bo-sysbar-dot--bad' : 'bo-sysbar-dot--ok'"></span>
+              <span>[[ onlineCount ]] {{ i18n "pages.nodes.sysOnline" }}<template v-if="downCount"> · [[ downCount ]] {{ i18n "pages.nodes.sysDown" }}</template></span>
+              <span class="bo-console-strip-meta">[[ inboundsTotal ]] {{ i18n "pages.nodes.inbounds" }}</span>
+            </div>
+
+            <!-- One card per registered remote panel. Status is refreshed by the
+                 heartbeat job and on demand with Probe. -->
+            <div class="bo-cards bo-console-grid" v-if="nodes.length">
+              <article class="bo-tile" v-for="node in nodes" :key="node.id">
+                <div :style="{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }">
+                  <div :style="{ minWidth: 0 }">
+                    <div class="bo-console-name">[[ node.name ]]</div>
+                    <div class="bo-console-addr">[[ node.scheme ]]://[[ node.address ]]:[[ node.port ]][[ node.basePath ]]</div>
+                  </div>
+                  <a-tag :color="statusColor(node.status)" :style="{ marginInlineEnd: 0, fontFamily: 'var(--font-mono)' }">[[ node.status ]]</a-tag>
+                </div>
+                <dl class="bo-console-dl">
+                  <dt class="bo-muted">{{ i18n "pages.nodes.version" }}</dt><dd>[[ node.version || '-' ]]</dd>
+                  <dt class="bo-muted">{{ i18n "pages.nodes.inbounds" }}</dt><dd>[[ node.inbounds ]]</dd>
+                  <dt class="bo-muted">{{ i18n "pages.nodes.lastSeen" }}</dt><dd>[[ fmtTime(node.lastSeen) ]]</dd>
+                  <dt class="bo-muted">{{ i18n "pages.nodes.syncMode" }}</dt><dd>[[ node.syncMode ]]</dd>
+                </dl>
+                <div :style="{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '8px' }">
+                  <a-button size="small" icon="sync" @click="probe(node)">{{ i18n "pages.nodes.probe" }}</a-button>
+                  <a-button size="small" icon="unordered-list" @click="showInbounds(node)">{{ i18n "pages.nodes.inbounds" }}</a-button>
+                  <a-button size="small" icon="edit" @click="openEdit(node)">{{ i18n "pages.nodes.edit" }}</a-button>
+                  <a-button size="small" type="danger" icon="delete" @click="delNode(node)">{{ i18n "pages.nodes.delete" }}</a-button>
+                </div>
+              </article>
+            </div>
+            <a-card hoverable v-else>
+              <a-empty :description="`{{ i18n "noData" }}`"></a-empty>
+            </a-card>
+          </div>
         </transition>
       </a-spin>
 
@@ -149,7 +156,7 @@
     data: {
       themeSwitcher,
       pageTitle: '{{ i18n "pages.nodes.title" }}',
-      pageClass: '',
+      pageClass: 'nodes-page',
       spinning: false,
       nodes: [],
       tokens: [],
@@ -173,6 +180,17 @@
         { title: '{{ i18n "pages.nodes.scopes" }}', dataIndex: 'scopes' },
         { title: '', key: 'actions', scopedSlots: { customRender: 'actions' }, width: 100 },
       ],
+    },
+    computed: {
+      onlineCount() {
+        return this.nodes.filter((n) => n.status === 'online').length;
+      },
+      downCount() {
+        return this.nodes.filter((n) => n.status === 'down').length;
+      },
+      inboundsTotal() {
+        return this.nodes.reduce((sum, n) => sum + (n.inbounds || 0), 0);
+      },
     },
     methods: {
       statusColor(status) {
