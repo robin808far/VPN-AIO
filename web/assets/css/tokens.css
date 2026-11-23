@@ -48,10 +48,10 @@
   --radius-xl:16px;
   --radius-pill:999px;
 
-  /* type. page.html @font-face's the bundled Vazirmatn under the family
-     name 'Vazirmatn' with a Persian/Arabic unicode-range; it must lead
-     the stack so Persian glyphs take it and Latin falls through. */
-  --font-sans:'Vazirmatn',-apple-system,BlinkMacSystemFont,'Segoe UI',
+  /* type. page.html picks the font by locale: 'Nunito' (Google Fonts) for all
+     non-Persian languages, 'Vazirmatn' when the `lang` cookie starts with fa
+     (html.lang-fa set by the inline head script). */
+  --font-sans:'Nunito',-apple-system,BlinkMacSystemFont,'Segoe UI',
               system-ui,Roboto,'Helvetica Neue',Arial,sans-serif;
   --font-mono:ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,
               'Liberation Mono',monospace;
