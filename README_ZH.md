@@ -70,7 +70,10 @@
 ## 安装面板
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/robin808far/VPN-AIO/main/deploy.sh | sudo bash
+bash <(curl -Ls https://raw.githubusercontent.com/robin808far/VPN-AIO/main/install.sh)
+
+# 安装指定版本，例如 v3.1.0
+bash <(curl -Ls https://raw.githubusercontent.com/robin808far/VPN-AIO/main/install.sh) v3.1.0
 ```
 
 ## 卸载面板

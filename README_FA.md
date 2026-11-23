@@ -77,7 +77,10 @@
 ## نصب پنل
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/robin808far/VPN-AIO/main/deploy.sh | sudo bash
+bash <(curl -Ls https://raw.githubusercontent.com/robin808far/VPN-AIO/main/install.sh)
+
+# نصب یک نسخهٔ خاص، مثلاً v3.1.0
+bash <(curl -Ls https://raw.githubusercontent.com/robin808far/VPN-AIO/main/install.sh) v3.1.0
 ```
 
 ## حذف پنل

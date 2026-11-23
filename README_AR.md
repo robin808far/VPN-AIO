@@ -70,7 +70,10 @@
 ## تثبيت اللوحة
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/robin808far/VPN-AIO/main/deploy.sh | sudo bash
+bash <(curl -Ls https://raw.githubusercontent.com/robin808far/VPN-AIO/main/install.sh)
+
+# تثبيت إصدار محدد، مثل v3.1.0
+bash <(curl -Ls https://raw.githubusercontent.com/robin808far/VPN-AIO/main/install.sh) v3.1.0
 ```
 
 ## إزالة اللوحة

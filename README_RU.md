@@ -70,7 +70,10 @@
 ## Установка панели
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/robin808far/VPN-AIO/main/deploy.sh | sudo bash
+bash <(curl -Ls https://raw.githubusercontent.com/robin808far/VPN-AIO/main/install.sh)
+
+# Установка конкретной версии, например v3.1.0
+bash <(curl -Ls https://raw.githubusercontent.com/robin808far/VPN-AIO/main/install.sh) v3.1.0
 ```
 
 ## Удаление панели

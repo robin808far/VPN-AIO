@@ -4,9 +4,11 @@ Last updated: 2026-11-23
 
 ## Current status
 
-- **Version is now `4.0.0`** (`config/version`), carrying the new multi-panel Nodes feature (below). Not yet committed/pushed or released.
+- **Version is now `4.0.0`** (`config/version`), carrying the new multi-panel Nodes feature (below). Released as https://github.com/robin808far/VPN-AIO/releases/tag/v4.0.0 (Latest).
+- **Version-pinned install (2026-11-23):** new `install.sh` at the repo root, 3x-ui style: `bash <(curl -Ls https://raw.githubusercontent.com/robin808far/VPN-AIO/main/install.sh) v3.1.0` (optional tag, `v` optional, validated; bare run = latest). It downloads `deploy.sh` from `main` — not from the pinned tag, because tags older than v3.1.0 ship a deploy.sh without `VPN_AIO_VERSION` support — fetches it to a mktemp file before the root check (works under `bash <(curl …)` where `$0` is `bash`), and re-execs it with sudo + `VPN_AIO_VERSION` when not root. All 7 READMEs now show this one-liner (with a versioned example) instead of the old `deploy.sh | sudo bash` pipe.
+- **`media/overview.png` replaced (2026-11-23):** now the panel's front (login) page, captured from a live v4.0.0 build at 1395x900 via the built-in browser; pushed to GitHub.
 - The GitHub recovery for `robin808far/VPN-AIO` is complete, including its three public releases.
-- Happ 3.1.0 is committed/pushed and publicly released as Latest: https://github.com/robin808far/VPN-AIO/releases/tag/v3.1.0.
+- Happ 3.1.0 is committed/pushed and publicly released: https://github.com/robin808far/VPN-AIO/releases/tag/v3.1.0.
 
 ## Nodes (multi-panel) — implemented in 4.0.0
 
