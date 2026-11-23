@@ -97,9 +97,11 @@ body { background:var(--bg); }
 /* ===== card head ===== */
 #app.login-app .lgt-head { display:flex; align-items:center; justify-content:space-between; gap:16px; }
 #app.login-app .lgt-brand {
-  font-size:var(--fs-lg); font-weight:var(--fw-bold); letter-spacing:.14em; color:var(--accent);
-  white-space:nowrap; direction:ltr; unicode-bidi:isolate;
+  height:88px; width:auto; display:block;
+  /* the wordmark is petrol on transparent: keep it legible on both themes */
+  filter:var(--logo-ink, none);
 }
+@media (max-width:576px){ #app.login-app .lgt-brand { height:64px; } }
 #app.login-app .lgt-gear {
   width:34px; height:34px; flex:0 0 auto; border-radius:var(--radius-pill);
   border:1px solid var(--border); background:var(--surface-2); color:var(--text-2);
@@ -276,7 +278,7 @@ body { background:var(--bg); }
       <div class="lgt-card lgt-rise" ref="card">
 
         <div class="lgt-head">
-          <p class="lgt-brand">[VPN-AIO]</p>
+          <img class="lgt-brand" src="{{ .base_path }}assets/img/vpn-aio.svg" alt="VPN-AIO" />
           <div class="lgt-pop-wrap">
             <button type="button" class="lgt-gear" ref="gear" @click.stop="settingsOpen = !settingsOpen"
               :aria-expanded="settingsOpen ? 'true' : 'false'" aria-controls="lgt-pop"

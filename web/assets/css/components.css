@@ -99,7 +99,7 @@
    mockup: the shell is the scroll boundary here, so the rail is simply a
    full-height flex child that scrolls its own overflow. */
 .bo-rail {
-  flex:0 0 124px; width:124px;
+  flex:0 0 188px; width:188px;
   height:100%;
   background:var(--surface);
   border-inline-end:1px solid var(--border);
@@ -120,7 +120,7 @@
    rail (40px tall needs 158px of width against a 124px rail), and max-width
    then squashed it horizontally because the height stayed fixed. Size by
    width and let the height follow, so it can never distort. */
-.bo-rail-brand img { display:block; width:100%; max-width:88px; height:auto; }
+.bo-rail-brand img { display:block; width:100%; max-width:156px; height:auto; }
 
 .bo-rail-nav {
   display:flex; flex-direction:column; gap:5px;
@@ -632,7 +632,9 @@ body.dark .bo-theme-toggle .bo-i-moon { display:block; }
 .bo-btn[disabled] { opacity:.5; cursor:not-allowed; transform:none; filter:none; }
 
 .bo-vpnui-body { display:flex; flex-direction:column; justify-content:space-between; gap:18px; flex:1; }
-.bo-vpnui-version { font-size:23px; font-weight:var(--fw-bold); color:var(--text); }
+.bo-vpnui-version { font-size:34px; font-weight:var(--fw-bold); color:var(--text); letter-spacing:.02em; }
+/* the VPN-AIO wordmark on the dashboard tile: small caps title was unreadable */
+.bo-t-vpnui .bo-tile-title { font-size:var(--fs-lg); letter-spacing:.06em; color:var(--text); }
 .bo-status-line { display:flex; align-items:center; gap:6px; font-size:13px; font-weight:var(--fw-semibold); margin-top:var(--sp-2); }
 .bo-status-line--ok { color:var(--ok); }
 .bo-status-line--warn { color:var(--warn); }
