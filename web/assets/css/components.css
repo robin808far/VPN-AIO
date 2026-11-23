@@ -319,7 +319,11 @@ body.dark .bo-theme-toggle .bo-i-moon { display:block; }
              box-shadow var(--dur-fast) var(--ease),
              border-color var(--dur-fast) var(--ease);
 }
-.bo-tile:hover { transform:translateY(-2px); border-color:var(--border-strong); }
+.bo-tile:hover {
+  transform:translateY(-2px);
+  border-color:var(--border-strong);
+  box-shadow:var(--shadow-md);
+}
 /* Content sits at the top of a stretched tile. space-between was tried and
    looks worse: it strands the heading at the top and the body at the very
    bottom with a hole in the middle.
@@ -2839,3 +2843,45 @@ html[data-theme-animations='off'] .log-live-dot { animation:none; }
 }
 .bo-console-dl dt { font-family:var(--font-mono); font-size:var(--fs-xs); align-self:center; }
 .bo-console-dl dd { margin:0; font-family:var(--font-mono); overflow-wrap:anywhere; }
+
+/* --- 4.1 polish pass ----------------------------------------------- */
+/* Small, theme-safe upgrades on top of the existing system. Everything
+   reads its colours from the tokens, so both themes stay correct. */
+
+/* Frosted topbar: the page scrolls under a slightly translucent bar. */
+.bo-topbar {
+  background:color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+}
+@supports not (backdrop-filter:blur(4px)) {
+  .bo-topbar { background:var(--surface); }
+}
+
+/* Sidebar: the selected item gets a calmer, faster accent; the animated
+   sweep (ma-bg-move, 6.6s) is replaced by a still gradient that settles
+   instead of crawling. */
+.ant-menu:not(.ant-menu-horizontal) .ant-menu-item-selected {
+  animation:none;
+  background-image:linear-gradient(270deg, #fff0 30%, #009980 85%, #009980 100%);
+  transition:background-color var(--dur-fast) var(--ease);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ant-menu:not(.ant-menu-horizontal) .ant-menu-item-selected { animation:none; }
+}
+
+/* Buttons: lift on hover so the primary action feels pressable. */
+.bo-shell .ant-btn { transition:transform var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
+.bo-shell .ant-btn:not([disabled]):active { transform:scale(.97); }
+
+/* Tiles keep their lift; make the motion present but quiet on reduced-motion. */
+@media (prefers-reduced-motion: reduce) {
+  .bo-tile:hover { transform:none; }
+  .bo-shell .ant-btn:not([disabled]):active { transform:none; }
+}
+
+/* Scrollbars follow the theme instead of the UA default. */
+.bo-shell *::-webkit-scrollbar { width:10px; height:10px; }
+.bo-shell *::-webkit-scrollbar-thumb { background:var(--border-strong); border-radius:5px; }
+.bo-shell *::-webkit-scrollbar-thumb:hover { background:var(--text-3); }
+.bo-shell *::-webkit-scrollbar-track { background:transparent; }
