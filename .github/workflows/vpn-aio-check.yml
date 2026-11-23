@@ -81,6 +81,6 @@ jobs:
           VPN_AIO_CONTAINER_LIFECYCLE_ACK: 'yes'
         run: docker run --rm --network none --cap-add=NET_ADMIN -e VPN_AIO_CONTAINER_LIFECYCLE_ACK -e VPN_AIO_EXPECTED_VERSION="$(cat config/version)" vpn-aio-lifecycle-test
       - name: Exercise Happ subscription HTTP contract in isolation
-        run: docker run --rm --network none --cap-add=NET_ADMIN -e VPN_AIO_HAPP_CHECK_ACK=yes --entrypoint python3 vpn-aio-lifecycle-test /checks/happ-subscription-check.py
+        run: docker run --rm --network none --cap-add=NET_ADMIN -e VPN_AIO_HAPP_CHECK_ACK=yes -e VPN_AIO_EXPECTED_VERSION="$(cat config/version)" --entrypoint python3 vpn-aio-lifecycle-test /checks/happ-subscription-check.py
       # This is not a release build: the full static VPN daemon and geo bundles
       # are built by build.sh before an installable artifact is published.

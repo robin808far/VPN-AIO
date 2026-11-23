@@ -79,7 +79,8 @@ def main():
         panel = subprocess.Popen([str(BINARY)], stdout=log, stderr=log)
         try:
             login()
-            require(subprocess.check_output([str(BINARY), "-v"], text=True).strip() == "3.1.0", "version 3.1.0")
+            version = os.environ.get("VPN_AIO_EXPECTED_VERSION", "3.1.0")
+            require(subprocess.check_output([str(BINARY), "-v"], text=True).strip() == version, f"version {version}")
             settings = api("/panel/setting/all", {})["obj"]
             require(settings["subHappAutoDetect"] is False, "fresh install does not opt into Happ overrides")
             settings.update({
@@ -142,7 +143,7 @@ def main():
                     "Happ opt-out suppresses metadata after restart")
             require(headers.get("Routing-Enable") == "true", "legacy routing unchanged after Happ opt-out")
             print(json.dumps({
-                "version": "3.1.0", "sha256": hashlib.sha256(BINARY.read_bytes()).hexdigest(),
+                "version": version, "sha256": hashlib.sha256(BINARY.read_bytes()).hexdigest(),
                 "coverage": "real panel HTTP with simulated Happ User-Agent; not a real Happ app test",
             }), flush=True)
         finally:
