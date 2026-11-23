@@ -8,7 +8,7 @@
 
 هدف این نسخه **Ubuntu 24.04 amd64** است. هستهٔ Xray **26.11.9**، پروتکل‌های بومی AnyTLS، TUIC، NaiveProxy و MASQUE، انتقال XDRIVE و AmneziaWG **3.1.20261113-02** با کنترل‌ها و خروجی‌های ۳.۱ در دسترس‌اند. نسخهٔ ۴.۰.۰ مدیریت چند-پنلی **Nodes** را اضافه می‌کند؛ نسخهٔ ۳.۱.۰ تنظیمات بومی اشتراک Happ را اضافه می‌کند؛ نسخهٔ ۳.۰.۰ [مدیریت Hosts](docs/guides/HOSTS.md) را به پنل افزود. پیش از ارتقا، [یادداشت انتشار ۴.۰.۰](https://github.com/robin808far/VPN-AIO/releases/tag/v4.0.0) و [گزارش بررسی](docs/releases/validation/VPN-AIO-3.1.0.md) را بخوانید؛ ماتریس VM/کرنل بین‌توزیعی طبق توافق اجرا نشده است. برای فهرست و دسته‌بندی مستندات پروژه، [راهنمای مستندات](docs/README.md) را ببینید.
 
-![نمای کلی](https://raw.githubusercontent.com/Sir-MmD/vpn-ui/refs/heads/main/media/overview.png)
+![نمای کلی](https://raw.githubusercontent.com/robin808far/VPN-AIO/main/media/overview.png)
 
 ## پروتکل‌های جدید
 

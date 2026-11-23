@@ -6,7 +6,7 @@
 
 本项目是 **[3X-UI](https://github.com/MHSanaei/3x-ui)** 面板（2.9.3 版本）的增强版。本项目旨在添加多种协议，并将其打造成一个支持 **Xray-core** 各项功能的综合性面板。
 
-![总览](https://raw.githubusercontent.com/Sir-MmD/vpn-ui/refs/heads/main/media/overview.png)
+![总览](https://raw.githubusercontent.com/robin808far/VPN-AIO/main/media/overview.png)
 
 ## 新增协议
 

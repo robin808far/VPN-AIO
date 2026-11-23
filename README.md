@@ -10,7 +10,7 @@ This version targets **Ubuntu 24.04 amd64** installations. It integrates Xray **
 
 Project documentation is organized under [`docs/`](docs/README.md).
 
-![Overview](https://raw.githubusercontent.com/Sir-MmD/vpn-ui/refs/heads/main/media/overview.png)
+![Overview](https://raw.githubusercontent.com/robin808far/VPN-AIO/main/media/overview.png)
 
 ## New Protocols
 

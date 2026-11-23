@@ -6,7 +6,7 @@
 
 Este proyecto es una versión mejorada del panel **[3X-UI](https://github.com/MHSanaei/3x-ui)** (versión 2.9.3). El objetivo de este proyecto es agregar diversos protocolos y ofrecerlo como un panel integral con soporte para las funciones de **Xray-core**.
 
-![Vista general](https://raw.githubusercontent.com/Sir-MmD/vpn-ui/refs/heads/main/media/overview.png)
+![Vista general](https://raw.githubusercontent.com/robin808far/VPN-AIO/main/media/overview.png)
 
 ## Nuevos protocolos
 
