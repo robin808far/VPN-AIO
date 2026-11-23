@@ -25,6 +25,7 @@ Este proyecto es una versión mejorada del panel **[3X-UI](https://github.com/MH
 
 ## Nuevas funcionalidades
 
+- **Nodes (multi-panel)**: añade otros paneles VPN-AIO como nodos mediante URL y token, sondea su estado cada 30 segundos y consulta y gestiona sus Inbounds desde un solo panel, con tokens de API con permisos limitados (solo administrador principal)
 - **Multiadministrador** con acceso por Inbound: cada administrador solo ve los Inbounds que le asignes
 - Cuentas de **Revendedor** con un saldo de tráfico medido que recarga un administrador, gastable solo en los Inbounds que se le hayan dado
 - Función **Client to Client**, incluso como **Cross Inbound** (conexión interna de un usuario L2TP con un usuario OpenVPN)

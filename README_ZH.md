@@ -25,6 +25,7 @@
 
 ## 新增功能
 
+- **Nodes（多面板）**：通过 URL + Token 将其他 VPN-AIO 面板添加为节点，每 30 秒探测状态，并在单一面板中查看和管理各节点的 Inbound，使用受限权限的 API Token（仅限主管理员）
 - **多管理员**，按 Inbound 授权，每个管理员只能看到分配给他的 Inbound
 - **分销商**账户，流量额度由管理员充值计量，且只能消耗在分配给它的 Inbound 上
 - 支持 **Client to Client** 功能，甚至可以实现 **Cross Inbound**（L2TP 用户与 OpenVPN 用户之间的内部互联）

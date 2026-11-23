@@ -27,6 +27,7 @@ Bu proje, **[3X-UI](https://github.com/MHSanaei/3x-ui)** panelinin (2.9.3 sürü
 
 - Inbound bazlı erişimle **Çoklu Yönetici**: her yönetici yalnızca kendisine atadığınız Inbound'ları görür
 - Yöneticinin yüklediği ölçülü trafik bakiyesiyle **Bayi** hesapları, yalnızca kendisine verilen Inbound'larda harcanır
+- **Nodes (çoklu panel)**: diğer VPN-AIO panellerini URL + token ile düğüm olarak ekleyin, durumlarını 30 saniyede bir kontrol edin ve Inbound'larını tek panelden yönetin; kapsamlı API tokenları ile (yalnızca baş yönetici)
 - **Client to Client** özelliği, hatta **Cross Inbound** biçiminde bile (bir L2TP kullanıcısının bir OpenVPN kullanıcısına dahili bağlantısı)
 - **Shadowsocks** protokolüne **AES-256-GCM** ve **AES-128-GCM** **Encryption** yöntemlerinin eklenmesi
 - **Inbound** ve **Outbound** içinde **XHTTP Object** desteği
