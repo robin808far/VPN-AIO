@@ -53,10 +53,26 @@ jobs:
           cd build/out
           sha256sum VPN-AIO-amd64 VPN-AIO-arm64 > SHA256SUMS
           ls -lh VPN-AIO-amd64 VPN-AIO-arm64 SHA256SUMS
+      - name: Generate changelog
+        run: |
+          TAG="${{ inputs.tag || github.ref_name }}"
+          PREV="$(git tag --sort=-creatordate | grep -v "^${TAG}$" | head -1)"
+          {
+            echo "## VPN-AIO ${TAG#v}"
+            echo
+            echo "### Changes"
+            git log --no-decorate --format='- %s (%h)' "${PREV:+$PREV..}$TAG" || git log --no-decorate --format='- %s (%h)' "$TAG" -n 20
+            echo
+            if [ -n "$PREV" ]; then
+              echo "**Full Changelog**: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/compare/$PREV...$TAG"
+            fi
+          } > build/out/CHANGELOG.md
+          cat build/out/CHANGELOG.md
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ inputs.tag || github.ref_name }}
+          body_path: build/out/CHANGELOG.md
           files: |
             build/out/VPN-AIO-amd64
             build/out/VPN-AIO-arm64
