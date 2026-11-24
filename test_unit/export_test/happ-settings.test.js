@@ -6,7 +6,7 @@ const assert = require("node:assert/strict");
 
 const root = path.resolve(__dirname, "../..");
 const html = fs.readFileSync(path.join(root, "web/html/settings.html"), "utf8").replace(/\r\n/g, "\n");
-const start = html.indexOf("<script>\n  const app = new Vue");
+const start = html.indexOf("<script>\n  var app = new Vue");
 assert.ok(start >= 0, "settings Vue script not found");
 const script = html.slice(start + "<script>".length, html.indexOf("</script>", start))
     .replace(/\{\{\s*i18n\s+"[^"]+"\s*\}\}/g, "test")
