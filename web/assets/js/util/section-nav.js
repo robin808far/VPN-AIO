@@ -30,7 +30,7 @@
  * carry v-if), so a declared copy could only drift from them, and would have
  * needed thirteen new translations to say what the page already says.
  */
-const SectionNavMixin = {
+var SectionNavMixin = {
     data() {
         return {
             // The open section. Same key space as the a-tab-pane keys it replaced,

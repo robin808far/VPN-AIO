@@ -116,6 +116,7 @@ type Server struct {
 	awgService         service.AwgService
 	greService         service.GreService
 	mtprotoService     service.MtprotoService
+	singboxService     service.SingboxService
 	sshService         service.SshService
 	sshOutboundService service.SshOutboundService
 	vpnOutboundService service.VpnOutboundService
@@ -366,6 +367,7 @@ func (s *Server) startTask() {
 	s.awgService.InitAwg()
 	s.greService.InitGre()
 	s.mtprotoService.InitMtproto()
+	s.singboxService.InitSingbox()
 	s.sshService.InitSsh()
 	// BEFORE anything dials, which is why it is here and not beside InitVpnOutbound
 	// below. A carrier is a device plus a routing table, and whatever rides on it sends

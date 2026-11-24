@@ -140,7 +140,7 @@
 </a-modal>
 
 <script>
-  const membershipInfoModal = {
+  var membershipInfoModal = {
     visible: false,
     record: null,   // the DBInbound
     client: null,   // its entry for this account
@@ -159,7 +159,7 @@
     close() { this.visible = false; },
   };
 
-  const membershipInfoModalApp = new Vue({
+  var membershipInfoModalApp = new Vue({
     delimiters: ['[[', ']]'],
     el: '#membership-info-modal',
     data: { themeSwitcher, membershipInfoModal, app: null },

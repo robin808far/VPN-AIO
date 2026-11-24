@@ -5,8 +5,8 @@
 
 {{define "component/aTableSortable"}}
 <script>
-  const DRAGGABLE_ROW_CLASS = 'draggable-row';
-  const findParentRowElement = (el) => {
+  var DRAGGABLE_ROW_CLASS = 'draggable-row';
+  var findParentRowElement = (el) => {
     if (!el || !el.tagName) {
       return null;
     } else if (el.classList.contains(DRAGGABLE_ROW_CLASS)) {

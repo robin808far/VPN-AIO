@@ -27,7 +27,17 @@ func startBusyBinary(t *testing.T, dir string) (string, *exec.Cmd) {
 	if err != nil {
 		t.Skipf("cannot read %s: %v", src, err)
 	}
-	dest := filepath.Join(dir, "busyd")
+	// The copy must keep the source's BASENAME. uutils coreutils is a multicall
+	// binary that dispatches on /proc/self/exe's name and aborts with "Security
+	// violation: Requested utility `sleep` does not match executable name" when
+	// run as "busyd" — the exec died instantly, no image was ever busy, and the
+	// wait loop burned out (the 5s/30s "flakiness"). A dir named "sleep" gives
+	// the copy the name it insists on while staying inside the temp dir.
+	binDir := filepath.Join(dir, "sleep")
+	if err := os.MkdirAll(binDir, 0o755); err != nil {
+		t.Fatalf("seed the fake daemon dir: %v", err)
+	}
+	dest := filepath.Join(binDir, filepath.Base(src))
 	if err := os.WriteFile(dest, data, 0o755); err != nil {
 		t.Fatalf("seed the fake daemon: %v", err)
 	}
@@ -42,7 +52,10 @@ func startBusyBinary(t *testing.T, dir string) (string, *exec.Cmd) {
 	})
 
 	// Start returns once the fork is done, which can precede the execve landing.
-	deadline := time.Now().Add(5 * time.Second)
+	// 30s (not 5s): on a loaded CI box the scheduler can delay execve well past
+	// 5s, which failed this test spuriously — the wait is a polling loop, not a
+	// functional bound.
+	deadline := time.Now().Add(30 * time.Second)
 	for {
 		link, err := os.Readlink(fmt.Sprintf("/proc/%d/exe", cmd.Process.Pid))
 		if err == nil && link == dest {

@@ -1,0 +1,318 @@
+{{define "form/singbox"}}
+<!-- Shown when an inbound's CORE is sing-box (any protocol): the panel stores the
+     raw sing-box inbound object as the settings JSON and runs it verbatim.
+     Two views over the SAME draft: the graphical form (s-ui style, edits the
+     parsed object field by field) and the raw JSON editor. Each edit of one
+     view re-serializes into singboxDraft, so the other view follows. -->
+<a-tabs default-active-key="gui" size="small">
+    <a-tab-pane key="gui" tab="Graphical">
+        <a-form layout="vertical">
+            <a-row :gutter="12">
+                <a-col :xs="12" :md="6">
+                    <a-form-item label="Type">
+                        <a-input :value="singboxGet(['type'])" disabled></a-input>
+                    </a-form-item>
+                </a-col>
+                <a-col :xs="12" :md="6">
+                    <a-form-item label="Tag">
+                        <a-input :value="singboxGet(['tag'])" @change="e => singboxSet(['tag'], e.target.value)"></a-input>
+                    </a-form-item>
+                </a-col>
+                <a-col :xs="12" :md="6">
+                    <a-form-item label="Listen">
+                        <a-input :value="singboxGet(['listen'])" placeholder="::"
+                            @change="e => singboxSet(['listen'], e.target.value)"></a-input>
+                    </a-form-item>
+                </a-col>
+                <a-col :xs="12" :md="6">
+                    <a-form-item label="Port">
+                        <a-input-number :value="singboxGet(['listen_port'])" :min="1" :max="65535"
+                            style="width: 100%"
+                            @change="v => singboxSet(['listen_port'], v)"></a-input-number>
+                    </a-form-item>
+                </a-col>
+            </a-row>
+
+            <!-- ===== per-protocol settings ===== -->
+            <template v-if="singboxGet(['type']) === 'vless' || singboxGet(['type']) === 'vmess'">
+                <a-row :gutter="12">
+                    <a-col :xs="12" :md="8">
+                        <a-form-item label="Multiplex (mux)">
+                            <a-switch :checked="singboxGet(['multiplex', 'enabled'], false)"
+                                @change="v => singboxSet(['multiplex', 'enabled'], v)"></a-switch>
+                        </a-form-item>
+                    </a-col>
+                    <a-col :xs="12" :md="8" v-if="singboxGet(['multiplex', 'enabled'], false)">
+                        <a-form-item label="Max connections">
+                            <a-input-number :value="singboxGet(['multiplex', 'max_connections'])" :min="0"
+                                style="width: 100%"
+                                @change="v => singboxSet(['multiplex', 'max_connections'], v)"></a-input-number>
+                        </a-form-item>
+                    </a-col>
+                    <a-col :xs="12" :md="8" v-if="singboxGet(['multiplex', 'enabled'], false)">
+                        <a-form-item label="Min streams">
+                            <a-input-number :value="singboxGet(['multiplex', 'min_streams'])" :min="0"
+                                style="width: 100%"
+                                @change="v => singboxSet(['multiplex', 'min_streams'], v)"></a-input-number>
+                        </a-form-item>
+                    </a-col>
+                </a-row>
+            </template>
+
+            <template v-if="singboxGet(['type']) === 'shadowsocks'">
+                <a-row :gutter="12">
+                    <a-col :xs="12" :md="10">
+                        <a-form-item label="Method">
+                            <a-select :value="singboxGet(['method'])"
+                                @change="v => singboxSet(['method'], v)">
+                                <a-select-option value="2022-blake3-aes-128-gcm">2022-blake3-aes-128-gcm</a-select-option>
+                                <a-select-option value="2022-blake3-aes-256-gcm">2022-blake3-aes-256-gcm</a-select-option>
+                                <a-select-option value="2022-blake3-chacha20-poly1305">2022-blake3-chacha20-poly1305</a-select-option>
+                                <a-select-option value="aes-128-gcm">aes-128-gcm</a-select-option>
+                                <a-select-option value="aes-256-gcm">aes-256-gcm</a-select-option>
+                                <a-select-option value="chacha20-ietf-poly1305">chacha20-ietf-poly1305</a-select-option>
+                                <a-select-option value="none">none</a-select-option>
+                            </a-select>
+                        </a-form-item>
+                    </a-col>
+                    <a-col :xs="12" :md="14">
+                        <a-form-item label="Password">
+                            <a-input :value="singboxGet(['password'])"
+                                @change="e => singboxSet(['password'], e.target.value)"></a-input>
+                        </a-form-item>
+                    </a-col>
+                </a-row>
+            </template>
+
+            <template v-if="singboxGet(['type']) === 'hysteria2'">
+                <a-row :gutter="12">
+                    <a-col :xs="12" :md="6">
+                        <a-form-item label="Ignore client bandwidth">
+                            <a-switch :checked="singboxGet(['ignore_client_bandwidth'], false)"
+                                @change="v => singboxSet(['ignore_client_bandwidth'], v)"></a-switch>
+                        </a-form-item>
+                    </a-col>
+                    <a-col :xs="12" :md="6">
+                        <a-form-item label="Up (Mbps)">
+                            <a-input-number :value="singboxGet(['up_mbps'])" :min="0" style="width: 100%"
+                                @change="v => singboxSet(['up_mbps'], v)"></a-input-number>
+                        </a-form-item>
+                    </a-col>
+                    <a-col :xs="12" :md="6">
+                        <a-form-item label="Down (Mbps)">
+                            <a-input-number :value="singboxGet(['down_mbps'])" :min="0" style="width: 100%"
+                                @change="v => singboxSet(['down_mbps'], v)"></a-input-number>
+                        </a-form-item>
+                    </a-col>
+                    <a-col :xs="12" :md="6">
+                        <a-form-item label="Obfs (salamander)">
+                            <a-switch :checked="singboxGet(['obfs', 'type'], '') === 'salamander'"
+                                @change="v => singboxSet(['obfs'], v ? { type: 'salamander', password: '' } : undefined)"></a-switch>
+                        </a-form-item>
+                    </a-col>
+                    <a-col :xs="24" :md="12" v-if="singboxGet(['obfs', 'type'], '') === 'salamander'">
+                        <a-form-item label="Obfs password">
+                            <a-input :value="singboxGet(['obfs', 'password'])"
+                                @change="e => singboxSet(['obfs', 'password'], e.target.value)"></a-input>
+                        </a-form-item>
+                    </a-col>
+                </a-row>
+            </template>
+
+            <template v-if="singboxGet(['type']) === 'tuic'">
+                <a-row :gutter="12">
+                    <a-col :xs="12" :md="8">
+                        <a-form-item label="Congestion control">
+                            <a-select :value="singboxGet(['congestion_control'], 'cubic')"
+                                @change="v => singboxSet(['congestion_control'], v)">
+                                <a-select-option value="cubic">cubic</a-select-option>
+                                <a-select-option value="new_reno">new_reno</a-select-option>
+                                <a-select-option value="bbr">bbr</a-select-option>
+                            </a-select>
+                        </a-form-item>
+                    </a-col>
+                    <a-col :xs="12" :md="8">
+                        <a-form-item label="UDP relay mode">
+                            <a-select :value="singboxGet(['udp_relay_mode'], 'native')"
+                                @change="v => singboxSet(['udp_relay_mode'], v)">
+                                <a-select-option value="native">native</a-select-option>
+                                <a-select-option value="quic">quic</a-select-option>
+                            </a-select>
+                        </a-form-item>
+                    </a-col>
+                </a-row>
+            </template>
+
+            <!-- ===== users ===== -->
+            <div v-if="singboxUsesUsers()">
+                <h4 class="bo-if-h" style="margin: 8px 0 4px;">Users</h4>
+                <a-row v-for="(u, i) in singboxUsers()" :key="i" :gutter="12" align="middle">
+                    <a-col :xs="8" :md="6">
+                        <a-input :value="singboxUserGet(i, 'name')" placeholder="name"
+                            @change="e => singboxUserSet(i, 'name', e.target.value)"></a-input>
+                    </a-col>
+                    <a-col :xs="16" :md="8" v-if="singboxGet(['type']) === 'vless' || singboxGet(['type']) === 'vmess'">
+                        <a-input :value="singboxUserGet(i, 'uuid')" placeholder="uuid"
+                            @change="e => singboxUserSet(i, 'uuid', e.target.value)"></a-input>
+                    </a-col>
+                    <a-col :xs="12" :md="5" v-if="singboxGet(['type']) === 'vless'">
+                        <a-select :value="singboxUserGet(i, 'flow')" placeholder="flow"
+                            @change="v => singboxUserSet(i, 'flow', v)">
+                            <a-select-option value="">no flow</a-select-option>
+                            <a-select-option value="xtls-rprx-vision">xtls-rprx-vision</a-select-option>
+                        </a-select>
+                    </a-col>
+                    <a-col :xs="16" :md="10"
+                        v-if="['trojan', 'anytls', 'shadowtls', 'hysteria2', 'tuic'].includes(singboxGet(['type']))">
+                        <a-input :value="singboxUserGet(i, 'password')" placeholder="password"
+                            @change="e => singboxUserSet(i, 'password', e.target.value)"></a-input>
+                    </a-col>
+                    <a-col :xs="8" :md="5">
+                        <a-button type="danger" size="small" icon="delete"
+                            @click="singboxRemoveUser(i)"></a-button>
+                    </a-col>
+                </a-row>
+                <a-button size="small" icon="plus" style="margin-top: 8px"
+                    @click="singboxAddUser()">Add user</a-button>
+            </div>
+
+            <!-- ===== transport ===== -->
+            <div style="margin-top: 12px;">
+                <a-form-item label="Transport">
+                    <a-switch :checked="singboxHas(['transport'])"
+                        @change="v => singboxToggleBlock(['transport'], v, { type: 'ws', path: '/' })"></a-switch>
+                </a-form-item>
+                <template v-if="singboxHas(['transport'])">
+                    <a-row :gutter="12">
+                        <a-col :xs="12" :md="6">
+                            <a-form-item label="Network">
+                                <a-select :value="singboxGet(['transport', 'type'], 'ws')"
+                                    @change="v => singboxSet(['transport', 'type'], v)">
+                                    <a-select-option value="ws">ws</a-select-option>
+                                    <a-select-option value="http">http</a-select-option>
+                                    <a-select-option value="httpupgrade">httpupgrade</a-select-option>
+                                    <a-select-option value="grpc">grpc</a-select-option>
+                                </a-select>
+                            </a-form-item>
+                        </a-col>
+                        <a-col :xs="12" :md="6" v-if="singboxGet(['transport', 'type']) !== 'grpc'">
+                            <a-form-item label="Path">
+                                <a-input :value="singboxGet(['transport', 'path'])" placeholder="/"
+                                    @change="e => singboxSet(['transport', 'path'], e.target.value)"></a-input>
+                            </a-form-item>
+                        </a-col>
+                        <a-col :xs="12" :md="6" v-if="singboxGet(['transport', 'type']) === 'grpc'">
+                            <a-form-item label="Service name">
+                                <a-input :value="singboxGet(['transport', 'service_name'])"
+                                    @change="e => singboxSet(['transport', 'service_name'], e.target.value)"></a-input>
+                            </a-form-item>
+                        </a-col>
+                        <a-col :xs="12" :md="6">
+                            <a-form-item label="Host header">
+                                <a-input :value="singboxHostHeader()"
+                                    @change="e => singboxSetHostHeader(e.target.value)"></a-input>
+                            </a-form-item>
+                        </a-col>
+                    </a-row>
+                </template>
+            </div>
+
+            <!-- ===== tls ===== -->
+            <div style="margin-top: 12px;">
+                <a-form-item label="TLS">
+                    <a-switch :checked="singboxHas(['tls'])"
+                        @change="v => singboxToggleBlock(['tls'], v, { enabled: true })"></a-switch>
+                </a-form-item>
+                <template v-if="singboxHas(['tls'])">
+                    <a-row :gutter="12">
+                        <a-col :span="24" v-if="sslCertChoices().length">
+                            <a-form-item label='{{ i18n "pages.inbounds.useManagedCert" }}'>
+                                <a-select :value="sslCertSelectedSingbox" allowClear
+                                    :placeholder="'{{ i18n "none" }}'"
+                                    @change="applyManagedCertSingbox">
+                                    <a-select-option v-for="c in sslCertChoices()" :key="c.profile" :value="c.profile">
+                                        [[ c.profile ]] — [[ c.domain || c.certPath ]]
+                                    </a-select-option>
+                                </a-select>
+                            </a-form-item>
+                        </a-col>
+                        <a-col :xs="12" :md="6">
+                            <a-form-item label="Enabled">
+                                <a-switch :checked="singboxGet(['tls', 'enabled'], false)"
+                                    @change="v => singboxSet(['tls', 'enabled'], v)"></a-switch>
+                            </a-form-item>
+                        </a-col>
+                        <a-col :xs="12" :md="8">
+                            <a-form-item label="SNI (server name)">
+                                <a-input :value="singboxGet(['tls', 'server_name'])"
+                                    @change="e => singboxSet(['tls', 'server_name'], e.target.value)"></a-input>
+                            </a-form-item>
+                        </a-col>
+                        <a-col :xs="12" :md="10">
+                            <a-form-item label="Certificate path">
+                                <a-input :value="singboxGet(['tls', 'certificate_path'])" placeholder="/etc/ssl/fullchain.pem"
+                                    @change="e => singboxSet(['tls', 'certificate_path'], e.target.value)"></a-input>
+                            </a-form-item>
+                        </a-col>
+                        <a-col :xs="12" :md="10">
+                            <a-form-item label="Key path">
+                                <a-input :value="singboxGet(['tls', 'key_path'])" placeholder="/etc/ssl/privkey.pem"
+                                    @change="e => singboxSet(['tls', 'key_path'], e.target.value)"></a-input>
+                            </a-form-item>
+                        </a-col>
+                        <a-col :xs="12" :md="6">
+                            <a-form-item label="Insecure">
+                                <a-switch :checked="singboxGet(['tls', 'insecure'], false)"
+                                    @change="v => singboxSet(['tls', 'insecure'], v)"></a-switch>
+                            </a-form-item>
+                        </a-col>
+                    </a-row>
+                    <a-form-item label="REALITY">
+                        <a-switch :checked="singboxHas(['tls', 'reality'])"
+                            @change="v => singboxToggleBlock(['tls', 'reality'], v, { enabled: true, handshake: { server: '', server_port: 443 } })"></a-switch>
+                    </a-form-item>
+                    <template v-if="singboxHas(['tls', 'reality'])">
+                        <a-row :gutter="12">
+                            <a-col :xs="12" :md="8">
+                                <a-form-item label="Handshake server">
+                                    <a-input :value="singboxGet(['tls', 'reality', 'handshake', 'server'])" placeholder="www.microsoft.com"
+                                        @change="e => singboxSet(['tls', 'reality', 'handshake', 'server'], e.target.value)"></a-input>
+                                </a-form-item>
+                            </a-col>
+                            <a-col :xs="12" :md="4">
+                                <a-form-item label="Handshake port">
+                                    <a-input-number :value="singboxGet(['tls', 'reality', 'handshake', 'server_port'], 443)"
+                                        :min="1" :max="65535" style="width: 100%"
+                                        @change="v => singboxSet(['tls', 'reality', 'handshake', 'server_port'], v)"></a-input-number>
+                                </a-form-item>
+                            </a-col>
+                            <a-col :xs="12" :md="6">
+                                <a-form-item label="Private key">
+                                    <a-input :value="singboxGet(['tls', 'reality', 'private_key'])"
+                                        @change="e => singboxSet(['tls', 'reality', 'private_key'], e.target.value)"></a-input>
+                                </a-form-item>
+                            </a-col>
+                            <a-col :xs="12" :md="6">
+                                <a-form-item label="Short IDs (comma separated)">
+                                    <a-input :value="singboxShortIds()"
+                                        @change="e => singboxSetShortIds(e.target.value)"></a-input>
+                                </a-form-item>
+                            </a-col>
+                        </a-row>
+                    </template>
+                </template>
+            </div>
+        </a-form>
+    </a-tab-pane>
+    <a-tab-pane key="json" tab="JSON">
+        <a-form-item :validate-status="singboxJsonStatus.status" :help="singboxJsonStatus.help">
+            <a-textarea
+                :value="singboxJsonText()"
+                @input="applySingboxJson($event.target.value)"
+                :rows="16"
+                class="code-editor"
+            ></a-textarea>
+        </a-form-item>
+    </a-tab-pane>
+</a-tabs>
+{{end}}

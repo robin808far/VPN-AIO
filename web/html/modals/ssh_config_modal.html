@@ -65,7 +65,7 @@
 </style>
 
 <script>
-  const sshConfigModal = {
+  var sshConfigModal = {
     visible: false,
     loading: false,
     title: 'SSH Config',
@@ -94,7 +94,7 @@
     },
   };
 
-  const sshConfigModalApp = new Vue({
+  var sshConfigModalApp = new Vue({
     delimiters: ['[[', ']]'],
     el: '#ssh-config-modal',
     data: {

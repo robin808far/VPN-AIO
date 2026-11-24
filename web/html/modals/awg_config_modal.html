@@ -48,7 +48,7 @@
 </style>
 
 <script>
-  const awgConfigModal = {
+  var awgConfigModal = {
     visible: false,
     loading: false,
     title: 'AmneziaWG Config',
@@ -74,7 +74,7 @@
     },
   };
 
-  const awgConfigModalApp = new Vue({
+  var awgConfigModalApp = new Vue({
     delimiters: ['[[', ']]'],
     el: '#awg-config-modal',
     data: {

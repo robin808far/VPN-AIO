@@ -6,6 +6,14 @@
   <meta name="renderer" content="webkit">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex,nofollow">
+  <script>
+    // Set the theme hint before first paint so the pre-Vue background matches
+    // the user's theme (dark is the default, same as createThemeSwitcher).
+    try {
+      if (localStorage.getItem('dark-mode') !== 'false') document.documentElement.classList.add('pre-dark');
+      if (localStorage.getItem('isUltraDarkThemeEnabled') === 'true') document.documentElement.setAttribute('data-theme', 'ultra-dark');
+    } catch (e) { document.documentElement.classList.add('pre-dark'); }
+  </script>
   <link rel="stylesheet" href="{{ .base_path }}assets/ant-design-vue/antd.min.css">
   <link rel="stylesheet" href="{{ .base_path }}assets/css/tokens.css?{{ .asset_ver }}">
   <link rel="stylesheet" href="{{ .base_path }}assets/css/custom.css?{{ .asset_ver }}">
@@ -13,9 +21,46 @@
   <link rel="stylesheet" href="{{ .base_path }}assets/css/ant-bridge.css?{{ .asset_ver }}">
   <link rel="stylesheet" href="{{ .base_path }}assets/css/terminal.css?{{ .asset_ver }}">
   <style>
+    /* First-paint background: matches the theme before bo-shell paints, so a
+       slow navigation never shows the browser's default white page. */
+    html { background: #f4f6f8; }
+    html.pre-dark { background: #0a1222; }
+    html.pre-dark[data-theme='ultra-dark'] { background: #21242a; }
+    /* Boot splash: shown only while #app still carries v-cloak (Vue not yet
+       mounted). Removed automatically the moment Vue mounts. */
+    #app[v-cloak] ~ #boot-splash { display: flex; }
+    #boot-splash { display: none; position: fixed; inset: 0; z-index: 9999;
+      align-items: center; justify-content: center; flex-direction: column; gap: 14px;
+      color: rgba(0, 0, 0, .65); }
+    html.pre-dark #boot-splash { color: rgba(255, 255, 255, .85); }
+    #boot-splash::before { content: ''; width: 34px; height: 34px; border-radius: 50%;
+      border: 3px solid rgba(89, 203, 172, .25); border-top-color: #59cbac;
+      animation: bo-boot-spin .8s linear infinite; }
+    @keyframes bo-boot-spin { to { transform: rotate(360deg); } }
     [v-cloak] {
       display: none;
     }
+    /* Soft-navigation spinner: shown over the CONTENT AREA ONLY while a panel
+       page is fetched, so the top bar and the side rail never disappear —
+       exactly the "shell stays, middle reloads" behaviour of mainstream
+       sites. The offset skips the side rail (188px wide, 76px below 560px);
+       inset-inline-start keeps the correct side in RTL (Persian) and LTR. */
+    #bo-page-loader { display: none; position: fixed; inset-block: 0; inset-inline-end: 0;
+      inset-inline-start: 188px; z-index: 9998;
+      align-items: center; justify-content: center; pointer-events: none;
+      background: var(--bg, #0d1424); }
+    @media (max-width:560px) { #bo-page-loader { inset-inline-start: 76px; } }
+    /* Frozen side-rail clone: keeps the rail pixel-stable on screen while the
+       new page's Vue app mounts (its rail is not in the DOM until then).
+       The top-bar clone does the same for the header strip. */
+    #bo-rail-ghost, #bo-topbar-ghost { position: fixed; z-index: 9997;
+      overflow: hidden; background: var(--surface, #10192c); }
+    #bo-rail-ghost { inset-block: 0; inset-inline-start: 0; }
+    #bo-topbar-ghost { top: 0; inset-inline-end: 0; }
+    #bo-page-loader.is-visible { display: flex; }
+    #bo-page-loader-spin { width: 34px; height: 34px; border-radius: 50%;
+      border: 3px solid rgba(89, 203, 172, .25); border-top-color: #59cbac;
+      animation: bo-boot-spin .8s linear infinite; }
     /* vazirmatn-regular - arabic_latin_latin-ext */
     @font-face {
       font-display: swap;
@@ -132,7 +177,7 @@
     // re-derived server-side before a single byte is charged (see
     // ResellerService.Quote), so a browser that lies about its own minimums
     // buys nothing.
-    const RESELLER = Object.assign(
+    var RESELLER = Object.assign(
       { isReseller: false, unlimited: false, allowanceBytes: 0, spentBytes: 0,
         availableBytes: 0, daysPerGb: 0, minCreateGb: 0, minAddGb: 0,
         allowExternalProxy: false },
@@ -148,7 +193,7 @@
     // Like .perms and RESELLER this drives what the UI SHOWS, never what it
     // ALLOWS: the routes stay reachable by direct request and the middleware is
     // the enforcement.
-    const PERMS = Object.assign({}, {{ .perms }});
+    var PERMS = Object.assign({}, {{ .perms }});
   </script>
 {{ end }}
 
@@ -258,6 +303,7 @@
     </main>
   </div>
 </div>
+<div id="boot-splash" aria-hidden="true">{{ i18n "loading" }}</div>
 {{ end }}
 
 {{ define "page/body_scripts" }}
@@ -269,8 +315,9 @@
 <script src="{{ .base_path }}assets/js/axios-init.js?{{ .asset_ver }}"></script>
 <script src="{{ .base_path }}assets/js/util/index.js?{{ .asset_ver }}"></script>
 <script src="{{ .base_path }}assets/js/nodes-sysbar.js?{{ .asset_ver }}"></script>
+<script src="{{ .base_path }}assets/js/softnav.js?{{ .asset_ver }}"></script>
 <script>
-  const basePath = '{{ .base_path }}';
+  var basePath = '{{ .base_path }}';
   axios.defaults.baseURL = basePath;
 </script>
 <script src="{{ .base_path }}assets/js/websocket.js?{{ .asset_ver }}"></script>

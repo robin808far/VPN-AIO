@@ -140,7 +140,7 @@
 </a-modal>
 
 <script>
-  const greConfigModal = {
+  var greConfigModal = {
     visible: false,
     loading: false,
     title: "",
@@ -222,7 +222,7 @@
     },
   };
 
-  const greConfigModalApp = new Vue({
+  var greConfigModalApp = new Vue({
     delimiters: ["[[", "]]"],
     el: "#gre-config-modal",
     data: {

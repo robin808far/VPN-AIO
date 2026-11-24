@@ -1098,11 +1098,29 @@ func isVpnProtocol(p model.Protocol) bool {
 }
 
 // isRelayProtocol reports whether p is a relay: it terminates its own protocol outside
-// Xray (telemt for mtproto, the in-binary gateway for ssh) and reaches Xray through a
-// PAIRED socks inbound the panel builds separately (GetSocksConfig), sharing this
-// inbound's tag.
+// Xray (telemt for mtproto, the in-binary gateway for ssh, sing-box for its protocols)
+// and reaches Xray through a PAIRED socks inbound the panel builds separately
+// (GetSocksConfig), sharing this inbound's tag.
 func isRelayProtocol(p model.Protocol) bool {
-	return p == model.MTPROTO || p == model.SSH
+	return p == model.MTPROTO || p == model.SSH || isSingboxProtocol(p)
+}
+
+// isSingboxProtocol reports whether a protocol is served ONLY by sing-box —
+// Xray cannot handle it even with the panel's patches. The Xray family AND the
+// patched-in protocols (hysteria2/tuic/anytls — the panel's Xray core carries
+// them, see third_party/Xray-core/proxy/) run under sing-box only when the
+// inbound's Core field says so.
+func isSingboxProtocol(p model.Protocol) bool {
+	return p == "shadowtls"
+}
+
+// isSingboxInbound reports whether THIS inbound runs under sing-box: the
+// sing-box-only protocols always, the shared ones by their Core field.
+func isSingboxInbound(in *model.Inbound) bool {
+	if in == nil {
+		return false
+	}
+	return isSingboxProtocol(in.Protocol) || in.Core == "singbox"
 }
 
 // hasDerivedXrayInbound reports whether what this inbound contributes to Xray is
@@ -1480,7 +1498,15 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 
 	needRestart := false
 	if inbound.Enable {
-		if hasDerivedXrayInbound(inbound.Protocol) || inbound.Protocol == model.MASQUE {
+		if isSingboxInbound(inbound) {
+			// sing-box terminates its own protocol outside Xray with no derived
+			// listener, so the live Xray API path does not apply; its own process
+			// is started here and never needs an Xray restart.
+			var sb SingboxService
+			if err := sb.RestartServices(); err != nil {
+				logger.Warning("sing-box: failed to start after inbound add:", err)
+			}
+		} else if hasDerivedXrayInbound(inbound.Protocol) || inbound.Protocol == model.MASQUE {
 			// The managed core builds derived listeners and understands MASQUE.
 			// The panel's linked config parser cannot build these inbounds.
 			needRestart = true
@@ -1519,18 +1545,26 @@ func (s *InboundService) DelInbound(id int) (bool, error) {
 	db := database.GetDB()
 
 	var tag string
+	var proto model.Protocol
+	var coreOf string
+	result := db.Model(model.Inbound{}).Select("tag", "protocol", "core").Where("id = ? and enable = ?", id, true).Row().Scan(&tag, &proto, &coreOf)
 	needRestart := false
-	result := db.Model(model.Inbound{}).Select("tag").Where("id = ? and enable = ?", id, true).First(&tag)
-	if result.Error == nil {
-		s.xrayApi.Init(p.GetAPIPort())
-		err1 := s.xrayApi.DelInbound(tag)
-		if err1 == nil {
-			logger.Debug("Inbound deleted by api:", tag)
+	if result == nil {
+		// A singbox inbound owns no Xray listener: deleting it only stops its own
+		// process, so the live Xray API path is skipped for it.
+		if isSingboxInbound(&model.Inbound{Id: id, Protocol: proto, Core: coreOf}) {
+			_ = procMgr.Stop(singboxProcName(id))
 		} else {
-			logger.Debug("Unable to delete inbound by api:", err1)
-			needRestart = true
+			s.xrayApi.Init(p.GetAPIPort())
+			err1 := s.xrayApi.DelInbound(tag)
+			if err1 == nil {
+				logger.Debug("Inbound deleted by api:", tag)
+			} else {
+				logger.Debug("Unable to delete inbound by api:", err1)
+				needRestart = true
+			}
+			s.xrayApi.Close()
 		}
-		s.xrayApi.Close()
 	} else {
 		logger.Debug("No enabled inbound founded to removing by api", tag)
 	}
@@ -1823,7 +1857,14 @@ func (s *InboundService) UpdateInbound(inbound *model.Inbound) (*model.Inbound, 
 	}
 
 	needRestart := false
-	if oldInbound.Protocol == model.MASQUE || previousProtocol == model.MASQUE {
+	if isSingboxInbound(oldInbound) || isSingboxInbound(inbound) {
+		// sing-box terminates its own protocol outside Xray, so an edit is a restart
+		// of its own process (with a fresh render) and never touches the Xray API.
+		var sb SingboxService
+		if err := sb.RestartServices(); err != nil {
+			logger.Warning("sing-box: failed to restart after inbound update:", err)
+		}
+	} else if oldInbound.Protocol == model.MASQUE || previousProtocol == model.MASQUE {
 		// Keep the current listener until the managed core loads the saved config.
 		needRestart = true
 	} else if hasDerivedXrayInbound(oldInbound.Protocol) {

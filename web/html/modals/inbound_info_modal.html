@@ -614,7 +614,7 @@
     });
   }
 
-  const infoModal = {
+  var infoModal = {
     visible: false,
     inbound: new Inbound(),
     dbInbound: new DBInbound(),
@@ -678,7 +678,7 @@
       return app.subSettings.subJsonURI + subID;
     }
   };
-  const infoModalApp = new Vue({
+  var infoModalApp = new Vue({
     delimiters: ['[[', ']]'],
     el: '#inbound-info-modal',
     data: {

@@ -1,13 +1,11 @@
-class Msg {
-    constructor(success = false, msg = "", obj = null) {
+var Msg = class Msg {    constructor(success = false, msg = "", obj = null) {
         this.success = success;
         this.msg = msg;
         this.obj = obj;
     }
 }
 
-class HttpUtil {
-    static _handleMsg(msg) {
+var HttpUtil = class HttpUtil {    static _handleMsg(msg) {
         if (!(msg instanceof Msg) || msg.msg === "") {
             return;
         }
@@ -72,16 +70,14 @@ class HttpUtil {
     }
 }
 
-class PromiseUtil {
-    static async sleep(timeout) {
+var PromiseUtil = class PromiseUtil {    static async sleep(timeout) {
         await new Promise(resolve => {
             setTimeout(resolve, timeout)
         });
     }
 }
 
-class RandomUtil {
-    static getSeq({ type = "default", hasNumbers = true, hasLowercase = true, hasUppercase = true } = {}) {
+var RandomUtil = class RandomUtil {    static getSeq({ type = "default", hasNumbers = true, hasLowercase = true, hasUppercase = true } = {}) {
         let seq = '';
 
         switch (type) {
@@ -186,8 +182,7 @@ class RandomUtil {
     }
 }
 
-class ObjectUtil {
-    static getPropIgnoreCase(obj, prop) {
+var ObjectUtil = class ObjectUtil {    static getPropIgnoreCase(obj, prop) {
         for (const name in obj) {
             if (!obj.hasOwnProperty(name)) {
                 continue;
@@ -334,8 +329,7 @@ class ObjectUtil {
     }
 }
 
-class Wireguard {
-    static gf(init) {
+var Wireguard = class Wireguard {    static gf(init) {
         var r = new Float64Array(16);
         if (init) {
             for (var i = 0; i < init.length; ++i)
@@ -521,8 +515,7 @@ class Wireguard {
     }
 }
 
-class ClipboardManager {
-    static copyText(content = "") {
+var ClipboardManager = class ClipboardManager {    static copyText(content = "") {
         // !! here old way of copying is used because not everyone can afford https connection
         return new Promise((resolve) => {
             try {
@@ -553,8 +546,7 @@ class ClipboardManager {
     }
 }
 
-class Base64 {
-    static encode(content = "", safe = false) {
+var Base64 = class Base64 {    static encode(content = "", safe = false) {
         if (safe) {
             return Base64.encode(content)
                 .replace(/\+/g, '-')
@@ -581,8 +573,7 @@ class Base64 {
     }
 }
 
-class SizeFormatter {
-    static ONE_KB = 1024;
+var SizeFormatter = class SizeFormatter {    static ONE_KB = 1024;
     static ONE_MB = this.ONE_KB * 1024;
     static ONE_GB = this.ONE_MB * 1024;
     static ONE_TB = this.ONE_GB * 1024;
@@ -599,8 +590,7 @@ class SizeFormatter {
     }
 }
 
-class CPUFormatter {
-    static cpuSpeedFormat(speed) {
+var CPUFormatter = class CPUFormatter {    static cpuSpeedFormat(speed) {
         return speed > 1000 ? (speed / 1000).toFixed(2) + " GHz" : speed.toFixed(2) + " MHz";
     }
 
@@ -609,8 +599,7 @@ class CPUFormatter {
     }
 }
 
-class TimeFormatter {
-    static formatSecond(second) {
+var TimeFormatter = class TimeFormatter {    static formatSecond(second) {
         if (second < 60) return second.toFixed(0) + 's';
         if (second < 3600) return (second / 60).toFixed(0) + 'm';
         if (second < 3600 * 24) return (second / 3600).toFixed(0) + 'h';
@@ -653,8 +642,7 @@ class TimeFormatter {
     }
 }
 
-class NumberFormatter {
-    static addZero(num) {
+var NumberFormatter = class NumberFormatter {    static addZero(num) {
         return num < 10 ? "0" + num : num;
     }
 
@@ -664,8 +652,7 @@ class NumberFormatter {
     }
 }
 
-class Utils {
-    static debounce(fn, delay) {
+var Utils = class Utils {    static debounce(fn, delay) {
         let timeoutID = null;
         return function () {
             clearTimeout(timeoutID);
@@ -676,8 +663,7 @@ class Utils {
     }
 }
 
-class CookieManager {
-    static getCookie(cname) {
+var CookieManager = class CookieManager {    static getCookie(cname) {
         let name = cname + '=';
         let ca = document.cookie.split(';');
         for (let c of ca) {
@@ -713,8 +699,7 @@ class CookieManager {
 // on the dashboard: a `vpnui.`-namespaced localStorage key, written inside a
 // try/catch because a browser with storage denied (private mode, blocked
 // third-party context) throws on setItem and must not take the page with it.
-class SecAlertDismissal {
-    static KEY = 'vpnui.secAlertDismissed';
+var SecAlertDismissal = class SecAlertDismissal {    static KEY = 'vpnui.secAlertDismissed';
 
     static isDismissed() {
         try {
@@ -731,8 +716,7 @@ class SecAlertDismissal {
     }
 }
 
-class ColorUtils {
-    static usageColor(data, threshold, total) {
+var ColorUtils = class ColorUtils {    static usageColor(data, threshold, total) {
         switch (true) {
             case data === null: return "purple";
             case total < 0: return "green";
@@ -766,14 +750,12 @@ class ColorUtils {
     }
 }
 
-class ArrayUtils {
-    static doAllItemsExist(array1, array2) {
+var ArrayUtils = class ArrayUtils {    static doAllItemsExist(array1, array2) {
         return array1.every(item => array2.includes(item));
     }
 }
 
-class URLBuilder {
-    static buildURL({ host, port, isTLS, base, path }) {
+var URLBuilder = class URLBuilder {    static buildURL({ host, port, isTLS, base, path }) {
         if (!host || host.length === 0) host = window.location.hostname;
         if (!port || port.length === 0) port = window.location.port;
         if (isTLS === undefined) isTLS = window.location.protocol === "https:";
@@ -790,8 +772,7 @@ class URLBuilder {
     }
 }
 
-class LanguageManager {
-    static supportedLanguages = [
+var LanguageManager = class LanguageManager {    static supportedLanguages = [
         {
             name: "العربية",
             value: "ar-EG",
@@ -918,7 +899,7 @@ class LanguageManager {
     }
 }
 
-const MediaQueryMixin = {
+var MediaQueryMixin = {
     data() {
         return {
             isMobile: window.innerWidth <= 768,
@@ -937,8 +918,7 @@ const MediaQueryMixin = {
     },
 }
 
-class FileManager {
-    static downloadTextFile(content, filename = 'file.txt', options = { type: "text/plain" }) {
+var FileManager = class FileManager {    static downloadTextFile(content, filename = 'file.txt', options = { type: "text/plain" }) {
         // Tolerate a bare mime-type string (older/cached callers passed 'text/plain'
         // instead of { type: 'text/plain' }); a non-object here makes the Blob
         // constructor throw "not of type 'BlobPropertyBag'".
@@ -983,8 +963,7 @@ class FileManager {
 //
 // Timers are held here, keyed, rather than on the Vue instances, so closing a
 // modal or navigating away cannot leave one running against a dead component.
-class LiveLog {
-    // Long enough not to hammer the box, short enough to feel live. The
+var LiveLog = class LiveLog {    // Long enough not to hammer the box, short enough to feel live. The
     // aggregated view fans out to one request per selected core, which is why
     // it only ever polls the cores actually ticked in the filter.
     static get INTERVAL_MS() { return 3000; }
@@ -1033,7 +1012,7 @@ LiveLog._timers = {};
 // (most of them: xl2tpd, ocserv and pppd just print sentences) is treated as
 // INFO, which is what makes "Warning" and "Error" actually narrow the view
 // instead of leaving every core's chatter on screen.
-const LOG_RANKS = {
+var LOG_RANKS = {
     DEBUG: 0, TRACE: 0,
     INFO: 1,
     NOTICE: 2,
@@ -1041,8 +1020,8 @@ const LOG_RANKS = {
     ERROR: 4, ERR: 4, FATAL: 4, CRIT: 4, CRITICAL: 4, PANIC: 4, ALERT: 4, EMERG: 4,
 };
 // The values the level <select> binds, mapped onto the same scale.
-const LOG_LEVEL_FLOOR = { debug: 0, info: 1, notice: 2, warning: 3, err: 4, error: 4 };
-const LOG_UNKNOWN_RANK = LOG_RANKS.INFO;
+var LOG_LEVEL_FLOOR = { debug: 0, info: 1, notice: 2, warning: 3, err: 4, error: 4 };
+var LOG_UNKNOWN_RANK = LOG_RANKS.INFO;
 
 // One renderer for every log the panel shows, so a daemon's output, Xray's and
 // the panel's own all read the same way.
@@ -1055,8 +1034,7 @@ const LOG_UNKNOWN_RANK = LOG_RANKS.INFO;
 // Colour encodes SEVERITY only. The source is a neutral badge on purpose: the
 // panel carries thirteen cores and hue cannot reliably distinguish that many,
 // which is the same reason protocol tags elsewhere are neutral.
-class LogFormatter {
-    // Log text is NOT trusted: lines echo client-supplied names (VPN usernames,
+var LogFormatter = class LogFormatter {    // Log text is NOT trusted: lines echo client-supplied names (VPN usernames,
     // remarks, SNI), and the pane renders with v-html. Everything is escaped
     // before any markup is added around it.
     static esc(s) {
@@ -1163,8 +1141,7 @@ class LogFormatter {
     }
 }
 
-class GeoUtil {
-    // "US" -> the regional-indicator pair the platform renders as a flag.
+var GeoUtil = class GeoUtil {    // "US" -> the regional-indicator pair the platform renders as a flag.
     // Built from the letters rather than a lookup table: every ISO 3166-1
     // alpha-2 code maps to its flag by the same offset, so there is no list to
     // keep in sync and a code we have never seen still renders.
@@ -1205,8 +1182,7 @@ class GeoUtil {
     }
 }
 
-class IntlUtil {
-    static formatDate(date) {
+var IntlUtil = class IntlUtil {    static formatDate(date) {
         const language = LanguageManager.getLanguage()
 
         let intlOptions = {

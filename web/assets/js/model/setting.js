@@ -1,5 +1,4 @@
-class AllSetting {
-
+var AllSetting = class AllSetting {
     constructor(data) {
         this.webListen = "";
         this.webDomain = "";

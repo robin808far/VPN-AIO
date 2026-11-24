@@ -15,7 +15,7 @@ import (
 type SubClashService struct {
 	inboundService service.InboundService
 	wgcService     service.WgcService
-	awgService     service.AwgService
+	awgService     *service.AwgService
 	SubService     *SubService
 }
 

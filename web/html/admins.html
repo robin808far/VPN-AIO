@@ -95,7 +95,7 @@
 {{template "modals/adminModal" .}}
 
 <script>
-  const columns = [
+  var columns = [
     { title: '{{ i18n "pages.admins.username" }}', align: 'center', width: 90, scopedSlots: { customRender: 'username' } },
     { title: '{{ i18n "pages.admins.nickname" }}', dataIndex: 'nickname', align: 'center', width: 70 },
     { title: '{{ i18n "status" }}', align: 'center', width: 50, scopedSlots: { customRender: 'enable' } },
@@ -105,7 +105,7 @@
     { title: '', align: 'center', width: 30, scopedSlots: { customRender: 'action' } },
   ];
 
-  const app = new Vue({
+  var app = new Vue({
     delimiters: ['[[', ']]'],
     mixins: [MediaQueryMixin],
     el: '#app',

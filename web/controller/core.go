@@ -37,10 +37,16 @@ func (a *CoreController) initRouter(g *gin.RouterGroup) {
 	// Reboots the HOST: escalation-class.
 	g.POST("/reboot", requireSuperAdmin(), a.reboot)
 	g.POST("/restart/:core", a.restart)
+	g.POST("/singbox/update", a.updateSingbox)
 	g.POST("/restart-all", a.restartAll)
 	g.POST("/stop/:core", a.stop)
 	g.GET("/logs/:core", a.logs)
 	g.GET("/config/:core", a.coreConfig)
+	g.GET("/singbox/base-config", a.singboxBaseConfig)
+	g.POST("/singbox/base-config", requireSuperAdmin(), a.saveSingboxBaseConfig)
+	g.POST("/singbox/reset-base-config", requireSuperAdmin(), a.resetSingboxBaseConfig)
+	g.POST("/singbox/start-core", requireSuperAdmin(), a.startSingboxCore)
+	g.POST("/singbox/stop-core", requireSuperAdmin(), a.stopSingboxCore)
 	// Editing a generated config is escalation-class in the same way uninstall and
 	// reboot above are, and for a sharper reason than either: an OpenVPN or accel-ppp
 	// config can name a script for a root daemon to execute, so write access here is
@@ -175,6 +181,18 @@ func (a *CoreController) restart(c *gin.Context) {
 	jsonMsg(c, I18nWeb(c, "pages.core.toasts.restarted"), err)
 }
 
+// updateSingbox downloads the latest upstream sing-box release, replaces the
+// binary and restarts every singbox inbound process on it.
+func (a *CoreController) updateSingbox(c *gin.Context) {
+	var svc service.SingboxService
+	version, err := svc.UpdateSingbox()
+	if err != nil {
+		jsonMsg(c, "", err)
+		return
+	}
+	jsonObj(c, gin.H{"version": version, "success": true}, nil)
+}
+
 // restartAll restarts every core.
 func (a *CoreController) restartAll(c *gin.Context) {
 	err := a.coreService.RestartAll()
@@ -253,4 +271,52 @@ func (a *CoreController) saveCoreConfig(c *gin.Context) {
 		// actually produced rather than against what it had before the save.
 		"targets": a.coreService.CoreConfigTargets(core),
 	}, nil)
+}
+
+// singboxBaseConfigForm is the save body for the sing-box base config. Form-encoded
+// like every other panel POST (axios runs bodies through Qs.stringify).
+type singboxBaseConfigForm struct {
+	Config string `form:"config"`
+}
+
+// singboxBaseConfig returns the stored (or default) sing-box base config — the
+// top-level blocks (log, dns, ntp, route, experimental, outbounds, endpoints)
+// every singbox inbound's rendered config is merged with.
+func (a *CoreController) singboxBaseConfig(c *gin.Context) {
+	payload, err := a.coreService.GetSingboxBaseConfig()
+	if err != nil {
+		jsonObj(c, nil, err)
+		return
+	}
+	jsonObj(c, gin.H{"config": payload.Config, "isDefault": payload.Default, "maintenance": a.coreService.SingboxMaintenanceStatus()}, nil)
+}
+
+// saveSingboxBaseConfig validates the text with `sing-box check`, stores it and
+// regenerates every singbox inbound against it.
+func (a *CoreController) saveSingboxBaseConfig(c *gin.Context) {
+	var form singboxBaseConfigForm
+	if err := c.ShouldBind(&form); err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.core.toasts.configSaved"), err)
+		return
+	}
+	err := a.coreService.SaveSingboxBaseConfig(form.Config)
+	jsonMsg(c, I18nWeb(c, "pages.core.toasts.configSaved"), err)
+}
+
+// resetSingboxBaseConfig drops the stored override and re-applies the default.
+func (a *CoreController) resetSingboxBaseConfig(c *gin.Context) {
+	err := a.coreService.ResetSingboxBaseConfig()
+	jsonMsg(c, I18nWeb(c, "pages.core.toasts.configSaved"), err)
+}
+
+// startSingboxCore lifts maintenance and starts every enabled singbox inbound.
+func (a *CoreController) startSingboxCore(c *gin.Context) {
+	err := a.coreService.StartSingboxCore()
+	jsonMsg(c, I18nWeb(c, "pages.core.toasts.restarted"), err)
+}
+
+// stopSingboxCore enters maintenance: everything stops and stays stopped.
+func (a *CoreController) stopSingboxCore(c *gin.Context) {
+	err := a.coreService.StopSingboxCore()
+	jsonMsg(c, I18nWeb(c, "pages.core.toasts.stopped"), err)
 }

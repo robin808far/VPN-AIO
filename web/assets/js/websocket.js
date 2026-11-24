@@ -1,8 +1,7 @@
 /**
  * WebSocket client for real-time updates
  */
-class WebSocketClient {
-  constructor(basePath = '') {
+var WebSocketClient = class WebSocketClient {  constructor(basePath = '') {
     this.basePath = basePath;
     this.ws = null;
     this.reconnectAttempts = 0;

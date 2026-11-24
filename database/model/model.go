@@ -333,8 +333,16 @@ type Inbound struct {
 	IPLimitStrategy string `json:"ipLimitStrategy" form:"ipLimitStrategy" gorm:"default:reject"`
 
 	// Xray configuration fields
-	Listen         string   `json:"listen" form:"listen"`
-	Port           int      `json:"port" form:"port"`
+	Listen string `json:"listen" form:"listen"`
+	Port   int    `json:"port" form:"port"`
+	// Core is which engine runs this inbound: "" (the default) means Xray, the
+	// panel's original core; "singbox" runs it under the sing-box core instead.
+	// This is the s-ui / VortexUI / Zagros model — the core is a per-inbound
+	// CHOICE, not a protocol: vless, vmess, trojan and shadowsocks are valid
+	// under either engine, while hysteria2, tuic, anytls and shadowtls are
+	// sing-box-only and always run under sing-box regardless of this field (see
+	// isSingboxProtocol). An empty value keeps every existing row Xray.
+	Core           string   `json:"core" form:"core" gorm:"default:''"`
 	Protocol       Protocol `json:"protocol" form:"protocol"`
 	Settings       string   `json:"settings" form:"settings"`
 	StreamSettings string   `json:"streamSettings" form:"streamSettings"`

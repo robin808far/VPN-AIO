@@ -42,13 +42,13 @@
   // inbound it was handed.
 
   // Every bulk operation the modal can offer, in the order it lists them.
-  const BULK_OPS = ['addDays', 'subDays', 'addTraffic', 'subTraffic',
+  var BULK_OPS = ['addDays', 'subDays', 'addTraffic', 'subTraffic',
     'enable', 'disable', 'freeze', 'unfreeze', 'addInbounds', 'removeInbounds', 'delete'];
 
   // The two that change WHICH INBOUNDS serve an account rather than what the
   // account is allowed. They do not go through the bulk client applier at all:
   // see runBulkMembership.
-  const BULK_MEMBERSHIP_OPS = ['addInbounds', 'removeInbounds'];
+  var BULK_MEMBERSHIP_OPS = ['addInbounds', 'removeInbounds'];
 
   // Four of them are withheld from a reseller. subDays is refused outright by the
   // server for a reseller, so offering it only buys them a failed run. addDays is
@@ -69,12 +69,12 @@
   // The three protocols whose accounts cannot be told apart across two inbounds of
   // the same kind, mirrored from ValidateMembershipSet (web/service/account.go).
   // Presentation only: the server refuses the set per account regardless.
-  const BULK_AMBIGUOUS_PROTOCOLS = ['l2tp', 'pptp', 'ikev2'];
+  var BULK_AMBIGUOUS_PROTOCOLS = ['l2tp', 'pptp', 'ikev2'];
 
   // The first option that survives the filter, so the select never opens pointing
   // at an operation it does not render. An a-select bound to a value with no
   // matching option shows the bare value string instead of a label.
-  const DEFAULT_BULK_OP = BULK_OPS.find(isBulkOpAllowed) || 'addTraffic';
+  var DEFAULT_BULK_OP = BULK_OPS.find(isBulkOpAllowed) || 'addTraffic';
 
   // One account's identity, the way the server keys it (accountKey in
   // web/service/account.go): the email, trimmed and lower-cased. Two rows that
@@ -83,7 +83,7 @@
     return typeof email === 'string' ? email.trim().toLowerCase() : '';
   }
 
-  const ClientActionsMixin = {
+  var ClientActionsMixin = {
     // Selection and bulk-run state travel with the methods that drive them, so a
     // page only has to mix this in to get a working selection.
     data() {

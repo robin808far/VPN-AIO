@@ -119,11 +119,12 @@ func TestClientIdentityMatchesTheBrowser(t *testing.T) {
 	}
 }
 
-// parseJsProtocols reads `const Protocols = { VMESS: 'vmess', ... }` into
-// name -> value ("VMESS" -> "vmess").
+// parseJsProtocols reads the `Object.assign(Protocols, { VMESS: 'vmess', ... })`
+// merge block (the declaration itself is a `var ... : {}` fallback, not a map
+// literal) into name -> value ("VMESS" -> "vmess").
 func parseJsProtocols(t *testing.T, js string) map[string]string {
 	t.Helper()
-	block := jsBlockAfter(t, js, "const Protocols = {")
+	block := jsBlockAfter(t, js, "Object.assign(Protocols, {")
 	out := map[string]string{}
 	for _, m := range regexp.MustCompile(`(\w+)\s*:\s*'([^']+)'`).FindAllStringSubmatch(block, -1) {
 		out[m[1]] = m[2]

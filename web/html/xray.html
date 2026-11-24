@@ -219,7 +219,7 @@
 {{template "modals/warpSocksModal"}}
 {{template "modals/nordModal"}}
 <script>
-  const rulesColumns = [
+  var rulesColumns = [
     { title: "#", align: 'center', width: 15, scopedSlots: { customRender: 'action' } },
     {
       title: '{{ i18n "pages.xray.rules.source"}}', children: [
@@ -248,14 +248,14 @@
     { title: '{{ i18n "pages.xray.rules.balancer"}}', dataIndex: 'balancerTag', align: 'center', width: 15 },
   ];
 
-  const rulesMobileColumns = [
+  var rulesMobileColumns = [
     { title: "#", align: 'center', width: 20, scopedSlots: { customRender: 'action' } },
     { title: '{{ i18n "pages.xray.rules.inbound"}}', align: 'center', width: 50, ellipsis: true, scopedSlots: { customRender: 'inbound' } },
     { title: '{{ i18n "pages.xray.rules.outbound"}}', align: 'center', width: 50, ellipsis: true, scopedSlots: { customRender: 'outbound' } },
     { title: '{{ i18n "pages.xray.rules.info"}}', align: 'center', width: 50, ellipsis: true, scopedSlots: { customRender: 'info' } },
   ];
 
-  const outboundColumns = [
+  var outboundColumns = [
     { title: "#", align: 'center', width: 60, scopedSlots: { customRender: 'action' } },
     { title: '{{ i18n "pages.xray.outbound.tag"}}', dataIndex: 'tag', align: 'center', width: 50 },
     { title: '{{ i18n "protocol"}}', align: 'center', width: 50, scopedSlots: { customRender: 'protocol' } },
@@ -265,34 +265,34 @@
     { title: '{{ i18n "pages.xray.outbound.test" }}', align: 'center', width: 60, scopedSlots: { customRender: 'test' } },
   ];
 
-  const reverseColumns = [
+  var reverseColumns = [
     { title: "#", align: 'center', width: 20, scopedSlots: { customRender: 'action' } },
     { title: '{{ i18n "pages.xray.outbound.type"}}', dataIndex: 'type', align: 'center', width: 50 },
     { title: '{{ i18n "pages.xray.outbound.tag"}}', dataIndex: 'tag', align: 'center', width: 50 },
     { title: '{{ i18n "pages.xray.outbound.domain"}}', dataIndex: 'domain', align: 'center', width: 50 },
   ];
 
-  const balancerColumns = [
+  var balancerColumns = [
     { title: "#", align: 'center', width: 20, scopedSlots: { customRender: 'action' } },
     { title: '{{ i18n "pages.xray.balancer.tag"}}', dataIndex: 'tag', align: 'center', width: 50 },
     { title: '{{ i18n "pages.xray.balancer.balancerStrategy"}}', align: 'center', width: 50, scopedSlots: { customRender: 'strategy' } },
     { title: '{{ i18n "pages.xray.balancer.balancerSelectors"}}', align: 'center', width: 100, scopedSlots: { customRender: 'selector' } },
   ];
 
-  const dnsColumns = [
+  var dnsColumns = [
     { title: "#", align: 'center', width: 20, scopedSlots: { customRender: 'action' } },
     { title: '{{ i18n "pages.xray.outbound.address"}}', align: 'center', width: 50, scopedSlots: { customRender: 'address' } },
     { title: '{{ i18n "pages.xray.dns.domains"}}', align: 'center', width: 50, scopedSlots: { customRender: 'domain' } },
     { title: '{{ i18n "pages.xray.dns.expectIPs"}}', align: 'center', width: 50, scopedSlots: { customRender: 'expectIPs' } },
   ];
 
-  const fakednsColumns = [
+  var fakednsColumns = [
     { title: "#", align: 'center', width: 20, scopedSlots: { customRender: 'action' } },
     { title: '{{ i18n "pages.xray.fakedns.ipPool"}}', dataIndex: 'ipPool', align: 'center', width: 50 },
     { title: '{{ i18n "pages.xray.fakedns.poolSize"}}', dataIndex: 'poolSize', align: 'center', width: 50 },
   ];
 
-  const app = new Vue({
+  var app = new Vue({
     delimiters: ['[[', ']]'],
     mixins: [MediaQueryMixin, SectionNavMixin],
     el: '#app',

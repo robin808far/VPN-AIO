@@ -34,6 +34,9 @@ declare -A PLATFORM=(
 
 ARCHES=("${@:-amd64}")
 
+# sing-box release to bundle (pinned, like every other daemon source here).
+SINGBOX_VERSION="1.12.14"
+
 build_arch() {
     local goarch="$1"
     local platform="${PLATFORM[$goarch]:-}"
@@ -243,6 +246,26 @@ build_arch() {
         -v "$REPO_ROOT/build/backend/telemt-bundle.sh:/telemt-bundle.sh:ro" \
         -v "$REPO_ROOT/third_party/telemt:/src:ro" \
         rust:alpine sh -e /telemt-bundle.sh
+
+    # sing-box — the modern proxy platform (hysteria2, tuic, anytls, shadowtls, …).
+    # A fully-static Go binary, so like telemt it is one flat file, no relocatable
+    # tree. Downloaded from the official SagerNet/sing-box releases (pinned tag)
+    # rather than built: upstream publishes static musl binaries for both arches,
+    # which is faster and more reproducible than a source build here.
+    step "Fetching sing-box $SINGBOX_VERSION for $goarch"
+    case "$goarch" in
+        amd64) singbox_arch=amd64 ;;
+        arm64) singbox_arch=arm64 ;;
+    esac
+    singbox_asset="sing-box-${SINGBOX_VERSION}-linux-${singbox_arch}.tar.gz"
+    docker run --rm --platform "$platform" \
+        -v "$outdir:/out" \
+        alpine:3.20 sh -euc "
+        wget -qO /tmp/sb.tar.gz \"https://github.com/SagerNet/sing-box/releases/download/v${SINGBOX_VERSION}/${singbox_asset}\" &&
+        tar -xzf /tmp/sb.tar.gz -C /tmp &&
+        cp /tmp/sing-box-${SINGBOX_VERSION}-linux-${singbox_arch}/sing-box /out/sing-box &&
+        chmod 755 /out/sing-box &&
+        /out/sing-box version"
 
     ok "Done: $(ls -lh "$outdir")"
 }

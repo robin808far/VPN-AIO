@@ -189,6 +189,15 @@
             // section.
             this.section = "identity";
             this.counts = {};
+            // A scan result belongs to the session that produced it: reopening the
+            // dialog must not resurrect a Feasible card for a target nobody kept.
+            // These live in the Vue data, not on inModal, so reset them there.
+            if (inboundModalVueInstance) {
+                inboundModalVueInstance.realityScanResult = null;
+                inboundModalVueInstance.realityFinderOpen = false;
+                inboundModalVueInstance.realityFinderRows = [];
+                inboundModalVueInstance.realityFinderQuery = "";
+            }
         },
         close() {
             inModal.visible = false;
@@ -267,6 +276,57 @@
                     inModal.inbound.clients.length > 0
                     ? inModal.inbound.clients[0]
                     : null;
+            },
+            // sing-box form state: validity of the raw inbound JSON being edited.
+            singboxDraft: "",
+            // REALITY target scanner: one-shot probe result for the Target field,
+            // and the state of the Find Targets dialog.
+            realityScanResult: null,
+            realityFinderOpen: false,
+            realityFinderQuery: "",
+            realityFinderBusy: false,
+            realityFinderRows: [],
+            realityFinderColumns: [{
+                title: "Target",
+                dataIndex: "target",
+            }, {
+                title: "Status",
+                dataIndex: "feasible",
+                scopedSlots: { customRender: "status" },
+            }, {
+                title: "TLS",
+                dataIndex: "tlsVersion",
+            }, {
+                title: "ALPN",
+                dataIndex: "alpn",
+            }, {
+                title: "Key Exchange",
+                dataIndex: "keyExchange",
+            }, {
+                title: "Certificate",
+                dataIndex: "certificate",
+            }, {
+                title: "Cert chain",
+                dataIndex: "certChain",
+                customRender: (v) => v ? v + " B" : "",
+            }, {
+                title: "Latency",
+                dataIndex: "latencyMs",
+                customRender: (v) => v ? v + " ms" : "",
+            }, {
+                title: "",
+                key: "use",
+                scopedSlots: { customRender: "use" },
+            }],
+            get singboxJsonStatus() {
+                const s = inModal.inbound;
+                if (!s || s.core !== "singbox") return { status: "", help: "" };
+                try {
+                    JSON.parse(this.singboxDraft || "{}");
+                    return { status: "success", help: "" };
+                } catch (e) {
+                    return { status: "error", help: "invalid JSON: " + e.message };
+                }
             },
             get datepicker() {
                 return app.datepicker;
@@ -399,7 +459,13 @@
             resellerForcedDays() {
                 return !!(RESELLER.isReseller && RESELLER.daysPerGb > 0);
             },
-            // The derived duration for the client being added. This modal has no
+            // Derived title for the scan alert — used as a computed-style
+            // message so the alert text stays in one place.
+            realityScanTitleText() {
+                const r = this.realityScanResult;
+                if (!r) return "";
+                return r.error || !r.feasible ? "Unusable" : "Feasible";
+            },
             // single `client` field (the form renders inside a v-for over the
             // inbound's clients), so read the first one, which is the only one
             // the add form ever shows.
@@ -811,6 +877,16 @@
                 return offered.includes(inbound.stream.network);
             },
             onProtocolChange(protocol) {
+                // Core follows the protocol only where it must: shadowtls has no
+                // Xray counterpart even in the patched core. hysteria2/tuic/anytls
+                // default to Xray (the patched core serves them); the operator can
+                // still pick sing-box in the Core dropdown below.
+                if (protocol === "shadowtls") {
+                    inModal.inbound.core = "singbox";
+                    this.singboxSeed(inModal.inbound);
+                } else {
+                    inModal.inbound.core = "";
+                }
                 // Prefill the standard control port for the PPP-based VPN protocols
                 // (L2TP 1701, PPTP 1723) and OpenVPN (UDP 1195 / TCP 1194 when ports
                 // are separated; 1195 is also the shared default) so the operator
@@ -856,6 +932,11 @@
                     // 443 is what MTProto clients expect and what FakeTLS needs to be
                     // plausible (an "HTTPS" session on a non-443 port is a giveaway).
                     inModal.inbound.port = 443;
+                } else if (protocol === 'singbox') {
+                    // Like anytls/tuic above: the common sing-box types impersonate
+                    // HTTPS (hysteria2 is QUIC on 443 by default) and a censor treats
+                    // them on another port as an anomaly by itself.
+                    inModal.inbound.port = 443;
                 } else if (protocol === 'ssh') {
                     // Non-privileged default so the in-binary SSH server binds without
                     // colliding with the host's own sshd on 22.
@@ -866,6 +947,195 @@
                     // censor treats any of them on another port as an anomaly by itself.
                     inModal.inbound.port = 443;
                 }
+            },
+            // sing-box helpers. When the operator picks the sing-box core the
+            // inbound's settings become a RAW sing-box inbound object: a minimal
+            // valid block is seeded from the protocol + port, and the JSON editor
+            // is the escape hatch for everything else sing-box can express.
+            coreSelectable(protocol) {
+                // Everything the patched Xray core serves can also run under
+                // sing-box; the operator picks the engine in the Core dropdown.
+                return ["vmess", "vless", "trojan", "shadowsocks",
+                    "hysteria2", "tuic", "anytls"].includes(protocol);
+            },
+            onCoreChange(core) {
+                const inb = inModal.inbound;
+                if (!inb) return;
+                if (core === "singbox") {
+                    this.singboxSeed(inb);
+                } else {
+                    // Back to Xray: restore the panel's own settings shape, and
+                    // reset the transport to one Xray always has — a sing-box
+                    // inbound may have left a transport block (ws/grpc/...) that
+                    // only makes sense with sing-box's own JSON, but xhttp/kcp/
+                    // xdrive are the ones the sing-box JSON can carry over as
+                    // names while the Xray form then shows a stale pick.
+                    inb.settings = new Inbound.Settings(inb.protocol);
+                    if (["xhttp", "xdrive"].includes(inb.stream.network)) {
+                        inb.stream.network = "tcp";
+                    }
+                }
+            },
+            singboxSeed(inb) {
+                const port = inb.port || 443;
+                let block;
+                switch (inb.protocol) {
+                    case "vmess":
+                    case "vless":
+                        block = { type: inb.protocol, tag: "singbox-in", listen: "::", listen_port: port, users: [{ name: "user1", uuid: RandomUtil.randomUUID(), flow: "" }] };
+                        break;
+                    case "trojan":
+                        block = { type: "trojan", tag: "singbox-in", listen: "::", listen_port: port, users: [{ name: "user1", password: RandomUtil.randomSeq(16) }] };
+                        break;
+                    case "shadowsocks":
+                        block = { type: "shadowsocks", tag: "singbox-in", listen: "::", listen_port: port, method: "2022-blake3-aes-128-gcm", password: RandomUtil.randomSeq(16) };
+                        break;
+                    default:
+                        block = { type: inb.protocol, tag: "singbox-in", listen: "::", listen_port: port };
+                }
+                this.singboxDraft = JSON.stringify(block, null, 2);
+            },
+            singboxJsonText() {
+                if (this.singboxDraft) return this.singboxDraft;
+                const inb = inModal.inbound;
+                if (!inb) return "{}";
+                // Editing an existing singbox inbound: show its stored block.
+                try {
+                    const parsed = JSON.parse(inb.settings || "{}");
+                    return JSON.stringify(parsed, null, 2);
+                } catch (e) {
+                    return inb.settings || "{}";
+                }
+            },
+            applySingboxJson(text) {
+                this.singboxDraft = text;
+                try {
+                    const block = JSON.parse(text);
+                    const inb = inModal.inbound;
+                    if (inb && Number.isInteger(block.listen_port)) {
+                        inb.port = block.listen_port;
+                    }
+                } catch (e) { /* invalid JSON: singboxJsonStatus flags it, keep typing */ }
+            },
+            // ---- graphical sing-box form (s-ui style): each field parses the
+            // draft, edits one path and re-serializes, so the JSON tab and the
+            // port box always show the same object. ----
+            singboxObj() {
+                try {
+                    return JSON.parse(this.singboxDraft || this.singboxJsonText());
+                } catch (e) {
+                    return null;
+                }
+            },
+            singboxWrite(obj) {
+                this.singboxDraft = JSON.stringify(obj, null, 2);
+                const inb = inModal.inbound;
+                if (inb && Number.isInteger(obj.listen_port)) {
+                    inb.port = obj.listen_port;
+                }
+            },
+            singboxGet(path, def) {
+                const obj = this.singboxObj();
+                if (!obj) return def;
+                let cur = obj;
+                for (const k of path) {
+                    if (cur == null || typeof cur !== "object" || !(k in cur)) return def;
+                    cur = cur[k];
+                }
+                return cur === undefined ? def : cur;
+            },
+            singboxSet(path, value) {
+                const obj = this.singboxObj();
+                if (!obj) return;
+                let cur = obj;
+                for (let i = 0; i < path.length - 1; i++) {
+                    if (cur[path[i]] == null || typeof cur[path[i]] !== "object") {
+                        if (value === undefined) return;
+                        cur[path[i]] = {};
+                    }
+                    cur = cur[path[i]];
+                }
+                const last = path[path.length - 1];
+                if (value === undefined) delete cur[last];
+                else cur[last] = value;
+                // Drop containers the edit just emptied so the JSON stays readable
+                for (let i = path.length - 1; i > 0; i--) {
+                    let p = obj;
+                    for (let j = 0; j < i - 1; j++) p = p[path[j]];
+                    const mid = p[path[i - 1]];
+                    if (mid && typeof mid === "object" && !Array.isArray(mid) && Object.keys(mid).length === 0) {
+                        delete p[path[i - 1]];
+                    } else break;
+                }
+                this.singboxWrite(obj);
+            },
+            singboxHas(path) {
+                const obj = this.singboxObj();
+                if (!obj) return false;
+                let cur = obj;
+                for (const k of path) {
+                    if (cur == null || typeof cur !== "object" || !(k in cur)) return false;
+                    cur = cur[k];
+                }
+                return true;
+            },
+            singboxToggleBlock(path, on, seed) {
+                this.singboxSet(path, on ? JSON.parse(JSON.stringify(seed)) : undefined);
+            },
+            singboxUsesUsers() {
+                return ["vless", "vmess", "trojan", "anytls", "shadowtls", "hysteria2", "tuic", "mixed", "socks", "http"]
+                    .includes(this.singboxGet(["type"]));
+            },
+            singboxUsers() {
+                const obj = this.singboxObj();
+                return obj && Array.isArray(obj.users) ? obj.users : [];
+            },
+            singboxUserGet(i, key) {
+                return this.singboxUsers()[i]?.[key] ?? "";
+            },
+            singboxUserSet(i, key, value) {
+                const obj = this.singboxObj();
+                if (!obj || !Array.isArray(obj.users) || !obj.users[i]) return;
+                obj.users[i][key] = value;
+                this.singboxWrite(obj);
+            },
+            singboxAddUser() {
+                const obj = this.singboxObj();
+                if (!obj) return;
+                if (!Array.isArray(obj.users)) obj.users = [];
+                obj.users.push({ name: "user" + (obj.users.length + 1) });
+                this.singboxWrite(obj);
+            },
+            singboxRemoveUser(i) {
+                const obj = this.singboxObj();
+                if (!obj || !Array.isArray(obj.users)) return;
+                obj.users.splice(i, 1);
+                if (obj.users.length === 0) delete obj.users;
+                this.singboxWrite(obj);
+            },
+            singboxHostHeader() {
+                const h = this.singboxGet(["transport", "headers"]);
+                if (!h) return "";
+                return h.Host ?? h.host ?? "";
+            },
+            singboxSetHostHeader(v) {
+                const path = ["transport", "headers"];
+                const obj = this.singboxObj();
+                if (!obj) return;
+                if (!obj.transport) obj.transport = {};
+                if (!obj.transport.headers) obj.transport.headers = {};
+                if (v === "") delete obj.transport.headers.Host;
+                else obj.transport.headers.Host = v;
+                if (Object.keys(obj.transport.headers).length === 0) delete obj.transport.headers;
+                this.singboxWrite(obj);
+            },
+            singboxShortIds() {
+                const ids = this.singboxGet(["tls", "reality", "short_id"], []);
+                return Array.isArray(ids) ? ids.join(",") : "";
+            },
+            singboxSetShortIds(text) {
+                const ids = text.split(",").map(s => s.trim()).filter(s => s.length > 0);
+                this.singboxSet(["tls", "reality", "short_id"], ids.length > 0 ? ids : undefined);
             },
             streamNetworkChange() {
                 if (!inModal.inbound.canEnableTls()) {
@@ -1013,6 +1283,29 @@
                 s.certificateFile = hit.certPath;
                 s.keyFile = hit.keyPath;
             },
+            // The same picker for singbox inbounds: their settings JSON is the raw
+            // sing-box object, so the managed pair lands on tls.certificate_path /
+            // tls.key_path — the fields the rendered config feeds straight to the
+            // daemon. Matching is by stored path, exactly like sslCertSelected.
+            sslCertSelectedSingbox() {
+                if (!this.inModal || !this.inModal.inbound) return '';
+                const path = (this.singboxGet(['tls', 'certificate_path']) || '').trim();
+                if (!path) return '';
+                const hit = this.sslCertChoices().find(c => c.certPath === path);
+                return hit ? hit.profile : '';
+            },
+            applyManagedCertSingbox(profile) {
+                if (!profile) {
+                    this.singboxSet(['tls', 'certificate_path'], '');
+                    this.singboxSet(['tls', 'key_path'], '');
+                    return;
+                }
+                const hit = this.sslCertChoices().find(c => c.profile === profile);
+                if (!hit) return;
+                this.singboxSet(['tls', 'enabled'], true);
+                this.singboxSet(['tls', 'certificate_path'], hit.certPath);
+                this.singboxSet(['tls', 'key_path'], hit.keyPath);
+            },
             async getNewX25519Cert() {
                 inModal.loading(true);
                 const msg = await HttpUtil.get("/panel/api/server/getNewX25519Cert");
@@ -1047,6 +1340,71 @@
                     this.inbound.stream.reality.target = randomTarget.target;
                     this.inbound.stream.reality.serverNames = randomTarget.sni;
                 }
+            },
+            // One-shot probe of whatever sits in the Target field, shown inline
+            // next to the form the way 3x-ui reports it.
+            async scanRealityTarget() {
+                const target = (this.inbound.stream.reality.target || "").trim();
+                if (!target) {
+                    this.$message.warn("Type a target first, e.g. example.com:443");
+                    return;
+                }
+                this.realityScanResult = null;
+                inModal.loading(true);
+                try {
+                    const msg = await HttpUtil.get("/panel/api/server/scanRealityTarget", {
+                        target: target,
+                    });
+                    if (!msg.success) {
+                        return;
+                    }
+                    this.realityScanResult = msg.obj;
+                    if (msg.obj.feasible && msg.obj.sni && !this.inbound.stream.reality.serverNames) {
+                        this.inbound.stream.reality.serverNames = msg.obj.sni;
+                    }
+                } finally {
+                    inModal.loading(false);
+                }
+            },
+            realityScanTitle() {
+                const r = this.realityScanResult;
+                if (!r) return "";
+                if (r.error) return "Unusable";
+                return r.feasible ? "Feasible" : "Unusable";
+            },
+            // The multi-target dialog: opens empty, the first Scan probes the
+            // common candidates like 3x-ui does.
+            async openRealityFinder() {
+                this.realityFinderOpen = true;
+                if (this.realityFinderRows.length === 0) {
+                    this.runRealityFinder();
+                }
+            },
+            async runRealityFinder() {
+                if (this.realityFinderBusy) return;
+                this.realityFinderBusy = true;
+                try {
+                    const msg = await HttpUtil.get("/panel/api/server/findRealityTargets", {
+                        query: (this.realityFinderQuery || "").trim(),
+                    });
+                    if (!msg.success) {
+                        this.$message.error(msg.msg || "scan failed");
+                        return;
+                    }
+                    this.realityFinderRows = msg.obj || [];
+                } finally {
+                    this.realityFinderBusy = false;
+                }
+            },
+            // "Use" writes the row into Target + SNI, and runs the single-target
+            // scan so the operator sees the same green box the Scan button gives.
+            useRealityFinderRow(row) {
+                this.inbound.stream.reality.target = row.target;
+                if (row.sni) {
+                    this.inbound.stream.reality.serverNames = row.sni;
+                }
+                this.realityFinderOpen = false;
+                this.realityScanResult = row;
             },
             async getNewEchCert() {
                 inModal.loading(true);

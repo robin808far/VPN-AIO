@@ -104,6 +104,27 @@
               </a-select>
           </a-form-item>
 
+          <a-form-item v-if="coreSelectable(inbound.protocol)">
+              <template slot="label">
+                  <a-tooltip>
+                      <template slot="title">
+                          <span>{{ i18n "pages.inbounds.coreDesc" }}</span>
+                      </template>
+                      {{ i18n "pages.inbounds.core" }}
+                      <a-icon type="question-circle"></a-icon>
+                  </a-tooltip>
+              </template>
+              <a-select
+                  v-model="inbound.core"
+                  :disabled="isEdit"
+                  @change="onCoreChange"
+                  :dropdown-class-name="themeSwitcher.currentTheme"
+              >
+                  <a-select-option value="">Xray</a-select-option>
+                  <a-select-option value="singbox">Sing-Box</a-select-option>
+              </a-select>
+          </a-form-item>
+
           <a-form-item>
               <template slot="label">
                   <a-tooltip>
@@ -317,6 +338,7 @@
       <template v-if="inbound.protocol === Protocols.AWG">{{template "form/awg"}}</template>
       <template v-if="inbound.protocol === Protocols.GRE">{{template "form/gre"}}</template>
       <template v-if="inbound.protocol === Protocols.MTPROTO">{{template "form/mtproto"}}</template>
+      <template v-if="inbound.core === 'singbox'">{{template "form/singbox"}}</template>
       <template v-if="inbound.protocol === Protocols.SSH">{{template "form/ssh"}}</template>
       <template v-if="inbound.protocol === Protocols.HYSTERIA">{{template "form/hysteria"}}</template>
       <template v-if="inbound.protocol === Protocols.ANYTLS">{{template "form/anytls"}}</template>
@@ -329,7 +351,15 @@
     <div class="bo-if-sec" data-sec="transport" v-show="inModal.section === 'transport'">
       <h4 class="bo-if-h">Transport</h4>
       <p class="bo-if-d">How the bytes move, plus the socket options and final mask that ride with it.</p>
-      <template v-if="inbound.canEnableStream()">
+      <!-- A sing-box inbound carries its whole listener block (type/listen/
+           listen_port/transport/...) inside the raw JSON editor above, so the
+           Xray stream form would duplicate and contradict it. Hide the entire
+           Transport section while the sing-box core is selected. -->
+      <template v-if="inbound.core === 'singbox'">
+        <a-alert type="info" show-icon
+          message="Sing-Box manages its own transport inside the inbound JSON (Transport / tls blocks). Edit the JSON in the Settings tab."></a-alert>
+      </template>
+      <template v-else-if="inbound.canEnableStream()">
         {{template "form/streamSettings"}}
       </template>
     </div>

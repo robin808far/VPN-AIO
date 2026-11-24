@@ -52,6 +52,14 @@
         </a-select>
     </a-form-item>
 
+    <a-form-item v-if="coreSelectable(inbound.protocol)" label='{{ i18n "pages.inbounds.core" }}'>
+        <a-select v-model="inbound.core" :disabled="isEdit" @change="onCoreChange"
+            :dropdown-class-name="themeSwitcher.currentTheme">
+            <a-select-option value="">Xray</a-select-option>
+            <a-select-option value="singbox">Sing-Box</a-select-option>
+        </a-select>
+    </a-form-item>
+
     <a-form-item>
         <template slot="label">
             <a-tooltip>

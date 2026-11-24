@@ -2853,6 +2853,52 @@ html[data-theme-animations='off'] .log-live-dot { animation:none; }
   .ant-menu:not(.ant-menu-horizontal) .ant-menu-item-selected { animation:none; }
 }
 
+/* ================================================================== *
+ * RTL (Persian/Arabic): ant-design v1 builds its horizontal form
+ * rows with floats and left paddings that do not flip with
+ * dir="rtl", so labels landed on the wrong side of their inputs
+ * and boxes collapsed. Instead of mirroring every float, drop the
+ * horizontal rows to the vertical layout (label above its field)
+ * inside RTL: it cannot desync, it also fixes the same mess on
+ * narrow screens, and Persian labels read naturally on their own
+ * line.
+ * ================================================================== */
+[dir="rtl"] .bo-inbound-modal .ant-form-item-label {
+  display:block; text-align:start; float:none;
+}
+[dir="rtl"] .bo-inbound-modal .ant-form-item-label > label { display:inline-block; }
+[dir="rtl"] .bo-inbound-modal .ant-form-item-control-wrapper,
+[dir="rtl"] .bo-inbound-modal .ant-form-item-control { display:block; width:100%; }
+/* The rail/pane flex row is laid out with physical order for LTR;
+   reverse it so the rail keeps its side in RTL. */
+[dir="rtl"] .bo-cf { flex-direction:row-reverse; }
+[dir="rtl"] .bo-cf-rail { border-inline-end:none; border-inline-start:1px solid var(--border); }
+
+/* The modal close button: ant places it top-right physically; under RTL
+   the title starts from the right, so park the X top-left. */
+[dir="rtl"] .bo-inbound-modal .ant-modal-close,
+[dir="rtl"] .bo-client-modal .ant-modal-close,
+[dir="rtl"] .ant-modal-wrap[dir="rtl"] .ant-modal-close,
+[dir="rtl"] .ant-modal .ant-modal-close { left:8px; right:auto; }
+
+/* Button groups (footer actions, page toolbars, toggle pills) come from
+   ant with margins that don't flip; separate them and flip the pair so
+   the primary action reads first on the right. */
+[dir="rtl"] .ant-btn + .ant-btn { margin-inline-start:8px; margin-inline-end:0; }
+[dir="rtl"] .ant-modal-footer { text-align:start; }
+[dir="rtl"] .ant-modal-footer .ant-btn + .ant-btn { margin-inline-start:8px; margin-inline-end:0; }
+[dir="rtl"] .ant-form-item .ant-btn + .ant-btn { margin-inline-start:8px; margin-inline-end:0; }
+
+/* Radio-button pills (none/TLS/Reality) keep DOM order under RTL which
+   reads backwards for Persian; restore reading order without touching
+   the bound values. */
+[dir="rtl"] .bo-rtl-reverse { display:inline-flex; flex-direction:row-reverse; }
+[dir="rtl"] .bo-rtl-reverse .ant-radio-button-wrapper:first-child { border-radius:0 4px 4px 0; }
+[dir="rtl"] .bo-rtl-reverse .ant-radio-button-wrapper:last-child { border-radius:4px 0 0 4px; }
+
+/* The modal must always paint above the page's security-alert banner. */
+.ant-modal-wrap { z-index:1000; }
+
 /* Buttons: lift on hover so the primary action feels pressable. */
 .bo-shell .ant-btn { transition:transform var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
 .bo-shell .ant-btn:not([disabled]):active { transform:scale(.97); }

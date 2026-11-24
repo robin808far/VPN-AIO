@@ -4,7 +4,7 @@
   <img src="web/assets/img/vpn-aio.svg" alt="VPN-AIO" width="260">
 </p>
 
-**VPN-AIO 5.5.0** is based on [Sir-MmD/vpn-ui](https://github.com/Sir-MmD/vpn-ui) and **[3X-UI](https://github.com/MHSanaei/3x-ui)**. Original licenses and credits are preserved.
+**VPN-AIO 6.0.0** is based on [Sir-MmD/vpn-ui](https://github.com/Sir-MmD/vpn-ui) and **[3X-UI](https://github.com/MHSanaei/3x-ui)**. Original licenses and credits are preserved.
 
 This version targets **Ubuntu 24.04 amd64** installations. It integrates Xray **26.11.9**, native AnyTLS/TUIC/NaiveProxy and MASQUE, XDRIVE, and AmneziaWG **3.1.20261113-02** with the 3.1 controls and exports. Version 4.0.0 adds multi-panel **Nodes** management; version 3.1.0 added native Happ subscription settings; version 3.0.0 added [managed Hosts](docs/guides/HOSTS.md). Read the [4.0.0 release notes](https://github.com/robin808far/VPN-AIO/releases/tag/v4.0.0) and [validation record](docs/releases/validation/VPN-AIO-3.1.0.md) before upgrading; the cross-distribution VM/kernel matrix remains explicitly waived.
 
@@ -62,7 +62,7 @@ the core rather than by a daemon, and they work as **inbounds and outbounds**:
 
 ## Upstream Operating System Matrix
 
-The table below records the original project's support matrix. VPN-AIO 5.0.0 validation targets Ubuntu 24.04; it does not claim a fresh test of every upstream platform.
+The table below records the original project's support matrix. VPN-AIO 6.0.0 validation targets Ubuntu 24.04; it does not claim a fresh test of every upstream platform.
 
 
 | | Distribution |Version |Version |

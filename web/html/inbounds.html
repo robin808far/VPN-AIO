@@ -679,7 +679,7 @@
   //
   // Widths are proportions, not pixels: the table scrolls at x:1000 and antd
   // shares the surplus out in these ratios.
-  const columns = [{
+  var columns = [{
     align: 'center',
     width: 25,
     slots: { title: 'selectAllHeader' },
@@ -730,7 +730,7 @@
   // and the words "Menu" and "Info" were each wider than the control beneath
   // them: 80px of the identity cell was being spent on labelling a kebab and an
   // i-in-a-circle. The select column has always been headed this way.
-  const mobileColumns = [{
+  var mobileColumns = [{
     align: 'center',
     width: 20,
     slots: { title: 'selectAllHeader' },
@@ -752,7 +752,7 @@
     scopedSlots: { customRender: 'info' },
   }];
 
-  const app = new Vue({
+  var app = new Vue({
     delimiters: ['[[', ']]'],
     el: '#app',
     mixins: [MediaQueryMixin, ClientActionsMixin],
@@ -1334,8 +1334,15 @@
           listen: inbound.listen,
           port: inbound.port,
           protocol: inbound.protocol,
+          core: inbound.core || "",
           settings: inbound.settings.toString(),
         };
+        // A sing-box core inbound posts the RAW sing-box inbound block from the
+        // editor, not the panel's Xray settings shape.
+        if (inbound.core === "singbox" && inModal.singboxDraft) {
+          data.settings = inModal.singboxDraft;
+          data.streamSettings = "";
+        }
         if (inbound.canEnableStream()) {
           data.streamSettings = inbound.stream.toString();
         } else if (inbound.stream?.sockopt) {
@@ -1370,8 +1377,14 @@
           listen: inbound.listen,
           port: inbound.port,
           protocol: inbound.protocol,
+          core: inbound.core || "",
           settings: inbound.settings.toString(),
         };
+        // Same as Add: a sing-box core inbound posts the RAW block from the editor.
+        if (inbound.core === "singbox" && inModal.singboxDraft) {
+          data.settings = inModal.singboxDraft;
+          data.streamSettings = "";
+        }
         if (inbound.canEnableStream()) {
           data.streamSettings = inbound.stream.toString();
         } else if (inbound.stream?.sockopt) {

@@ -77,6 +77,8 @@ func (a *ServerController) initRouter(g *gin.RouterGroup) {
 	g.GET("/getConfigJson", requireOverviewManage(), a.getConfigJson)
 	g.GET("/getDb", requireOverviewManage(), a.getDb)
 	g.GET("/getNewUUID", a.getNewUUID)
+	g.GET("/scanRealityTarget", a.scanRealityTarget)
+	g.GET("/findRealityTargets", a.findRealityTargets)
 	g.GET("/getNewX25519Cert", a.getNewX25519Cert)
 	g.GET("/getNewmldsa65", a.getNewmldsa65)
 	g.GET("/getNewmlkem768", a.getNewmlkem768)
@@ -747,6 +749,28 @@ func (a *ServerController) getNewX25519Cert(c *gin.Context) {
 		return
 	}
 	jsonObj(c, cert, nil)
+}
+
+// scanRealityTarget probes one operator-typed destination for REALITY
+// feasibility (TLS 1.3 over X25519) and reports what the handshake showed.
+func (a *ServerController) scanRealityTarget(c *gin.Context) {
+	res, err := a.serverService.ScanRealityTarget(c.Query("target"))
+	if err != nil {
+		jsonMsg(c, "scan reality target", err)
+		return
+	}
+	jsonObj(c, res, nil)
+}
+
+// findRealityTargets probes many destinations at once — the common candidates
+// when the query is empty, or a domain / IP / CIDR the operator typed.
+func (a *ServerController) findRealityTargets(c *gin.Context) {
+	rows, err := a.serverService.FindRealityTargets(c.Query("query"))
+	if err != nil {
+		jsonMsg(c, "find reality targets", err)
+		return
+	}
+	jsonObj(c, rows, nil)
 }
 
 // getNewmldsa65 generates a new ML-DSA-65 key.

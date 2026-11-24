@@ -1,8 +1,7 @@
 "use strict";
 
 // Client-side mirror of service.ProjectHost for synchronous panel links and QR codes.
-class ManagedHosts {
-    static splitAddress(value, fallbackPort) {
+var ManagedHosts = class ManagedHosts {    static splitAddress(value, fallbackPort) {
         const text = (value || '').trim();
         const bracket = text.match(/^\[([^\]]+)\]:(\d+)$/);
         const simple = text.match(/^([^:]*):(\d+)$/);

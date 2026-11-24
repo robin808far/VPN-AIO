@@ -1,5 +1,5 @@
 // List of popular services for VLESS Reality Target/SNI randomization
-const REALITY_TARGETS = [
+var REALITY_TARGETS = [
     { target: 'www.apple.com:443', sni: 'www.apple.com' },
     { target: 'www.icloud.com:443', sni: 'www.icloud.com' },
     { target: 'www.amazon.com:443', sni: 'www.amazon.com' },

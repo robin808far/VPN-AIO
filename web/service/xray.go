@@ -245,6 +245,12 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 		if inbound.Protocol == "l2tp" || inbound.Protocol == "pptp" || inbound.Protocol == "openvpn" || inbound.Protocol == "openconnect" || inbound.Protocol == "sstp" || inbound.Protocol == "ikev2" || inbound.Protocol == "wg-c" || inbound.Protocol == "awg" || inbound.Protocol == "gre" || inbound.Protocol == "mtproto" || inbound.Protocol == "ssh" {
 			continue
 		}
+		// An inbound whose Core is "singbox" is served by the sing-box process
+		// (its own config, its own port). Feeding it here too made Xray bind the
+		// same port and starve sing-box of it.
+		if isSingboxInbound(inbound) {
+			continue
+		}
 		// get settings clients
 		settings := map[string]any{}
 		json.Unmarshal([]byte(inbound.Settings), &settings)

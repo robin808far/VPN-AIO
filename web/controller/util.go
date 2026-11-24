@@ -132,6 +132,12 @@ func html(c *gin.Context, name string, title string, data gin.H) {
 	// never shipped: the settings blob used to carry it, which handed every
 	// logged-in admin the shared factor.
 	data["two_factor"] = currentTwoFactorEnabled(c)
+	// The HTML shell carries a short private lifetime so the sidebar's prefetch
+	// (warm on hover and on idle, see component/aSidebar.html) is actually
+	// reusable: without a fresh lifetime the browser revalidates and the click
+	// shows a white flash anyway. The live data on every page arrives over XHR,
+	// which is never cached, so a 30s shell is safe.
+	c.Header("Cache-Control", "private, max-age=30")
 	c.HTML(http.StatusOK, name, getContext(data))
 }
 

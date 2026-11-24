@@ -45,7 +45,7 @@ type SubService struct {
 	settingService service.SettingService
 	sshService     service.SshService
 	wgcService     service.WgcService
-	awgService     service.AwgService
+	awgService     *service.AwgService
 	greService     service.GreService
 	openvpnService service.OpenVpnService
 }
@@ -271,19 +271,40 @@ func (s *SubService) getFallbackMaster(dest string, streamSettings string) (stri
 func (s *SubService) getLink(inbound *model.Inbound, email string) string {
 	switch inbound.Protocol {
 	case "vmess":
+		if inbound.Core == "singbox" {
+			return s.genSingboxLink(inbound, email)
+		}
 		return s.genVmessLink(inbound, email)
 	case "vless":
+		if inbound.Core == "singbox" {
+			return s.genSingboxLink(inbound, email)
+		}
 		return s.genVlessLink(inbound, email)
 	case "trojan":
+		if inbound.Core == "singbox" {
+			return s.genSingboxLink(inbound, email)
+		}
 		return s.genTrojanLink(inbound, email)
 	case "shadowsocks":
+		if inbound.Core == "singbox" {
+			return s.genSingboxLink(inbound, email)
+		}
 		return s.genShadowsocksLink(inbound, email)
 	case "hysteria", "hysteria2":
+		if inbound.Core == "singbox" {
+			return s.genSingboxLink(inbound, email)
+		}
 		return s.genHysteriaLink(inbound, email)
 	case "anytls":
-		return s.genAnytlsLink(inbound, email)
+		if inbound.Core != "singbox" {
+			return s.genAnytlsLink(inbound, email)
+		}
+		return s.genSingboxLink(inbound, email)
 	case "tuic":
-		return s.genTuicLink(inbound, email)
+		if inbound.Core != "singbox" {
+			return s.genTuicLink(inbound, email)
+		}
+		return s.genSingboxLink(inbound, email)
 	case "naive":
 		return s.genNaiveLink(inbound, email)
 	case "mtproto":
@@ -2404,4 +2425,142 @@ func getHostFromXFH(s string) (string, error) {
 		return realHost, nil
 	}
 	return s, nil
+}
+
+// genSingboxLink emits a share link for a singbox inbound by reading the RAW
+// sing-box inbound object the panel stored: the type picks the scheme, the first
+// user picks the credential and the tls block picks the security params. Types
+// without a widely-imported URI (shadowtls, socks, http, mixed, custom JSON)
+// get a connection card instead of a bogus link, mirroring the mtproto/ssh split.
+func (s *SubService) genSingboxLink(inbound *model.Inbound, email string) string {
+	if inbound.Core != "singbox" {
+		return ""
+	}
+	var block map[string]any
+	if err := json.Unmarshal([]byte(inbound.Settings), &block); err != nil || len(block) == 0 {
+		return ""
+	}
+	typ, _ := block["type"].(string)
+	if typ == "" {
+		return ""
+	}
+	address := s.resolveInboundAddress(inbound)
+	port := inbound.Port
+	if p, ok := block["listen_port"].(float64); ok && p > 0 {
+		port = int(p)
+	}
+	remark := s.genRemark(inbound, email, "")
+	_ = email
+
+	firstUser, _ := block["users"].([]any)
+	var u map[string]any
+	if len(firstUser) > 0 {
+		u, _ = firstUser[0].(map[string]any)
+	}
+	getStr := func(key string) string {
+		if u == nil {
+			return ""
+		}
+		s, _ := u[key].(string)
+		return s
+	}
+
+	tls, _ := block["tls"].(map[string]any)
+	tlsEnabled := tls != nil
+	params := map[string]string{}
+	if !tlsEnabled {
+		params["security"] = "none"
+	} else {
+		params["security"] = "tls"
+		if sn, _ := tls["server_name"].(string); sn != "" {
+			params["sni"] = sn
+		}
+	}
+	transport, _ := block["transport"].(map[string]any)
+	if transport != nil {
+		nt, _ := transport["type"].(string)
+		params["type"] = nt
+	}
+
+	switch typ {
+	case "hysteria2":
+		// hysteria2://password@host:port?sni=...#remark — password auth only.
+		pass := getStr("password")
+		if pass == "" {
+			break
+		}
+		if !tlsEnabled {
+			params["security"] = "tls" // hysteria2 is always TLS/QUIC; an operator who
+			// left the tls block out still gets an importable link.
+		}
+		params["obfs-password"], _ = block["obfs"].(map[string]any)["password"].(string)
+		link := fmt.Sprintf("hy2://%s@%s", url.UserPassword("", pass).String(), net.JoinHostPort(address, strconv.Itoa(port)))
+		return buildLinkWithParams(link, params, remark)
+	case "tuic":
+		uuid := getStr("uuid")
+		pass := getStr("password")
+		if uuid == "" {
+			break
+		}
+		params["congestion_control"] = "cubic"
+		params["alpn"] = "h3"
+		params["udp_relay_mode"] = "native"
+		link := fmt.Sprintf("tuic://%s@%s", url.UserPassword(uuid, pass).String(), net.JoinHostPort(address, strconv.Itoa(port)))
+		return buildLinkWithParams(link, params, remark)
+	case "anytls":
+		pass := getStr("password")
+		if pass == "" {
+			break
+		}
+		link := fmt.Sprintf("anytls://%s@%s", url.UserPassword("", pass).String(), net.JoinHostPort(address, strconv.Itoa(port)))
+		return buildLinkWithParams(link, params, remark)
+	case "vless":
+		uuid := getStr("uuid")
+		if uuid == "" {
+			break
+		}
+		if flow := getStr("flow"); flow != "" {
+			params["flow"] = flow
+		}
+		link := fmt.Sprintf("vless://%s@%s", uuid, net.JoinHostPort(address, strconv.Itoa(port)))
+		return buildLinkWithParams(link, params, remark)
+	case "vmess":
+		uuid := getStr("uuid")
+		if uuid == "" {
+			break
+		}
+		obj := map[string]any{
+			"v": "2", "ps": remark, "add": address, "port": port, "id": uuid,
+			"aid": 0, "scy": "auto", "net": params["type"], "tls": params["security"],
+		}
+		if tlsEnabled {
+			if sn, _ := tls["server_name"].(string); sn != "" {
+				obj["sni"] = sn
+			}
+		}
+		raw, err := json.Marshal(obj)
+		if err != nil {
+			break
+		}
+		return "vmess://" + base64.StdEncoding.EncodeToString(raw)
+	case "trojan":
+		pass := getStr("password")
+		if pass == "" {
+			break
+		}
+		link := fmt.Sprintf("trojan://%s@%s", url.UserPassword("", pass).String(), net.JoinHostPort(address, strconv.Itoa(port)))
+		return buildLinkWithParams(link, params, remark)
+	case "shadowsocks":
+		method, _ := block["method"].(string)
+		pass, _ := block["password"].(string)
+		if method == "" || pass == "" {
+			break
+		}
+		userinfo := url.UserPassword(method, pass).String()
+		link := fmt.Sprintf("ss://%s@%s", userinfo, net.JoinHostPort(address, strconv.Itoa(port)))
+		return buildLinkWithParams(link, params, remark)
+	}
+	// No importable URI for this type: the connection card still surfaces the
+	// inbound, its usage and the raw block, so the account is not invisible.
+	return s.genConnectionCard(inbound, email)
 }

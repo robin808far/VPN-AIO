@@ -1,5 +1,4 @@
-class DBInbound {
-
+var DBInbound = class DBInbound {
     constructor(data) {
         this.id = 0;
         this.userId = 0;
@@ -29,6 +28,7 @@ class DBInbound {
 
         this.listen = "";
         this.port = 0;
+        this.core = "";
         this.protocol = "";
         this.settings = "";
         this.streamSettings = "";

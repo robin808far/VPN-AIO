@@ -48,7 +48,7 @@
 </style>
 
 <script>
-  const wgcConfigModal = {
+  var wgcConfigModal = {
     visible: false,
     loading: false,
     title: 'WireGuard Config',
@@ -80,7 +80,7 @@
     },
   };
 
-  const wgcConfigModalApp = new Vue({
+  var wgcConfigModalApp = new Vue({
     delimiters: ['[[', ']]'],
     el: '#wgc-config-modal',
     data: {

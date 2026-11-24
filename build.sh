@@ -230,6 +230,7 @@ BUNDLE_ARTIFACTS=(
     accel-ppp-bundle.tgz     # SSTP server
     strongswan-bundle.tgz    # IKEv2
     telemt                   # MTProto Proxy
+    sing-box                 # sing-box (hysteria2, tuic, anytls, shadowtls, …)
     pptp                     # PPTP client
     openconnect              # OpenConnect client
     vpnc-script              # its routing/DNS hook

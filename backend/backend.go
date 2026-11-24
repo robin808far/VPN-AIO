@@ -57,6 +57,8 @@ var Daemons = []Daemon{
 	// dlopen and no fixed install path, so it belongs in this flat manifest rather
 	// than needing a relocatable tree bundle like accel-ppp/strongSwan.
 	{Name: "telemt"},
+	// sing-box is a single fully-static Go binary, same arrangement as telemt.
+	{Name: "sing-box"},
 
 	// The client side. Three protocols the panel can serve can also be dialed
 	// out to, but only by separate upstream projects: pptpd, ocserv and

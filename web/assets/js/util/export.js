@@ -6,7 +6,7 @@
 // links, the SSH ssh:// link, and the WireGuard-C .conf. The username/password VPN
 // protocols (L2TP/PPTP/OpenVPN/OpenConnect/SSTP/IKEv2) have no importable payload, so
 // they render server/port/user/pass without a QR.
-const AccountExport = {
+var AccountExport = {
   // --- data ------------------------------------------------------------------
 
   // buildCards turns [{inboundId, email}] targets into renderable card objects,

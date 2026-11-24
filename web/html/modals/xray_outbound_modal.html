@@ -308,7 +308,12 @@
             // the form is never empty; an unusable kind then fails at save.
             vpnKinds() {
                 const label = k => (VPN_OUT_KINDS[k] || {}).label || k;
-                const reported = typeof app !== 'undefined' ? app.vpnOutKindList : null;
+                // `app` is declared after this modal's Vue on this page; ask the
+                // live instance through a channel that cannot hit the temporal
+                // dead zone (typeof on a TDZ const throws rather than
+                // returning "undefined").
+                let reported = null;
+                try { reported = app.vpnOutKindList; } catch (e) { reported = null; }
                 if (!Array.isArray(reported) || !reported.length) {
                     return Object.keys(VPN_OUT_KINDS).map(k => ({ kind: k, label: label(k), available: true, why: '' }));
                 }

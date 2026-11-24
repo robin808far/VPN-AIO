@@ -13,6 +13,7 @@
                 :class="{ 'is-active': isActive(tab.key) }" :href="tab.key"
                 :aria-current="isActive(tab.key) ? 'page' : false"
                 :title="collapsed ? tab.title : false"
+                @mouseenter="prefetch(tab.key)" @focusin="prefetch(tab.key)"
                 @click.prevent="openLink(tab.key)">
                 <a-icon :type="tab.icon"></a-icon>
                 <span v-text="tab.title"></span>
@@ -32,7 +33,7 @@
 
 {{define "component/aSidebar"}}
 <script>
-    const SIDEBAR_COLLAPSED_KEY = "isSidebarCollapsed"
+    var SIDEBAR_COLLAPSED_KEY = "isSidebarCollapsed"
 
     Vue.component('a-sidebar', {
         data() {
@@ -131,6 +132,15 @@
                 expandLabel: '{{ i18n "menu.expand"}}',
             }
         },
+        // Warm the cache with every page the admin can reach, staggered while the
+        // browser is idle, so the first click on a tab is already instant.
+        mounted() {
+            const warm = () => this.tabs.forEach((tab) => {
+                if (!this.isActive(tab.key)) this.prefetch(tab.key);
+            });
+            if (window.requestIdleCallback) window.requestIdleCallback(warm, { timeout: 5000 });
+            else setTimeout(warm, 2000);
+        },
         methods: {
             // The active tab used to be handed to ant's a-menu as selected-keys.
             // With plain anchors we compare against the request URI ourselves.
@@ -141,9 +151,24 @@
                 return norm(key) === norm(this.requestUri);
             },
             openLink(key) {
-                return key.startsWith('http') ?
-                    window.open(key) :
-                    location.href = key
+                if (key.startsWith('http')) return window.open(key);
+                // Soft navigation keeps the shell mounted; the global click
+                // interceptor covers every other panel link.
+                if (window.BO_SOFTNAV && BO_SOFTNAV.isPanelUrl(key)) return BO_SOFTNAV.navigate(key, true);
+                location.href = key;
+            },
+            // Pull the target page's HTML into the browser cache before the click
+            // lands, so navigation costs only what a same-page render does and the
+            // loading splash never has time to appear. The pages carry a short
+            // private max-age (see controller html()) so the prefetched response is
+            // actually reusable; the data on it is fetched fresh over XHR anyway.
+            prefetch(key) {
+                if (!key || key.startsWith('http') || key.indexOf('logout') !== -1) return;
+                if (document.querySelector('link[rel="prefetch"][href="' + key + '"]')) return;
+                const link = document.createElement('link');
+                link.rel = 'prefetch';
+                link.href = key;
+                document.head.appendChild(link);
             },
             toggleCollapse() {
                 this.collapsed = !this.collapsed;

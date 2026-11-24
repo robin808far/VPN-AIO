@@ -246,7 +246,7 @@
 <script>
   // Plain object, mirrored into the Vue instance's data, exactly like infoModal and
   // qrModal: callers reach it as a global rather than through a ref.
-  const accountInfoModal = {
+  var accountInfoModal = {
     visible: false,
     row: null,
     // Which membership is expanded, by inbound id. One at a time.
@@ -272,7 +272,7 @@
     },
   };
 
-  const accountInfoModalApp = new Vue({
+  var accountInfoModalApp = new Vue({
     delimiters: ['[[', ']]'],
     el: '#account-info-modal',
     data: {

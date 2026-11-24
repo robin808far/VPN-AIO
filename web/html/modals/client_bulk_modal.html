@@ -273,14 +273,14 @@
   // name carries, so the part in front of what was typed cannot be previewed
   // exactly. Only method 4 drops the stem, and only there can a generated name
   // collide with an existing one.
-  const BULK_STEM = 'xxxxxxxx';
+  var BULK_STEM = 'xxxxxxxx';
   // Rows the preview renders before it stops and counts the rest.
-  const BULK_PREVIEW_ROWS = 200;
+  var BULK_PREVIEW_ROWS = 200;
   // How far the collision scan walks. Well past any realistic batch, and bounded
   // because getters on this object are re-evaluated on every render.
-  const BULK_CLASH_SCAN = 2000;
+  var BULK_CLASH_SCAN = 2000;
 
-  const clientsBulkModal = {
+  var clientsBulkModal = {
     visible: false,
     confirmLoading: false,
     title: '',
@@ -642,7 +642,7 @@
     },
   };
 
-  const clientsBulkModalApp = new Vue({
+  var clientsBulkModalApp = new Vue({
     delimiters: ['[[', ']]'],
     el: '#client-bulk-modal',
     data: {

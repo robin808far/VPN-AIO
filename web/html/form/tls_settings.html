@@ -23,7 +23,7 @@
   <template v-if="!inbound.requiresTls()">
     <a-divider :style="{ margin: '3px 0' }"></a-divider>
     <a-form-item label='{{ i18n "security" }}'>
-      <a-radio-group v-model="inbound.stream.security" button-style="solid">
+      <a-radio-group v-model="inbound.stream.security" button-style="solid" :class="{ 'bo-rtl-reverse': LanguageManager.getLanguage().startsWith('fa') || LanguageManager.getLanguage().startsWith('ar') }">
         <a-radio-button value="none">{{ i18n "none" }}</a-radio-button>
         <a-radio-button v-if="inbound.canEnableReality()"
           value="reality">Reality</a-radio-button>

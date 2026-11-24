@@ -132,6 +132,7 @@ type CoreService struct {
 	awgService     AwgService
 	greService     GreService
 	mtprotoService MtprotoService
+	singboxService SingboxService
 	sshService     SshService
 	xrayService    XrayService
 }
@@ -199,6 +200,14 @@ var (
 	daemonVersionCache = map[string]string{}
 	daemonVersionMu    sync.Mutex
 )
+
+// clearDaemonVersion drops a cached --version lookup, used right after a daemon
+// binary is replaced in place so the next status poll reports the new version.
+func clearDaemonVersion(name string) {
+	daemonVersionMu.Lock()
+	delete(daemonVersionCache, name)
+	daemonVersionMu.Unlock()
+}
 
 // daemonVersion returns a short version string (e.g. "2.6.12") for a bundled or
 // host daemon by running `<bin> --version` and grabbing the first version-shaped
@@ -333,6 +342,7 @@ func (s *CoreService) GetCoresStatus() []CoreStatus {
 		s.awgStatus(),
 		s.greStatus(),
 		s.mtprotoStatus(),
+		s.singboxStatus(),
 		s.sshStatus(),
 		s.radiusStatus(),
 	}
@@ -734,8 +744,36 @@ func (s *CoreService) mtprotoStatus() CoreStatus {
 	return cs
 }
 
-func (s *CoreService) radiusStatus() CoreStatus {
-	cs := CoreStatus{Name: "radius"}
+// singboxStatus reports the sing-box core. Like mtproto it is a plain userspace
+// relay: availability is "is the binary bundled or on PATH" and liveness is
+// "is any per-inbound child running".
+func (s *CoreService) singboxStatus() CoreStatus {
+	cs := CoreStatus{Name: "singbox"}
+	inbounds, _ := s.singboxService.GetSingboxInbounds()
+	cs.Inbounds = len(inbounds)
+	if !s.singboxService.Available() {
+		cs.State = CoreNotInstalled
+		cs.Detail = "sing-box binary not bundled for this architecture"
+		return cs
+	}
+	cs.Version = daemonVersion("sing-box")
+	if blocked, _ := singboxMaintenance.Blocked(); blocked {
+		cs.State = CoreStopped
+		cs.Detail = "maintenance"
+		return cs
+	}
+	switch {
+	case cs.Inbounds == 0:
+		cs.State = CoreIdle
+	case procMgr.AnyRunningWithPrefix("singbox-server-"):
+		cs.State = CoreRunning
+	default:
+		cs.State = CoreStopped
+	}
+	return cs
+}
+
+func (s *CoreService) radiusStatus() CoreStatus {	cs := CoreStatus{Name: "radius"}
 	// RADIUS is embedded in the panel binary, so its version is the panel's.
 	cs.Version = config.GetVersion()
 	// The embedded RADIUS server binds 127.0.0.1:1812 (auth). If the port can't
@@ -944,6 +982,8 @@ func (s *CoreService) RestartCore(name string) error {
 		return s.greService.RestartServices()
 	case "mtproto":
 		return s.mtprotoService.RestartServices()
+	case "singbox":
+		return s.singboxService.RestartServices()
 	case "ssh":
 		return s.sshService.RestartServices()
 	case "radius":
@@ -960,7 +1000,7 @@ func (s *CoreService) RestartCore(name string) error {
 // one failing core doesn't abort the rest.
 func (s *CoreService) RestartAll() error {
 	var errs []string
-	for _, name := range []string{"xray", "l2tp", "pptp", "openvpn", "openconnect", "sstp", "ikev2", "wgc", "awg", "gre", "mtproto", "ssh", "radius"} {
+	for _, name := range []string{"xray", "l2tp", "pptp", "openvpn", "openconnect", "sstp", "ikev2", "wgc", "awg", "gre", "mtproto", "singbox", "ssh", "radius"} {
 		if err := s.RestartCore(name); err != nil {
 			errs = append(errs, fmt.Sprintf("%s: %v", name, err))
 		}
@@ -1001,6 +1041,8 @@ func (s *CoreService) StopCore(name string) error {
 		return s.greService.StopServices()
 	case "mtproto":
 		return s.mtprotoService.StopServices()
+	case "singbox":
+		return s.singboxService.StopServices()
 	case "ssh":
 		return s.sshService.StopServices()
 	case "radius":
@@ -1062,6 +1104,8 @@ func (s *CoreService) CoreLogs(name string) string {
 		return fmt.Sprintf("GRE runs in-kernel via netlink (no daemon log).\nTunnel(s) up: %s\nFOU (UDP encap) available: %s", up, fou)
 	case "mtproto":
 		return procMgr.LogsByPrefix("mtproto-server-")
+	case "singbox":
+		return procMgr.LogsByPrefix("singbox-server-")
 	case "ssh":
 		running := "no"
 		if s.sshService.AnyRunning() {

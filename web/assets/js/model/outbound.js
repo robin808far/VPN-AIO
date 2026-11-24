@@ -1,4 +1,8 @@
-const Protocols = {
+// Same shared object the inbound model builds (var + merge, never a fresh
+// const): pages swap without a full reload, so both key families must live on
+// one Protocols object.
+var Protocols = typeof Protocols !== 'undefined' && Protocols ? Protocols : {};
+Object.assign(Protocols, {
     Freedom: "freedom",
     Blackhole: "blackhole",
     DNS: "dns",
@@ -51,13 +55,13 @@ const Protocols = {
     VpnOpenConnect: "vpn:openconnect",
     VpnPPTP: "vpn:pptp",
     VpnGre: "vpn:gre"
-};
+});
 
 // Helpers for the tunnel protocols above. Separate consts and functions rather
 // than properties of Protocols on purpose: the Add Outbound picker walks that
 // object to build its option list, so a function stored in it would be offered
 // as a protocol.
-const VPN_PROTOCOL_PREFIX = "vpn:";
+var VPN_PROTOCOL_PREFIX = "vpn:";
 
 function isVpnProtocol(protocol) {
     return typeof protocol === 'string' && protocol.startsWith(VPN_PROTOCOL_PREFIX);
@@ -88,7 +92,7 @@ function vpnProtocolFor(kind) {
 // the picker falls back to, and "Tuic"/"Naive" are not how either project spells
 // itself; an operator matching the row against the client they already run
 // should not have to guess that they are the same thing.
-const PROTOCOL_LABELS = {
+var PROTOCOL_LABELS = {
     [Protocols.Wireguard]: 'WireGuard (Xray)',
     [Protocols.AnyTLS]: 'AnyTLS',
     [Protocols.Tuic]: 'TUIC',
@@ -129,7 +133,7 @@ function optionalNumber(value) {
     return Number.isFinite(n) ? n : undefined;
 }
 
-const SSMethods = {
+var SSMethods = {
     AES_256_GCM: 'aes-256-gcm',
     AES_128_GCM: 'aes-128-gcm',
     CHACHA20_POLY1305: 'chacha20-poly1305',
@@ -141,12 +145,12 @@ const SSMethods = {
     BLAKE3_CHACHA20_POLY1305: '2022-blake3-chacha20-poly1305',
 };
 
-const TLS_FLOW_CONTROL = {
+var TLS_FLOW_CONTROL = {
     VISION: "xtls-rprx-vision",
     VISION_UDP443: "xtls-rprx-vision-udp443",
 };
 
-const UTLS_FINGERPRINT = {
+var UTLS_FINGERPRINT = {
     UTLS_CHROME: "chrome",
     UTLS_FIREFOX: "firefox",
     UTLS_SAFARI: "safari",
@@ -161,13 +165,13 @@ const UTLS_FINGERPRINT = {
     UTLS_UNSAFE: "unsafe",
 };
 
-const ALPN_OPTION = {
+var ALPN_OPTION = {
     H3: "h3",
     H2: "h2",
     HTTP1: "http/1.1",
 };
 
-const OutboundDomainStrategies = [
+var OutboundDomainStrategies = [
     "AsIs",
     "UseIP",
     "UseIPv4",
@@ -181,7 +185,7 @@ const OutboundDomainStrategies = [
     "ForceIPv4"
 ];
 
-const WireguardDomainStrategy = [
+var WireguardDomainStrategy = [
     "ForceIP",
     "ForceIPv4",
     "ForceIPv4v6",
@@ -189,7 +193,7 @@ const WireguardDomainStrategy = [
     "ForceIPv6v4"
 ];
 
-const USERS_SECURITY = {
+var USERS_SECURITY = {
     AES_128_GCM: "aes-128-gcm",
     CHACHA20_POLY1305: "chacha20-poly1305",
     AUTO: "auto",
@@ -197,14 +201,14 @@ const USERS_SECURITY = {
     ZERO: "zero",
 };
 
-const MODE_OPTION = {
+var MODE_OPTION = {
     AUTO: "auto",
     PACKET_UP: "packet-up",
     STREAM_UP: "stream-up",
     STREAM_ONE: "stream-one",
 };
 
-const Address_Port_Strategy = {
+var Address_Port_Strategy = {
     NONE: "none",
     SrvPortOnly: "srvportonly",
     SrvAddressOnly: "srvaddressonly",
@@ -214,7 +218,7 @@ const Address_Port_Strategy = {
     TxtPortAndAddress: "txtportandaddress"
 };
 
-const DNSRuleActions = ['direct', 'drop', 'reject', 'hijack'];
+var DNSRuleActions = ['direct', 'drop', 'reject', 'hijack'];
 
 function normalizeDNSRuleField(value) {
     if (value === null || value === undefined) {
@@ -282,7 +286,9 @@ function getDNSRulesFromJson(json = {}) {
     return [];
 }
 
-Object.freeze(Protocols);
+// Protocols stays extensible: the inbound model may add its own (different-cased)
+// keys when the panel soft-navigates between pages sharing one document.
+if (false) Object.freeze(Protocols);
 Object.freeze(SSMethods);
 Object.freeze(TLS_FLOW_CONTROL);
 Object.freeze(UTLS_FINGERPRINT);
@@ -294,8 +300,7 @@ Object.freeze(MODE_OPTION);
 Object.freeze(Address_Port_Strategy);
 Object.freeze(DNSRuleActions);
 
-class CommonClass {
-
+var CommonClass = class CommonClass {
     static toJsonArray(arr) {
         return arr.map(obj => obj.toJson());
     }
@@ -313,8 +318,7 @@ class CommonClass {
     }
 }
 
-class TcpStreamSettings extends CommonClass {
-    constructor(type = 'none', host, path) {
+var TcpStreamSettings = class TcpStreamSettings extends CommonClass {    constructor(type = 'none', host, path) {
         super();
         this.type = type;
         this.host = host;
@@ -349,8 +353,7 @@ class TcpStreamSettings extends CommonClass {
     }
 }
 
-class KcpStreamSettings extends CommonClass {
-    constructor(
+var KcpStreamSettings = class KcpStreamSettings extends CommonClass {    constructor(
         mtu = 1350,
         tti = 20,
         uplinkCapacity = 5,
@@ -390,8 +393,7 @@ class KcpStreamSettings extends CommonClass {
     }
 }
 
-class WsStreamSettings extends CommonClass {
-    constructor(
+var WsStreamSettings = class WsStreamSettings extends CommonClass {    constructor(
         path = '/',
         host = '',
         heartbeatPeriod = 0,
@@ -420,8 +422,7 @@ class WsStreamSettings extends CommonClass {
     }
 }
 
-class GrpcStreamSettings extends CommonClass {
-    constructor(
+var GrpcStreamSettings = class GrpcStreamSettings extends CommonClass {    constructor(
         serviceName = "",
         authority = "",
         multiMode = false
@@ -445,8 +446,7 @@ class GrpcStreamSettings extends CommonClass {
     }
 }
 
-class HttpUpgradeStreamSettings extends CommonClass {
-    constructor(path = '/', host = '') {
+var HttpUpgradeStreamSettings = class HttpUpgradeStreamSettings extends CommonClass {    constructor(path = '/', host = '') {
         super();
         this.path = path;
         this.host = host;
@@ -467,8 +467,7 @@ class HttpUpgradeStreamSettings extends CommonClass {
     }
 }
 
-class xHTTPStreamSettings extends CommonClass {
-    constructor(
+var xHTTPStreamSettings = class xHTTPStreamSettings extends CommonClass {    constructor(
         path = '/',
         host = '',
         mode = '',
@@ -554,8 +553,7 @@ xHTTPStreamSettings.STRUCTURED_KEYS = new Set([
     'xmux', 'scMaxEachPostBytes', 'xPaddingBytes', 'downloadSettings',
 ]);
 
-class TlsStreamSettings extends CommonClass {
-    constructor(
+var TlsStreamSettings = class TlsStreamSettings extends CommonClass {    constructor(
         serverName = '',
         alpn = [],
         fingerprint = '',
@@ -607,8 +605,7 @@ TlsStreamSettings.STRUCTURED_KEYS = new Set([
     'pinnedPeerCertSha256', 'allowInsecure',
 ]);
 
-class RealityStreamSettings extends CommonClass {
-    constructor(
+var RealityStreamSettings = class RealityStreamSettings extends CommonClass {    constructor(
         publicKey = '',
         fingerprint = '',
         serverName = '',
@@ -652,8 +649,7 @@ RealityStreamSettings.STRUCTURED_KEYS = new Set([
     'publicKey', 'fingerprint', 'serverName', 'shortId', 'spiderX', 'mldsa65Verify',
 ]);
 
-class HysteriaStreamSettings extends CommonClass {
-    constructor(
+var HysteriaStreamSettings = class HysteriaStreamSettings extends CommonClass {    constructor(
         version = 2,
         auth = '',
         congestion = '',
@@ -747,8 +743,7 @@ class HysteriaStreamSettings extends CommonClass {
         return result;
     }
 };
-class SockoptStreamSettings extends CommonClass {
-    constructor(
+var SockoptStreamSettings = class SockoptStreamSettings extends CommonClass {    constructor(
         dialerProxy = "",
         tcpFastOpen = false,
         tcpKeepAliveInterval = 0,
@@ -816,8 +811,7 @@ class SockoptStreamSettings extends CommonClass {
     }
 }
 
-class UdpMask extends CommonClass {
-    constructor(type = 'salamander', settings = {}) {
+var UdpMask = class UdpMask extends CommonClass {    constructor(type = 'salamander', settings = {}) {
         super();
         this.type = type;
         this.settings = this._getDefaultSettings(type, settings);
@@ -910,8 +904,7 @@ class UdpMask extends CommonClass {
     }
 }
 
-class TcpMask extends CommonClass {
-    constructor(type = 'fragment', settings = {}) {
+var TcpMask = class TcpMask extends CommonClass {    constructor(type = 'fragment', settings = {}) {
         super();
         this.type = type;
         this.settings = this._getDefaultSettings(type, settings);
@@ -986,8 +979,7 @@ class TcpMask extends CommonClass {
     }
 }
 
-class QuicParams extends CommonClass {
-    constructor(
+var QuicParams = class QuicParams extends CommonClass {    constructor(
         congestion = 'bbr',
         debug = false,
         brutalUp = '',
@@ -1147,8 +1139,7 @@ QuicParams.DEFAULTS = Object.freeze({
     disableStatelessReset: false,
 });
 
-class FinalMaskStreamSettings extends CommonClass {
-    constructor(tcp = [], udp = [], quicParams = undefined) {
+var FinalMaskStreamSettings = class FinalMaskStreamSettings extends CommonClass {    constructor(tcp = [], udp = [], quicParams = undefined) {
         super();
         this.tcp = Array.isArray(tcp) ? tcp.map(t => t instanceof TcpMask ? t : new TcpMask(t.type, t.settings)) : [];
         this.udp = Array.isArray(udp) ? udp.map(u => u instanceof UdpMask ? u : UdpMask.fromJson(u)) : [UdpMask.fromJson(udp)];
@@ -1186,8 +1177,7 @@ class FinalMaskStreamSettings extends CommonClass {
     }
 }
 
-class StreamSettings extends CommonClass {
-    constructor(
+var StreamSettings = class StreamSettings extends CommonClass {    constructor(
         network = 'tcp',
         security = 'none',
         tlsSettings = new TlsStreamSettings(),
@@ -1333,8 +1323,7 @@ StreamSettings.STRUCTURED_KEYS = new Set([
     'finalmask', 'sockopt', 'xdriveSettings', 'masqueSettings',
 ]);
 
-class Mux extends CommonClass {
-    constructor(enabled = false, concurrency = 8, xudpConcurrency = 16, xudpProxyUDP443 = "reject") {
+var Mux = class Mux extends CommonClass {    constructor(enabled = false, concurrency = 8, xudpConcurrency = 16, xudpProxyUDP443 = "reject") {
         super();
         this.enabled = enabled;
         this.concurrency = concurrency;
@@ -1362,8 +1351,7 @@ class Mux extends CommonClass {
     }
 }
 
-class Outbound extends CommonClass {
-    static setFinalMaskItemKind(item, kind) { setOutboundMaskItemKind(item, kind); }
+var Outbound = class Outbound extends CommonClass {    static setFinalMaskItemKind(item, kind) { setOutboundMaskItemKind(item, kind); }
     constructor(
         tag = '',
         protocol = Protocols.VLESS,
@@ -2990,7 +2978,7 @@ Outbound.SshSettings = class extends CommonClass {
 // here does not fail, it produces a tunnel missing the field the operator filled
 // in. wireguard/awg/gre/openvpn/l2tp/ikev2 are mirrored from the landed drivers;
 // pptp, openconnect and sstp have no driver yet and are marked below.
-const VPN_OUT_WG_FIELDS = [
+var VPN_OUT_WG_FIELDS = [
     { name: 'endpoint', type: 'text', def: '', label: 'vpnOutEndpoint', placeholder: '203.0.113.10:51820' },
     // Takes the [Interface] Address line of a wg .conf verbatim, comma-separated
     // forms included, so the operator can paste rather than transcribe.
@@ -3013,7 +3001,7 @@ const VPN_OUT_WG_FIELDS = [
 //
 // H1-H4 are text and not numbers because they are uint32 magic headers, and
 // values above 2^31 are exactly where an <a-input-number> starts rounding.
-const VPN_OUT_AWG_FIELDS = VPN_OUT_WG_FIELDS.concat([
+var VPN_OUT_AWG_FIELDS = VPN_OUT_WG_FIELDS.concat([
     { name: 'jc', type: 'number', def: null, min: 0, max: 128, plain: 'Jc' },
     { name: 'jmin', type: 'number', def: null, min: 0, max: 1280, plain: 'Jmin' },
     { name: 'jmax', type: 'number', def: null, min: 0, max: 1280, plain: 'Jmax' },
@@ -3044,7 +3032,7 @@ const VPN_OUT_AWG_FIELDS = VPN_OUT_WG_FIELDS.concat([
     { name: 'disableCookies', type: 'boolean', def: false, plain: 'Disable cookies' },
 ]);
 
-const VPN_OUT_KINDS = {
+var VPN_OUT_KINDS = {
     // The qualifier is not decoration: it is what separates this row from Xray's
     // own userspace wireguard outbound in the picker, and unqualified the two read
     // as one protocol listed twice.
@@ -3370,7 +3358,7 @@ const VPN_OUT_KINDS = {
     },
 };
 
-const VPN_OUT_DEFAULT_KIND = 'wireguard';
+var VPN_OUT_DEFAULT_KIND = 'wireguard';
 
 // wg-quick .conf key -> field name in VPN_OUT_KINDS, per section. Lower-cased
 // keys because the format is case-insensitive and every generator picks its own
@@ -3380,7 +3368,7 @@ const VPN_OUT_DEFAULT_KIND = 'wireguard';
 // ones, which is why they are listed here rather than in a table of their own:
 // the same file parses for both kinds, and the ones the plain wireguard kind has
 // no field for are reported as ignored instead of silently dropped.
-const WG_CONF_INTERFACE_KEYS = {
+var WG_CONF_INTERFACE_KEYS = {
     privatekey: 'privateKey',
     address: 'address',
     mtu: 'mtu',
@@ -3394,7 +3382,7 @@ const WG_CONF_INTERFACE_KEYS = {
     h3: 'h3',
     h4: 'h4',
 };
-const WG_CONF_PEER_KEYS = {
+var WG_CONF_PEER_KEYS = {
     publickey: 'peerPublicKey',
     presharedkey: 'presharedKey',
     endpoint: 'endpoint',
@@ -3488,7 +3476,7 @@ function parseWgConf(text, kind = VPN_OUT_DEFAULT_KIND) {
 //   into    a single field that takes the file verbatim (OpenVPN's .ovpn, which
 //           the driver prefers over every discrete field anyway)
 //   parse   a parser producing values for the discrete fields
-const VPN_OUT_IMPORT = {
+var VPN_OUT_IMPORT = {
     wireguard: { accept: '.conf,.txt,text/plain', parse: parseWgConf },
     awg: { accept: '.conf,.txt,text/plain', parse: parseWgConf },
     openvpn: { accept: '.ovpn,.conf,.txt,text/plain', into: 'profile' },

@@ -54,7 +54,7 @@ func TestClashSubscriptionExportsEveryAwg31Option(t *testing.T) {
 		UserId: 1, Tag: "inbound-51838", Port: 51838, Remark: "AWG 3.1", Protocol: model.AWG, Enable: true,
 		Settings: `{"ipRanges":["10.8.38.2-10.8.38.254"],"userLimit":1,"awg31":{"s3":12,"s4":24,"i1":"<r 32>","i2":"<r 16>","i3":"<r 8>","i4":"<r 4>","i5":"<r 2>","headerProtectionKey":"` + key + `","contentPaddingAddition":"8-16","rekeyAfterTime":"100-120","rekeyTimeout":"3-6","rejectAfterTime":"160-200","keepaliveTimeout":"8-16","maxHandshakeAttempts":"15-25","randomTrailers":true,"disableCookies":true},"clients":[{"email":"awg31@x","enable":true,"subId":"sub-awg31"}]}`,
 	}
-	var awgService service.AwgService
+	var awgService = &service.AwgService{}
 	if _, err := awgService.ReconcileKeys(inbound); err != nil {
 		t.Fatalf("ReconcileKeys: %v", err)
 	}

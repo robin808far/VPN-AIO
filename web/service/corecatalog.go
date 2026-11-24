@@ -213,6 +213,17 @@ var coreCatalog = []coreSpec{
 		globs: []string{"/etc/vpn-ui-mtproto/server-*"},
 	},
 	{
+		name: "singbox", title: "sing-box", backend: "sing-box",
+		desc: "Modern proxy platform: hysteria2, tuic, anytls, shadowtls — and the Xray family when an inbound's Core field picks sing-box",
+		// Like telemt: one fully-static userspace binary, no kernel modules, no
+		// nft accounting path of its own. The core is a per-inbound CHOICE (the
+		// s-ui model): hysteria2/tuic/anytls/shadowtls always run here, while
+		// vless/vmess/trojan/shadowsocks run here only when Core="singbox".
+		daemons: []string{"sing-box"},
+		paths:   []string{"/etc/vpn-ui-singbox"},
+		globs:   []string{"/etc/vpn-ui-singbox/server-*"},
+	},
+	{
 		name: "ssh", title: "SSH", backend: "Built-in (VPN-AIO)",
 		desc: "SSH tunnel gateway, served by the panel itself", builtin: true,
 	},
@@ -511,10 +522,17 @@ func coreNamesFromSet(set map[string]bool) []string {
 // for the Xray-native protocols, which need no separate core. Only "wg-c"
 // differs from its core name; the rest are identical, and the map is the single
 // place that has to know it.
-func protocolCoreName(protocol string) string {
-	switch protocol {
+func protocolCoreName(protocol string) string {	switch protocol {
 	case "wg-c":
 		return "wgc"
+	// sing-box protocols: each inbound of these runs under the sing-box core,
+	// mirroring s-ui where the core is chosen per-protocol, not one "singbox"
+	// protocol. vless/vmess/trojan/shadowsocks stay Xray-native by default and
+	// only map to sing-box when the inbound's Core field says so.
+	// The patched Xray core serves hysteria2/tuic/anytls itself, so only
+	// shadowtls is unconditionally sing-box; the rest route here by Core field.
+	case "shadowtls":
+		return "singbox"
 	}
 	if c := coreSpecFor(protocol); c != nil && !c.builtin {
 		return c.name

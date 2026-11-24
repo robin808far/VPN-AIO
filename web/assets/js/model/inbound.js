@@ -1,4 +1,9 @@
-const Protocols = {
+// Declared with var (not const) and merged rather than assigned so the panel
+// can swap between pages without a full reload: the outbound model declares
+// its own (different-cased) keys on the same name, and both must stay visible
+// to whichever page renders last.
+var Protocols = typeof Protocols !== 'undefined' && Protocols ? Protocols : {};
+Object.assign(Protocols, {
     VMESS: 'vmess',
     VLESS: 'vless',
     TROJAN: 'trojan',
@@ -24,7 +29,7 @@ const Protocols = {
     GRE: 'gre',
     MTPROTO: 'mtproto',
     SSH: 'ssh',
-};
+});
 
 // The panel-wide client identity: the value that goes in the URL of
 // /panel/api/inbounds/updateClient/:clientId and /:id/delClient/:clientId.
@@ -41,7 +46,7 @@ const Protocols = {
 //
 // Kept beside getClientIdentity because it answers the neighbouring question: that
 // one says what a protocol is ADDRESSED by, this one says what its customer is given.
-const CLIENT_USERPASS_PROTOCOLS = [
+var CLIENT_USERPASS_PROTOCOLS = [
     Protocols.L2TP, Protocols.PPTP, Protocols.OPENVPN, Protocols.OPENCONNECT,
     Protocols.SSTP, Protocols.IKEV2, Protocols.SSH,
 ];
@@ -92,7 +97,7 @@ function getClientIdentity(protocol, client) {
 // Display labels for the protocol picker. The Add/Edit inbound dropdown shows
 // these while binding the lowercase Protocols VALUE (openvpn/http/openconnect/…),
 // which is what the backend parses — so the pretty text never reaches the server.
-const ProtocolLabels = {
+var ProtocolLabels = {
     vmess: 'VMess',
     vless: 'VLESS',
     trojan: 'Trojan',
@@ -120,7 +125,7 @@ const ProtocolLabels = {
     ssh: 'SSH',
 };
 
-const SSMethods = {
+var SSMethods = {
     AES_256_GCM: 'aes-256-gcm',
     AES_128_GCM: 'aes-128-gcm',
     CHACHA20_POLY1305: 'chacha20-poly1305',
@@ -131,19 +136,19 @@ const SSMethods = {
     BLAKE3_CHACHA20_POLY1305: '2022-blake3-chacha20-poly1305',
 };
 
-const TLS_FLOW_CONTROL = {
+var TLS_FLOW_CONTROL = {
     VISION: "xtls-rprx-vision",
     VISION_UDP443: "xtls-rprx-vision-udp443",
 };
 
-const TLS_VERSION_OPTION = {
+var TLS_VERSION_OPTION = {
     TLS10: "1.0",
     TLS11: "1.1",
     TLS12: "1.2",
     TLS13: "1.3",
 };
 
-const TLS_CIPHER_OPTION = {
+var TLS_CIPHER_OPTION = {
     AES_128_GCM: "TLS_AES_128_GCM_SHA256",
     AES_256_GCM: "TLS_AES_256_GCM_SHA384",
     CHACHA20_POLY1305: "TLS_CHACHA20_POLY1305_SHA256",
@@ -159,7 +164,7 @@ const TLS_CIPHER_OPTION = {
     ECDHE_RSA_CHACHA20_POLY1305: "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256",
 };
 
-const UTLS_FINGERPRINT = {
+var UTLS_FINGERPRINT = {
     UTLS_CHROME: "chrome",
     UTLS_FIREFOX: "firefox",
     UTLS_SAFARI: "safari",
@@ -174,26 +179,26 @@ const UTLS_FINGERPRINT = {
     UTLS_UNSAFE: "unsafe",
 };
 
-const ALPN_OPTION = {
+var ALPN_OPTION = {
     H3: "h3",
     H2: "h2",
     HTTP1: "http/1.1",
 };
 
-const SNIFFING_OPTION = {
+var SNIFFING_OPTION = {
     HTTP: "http",
     TLS: "tls",
     QUIC: "quic",
     FAKEDNS: "fakedns"
 };
 
-const USAGE_OPTION = {
+var USAGE_OPTION = {
     ENCIPHERMENT: "encipherment",
     VERIFY: "verify",
     ISSUE: "issue",
 };
 
-const DOMAIN_STRATEGY_OPTION = {
+var DOMAIN_STRATEGY_OPTION = {
     AS_IS: "AsIs",
     USE_IP: "UseIP",
     USE_IPV6V4: "UseIPv6v4",
@@ -207,13 +212,13 @@ const DOMAIN_STRATEGY_OPTION = {
     FORCE_IPV4: "ForceIPv4",
 };
 
-const TCP_CONGESTION_OPTION = {
+var TCP_CONGESTION_OPTION = {
     BBR: "bbr",
     CUBIC: "cubic",
     RENO: "reno",
 };
 
-const USERS_SECURITY = {
+var USERS_SECURITY = {
     AES_128_GCM: "aes-128-gcm",
     CHACHA20_POLY1305: "chacha20-poly1305",
     AUTO: "auto",
@@ -221,14 +226,15 @@ const USERS_SECURITY = {
     ZERO: "zero",
 };
 
-const MODE_OPTION = {
+var MODE_OPTION = {
     AUTO: "auto",
     PACKET_UP: "packet-up",
     STREAM_UP: "stream-up",
     STREAM_ONE: "stream-one",
 };
 
-Object.freeze(Protocols);
+// Protocols stays extensible: the outbound model adds its own (different-cased)
+// keys when the panel soft-navigates between pages sharing one document.
 Object.freeze(ProtocolLabels);
 Object.freeze(SSMethods);
 Object.freeze(TLS_FLOW_CONTROL);
@@ -243,8 +249,7 @@ Object.freeze(TCP_CONGESTION_OPTION);
 Object.freeze(USERS_SECURITY);
 Object.freeze(MODE_OPTION);
 
-class XrayCommonClass {
-
+var XrayCommonClass = class XrayCommonClass {
     static toJsonArray(arr) {
         return arr.map(obj => obj.toJson());
     }
@@ -300,8 +305,7 @@ class XrayCommonClass {
     }
 }
 
-class TcpStreamSettings extends XrayCommonClass {
-    constructor(
+var TcpStreamSettings = class TcpStreamSettings extends XrayCommonClass {    constructor(
         acceptProxyProtocol = false,
         type = 'none',
         request = new TcpStreamSettings.TcpRequest(),
@@ -428,8 +432,7 @@ TcpStreamSettings.TcpResponse = class extends XrayCommonClass {
     }
 };
 
-class KcpStreamSettings extends XrayCommonClass {
-    constructor(
+var KcpStreamSettings = class KcpStreamSettings extends XrayCommonClass {    constructor(
         mtu = 1350,
         tti = 20,
         uplinkCapacity = 5,
@@ -469,8 +472,7 @@ class KcpStreamSettings extends XrayCommonClass {
     }
 }
 
-class WsStreamSettings extends XrayCommonClass {
-    constructor(
+var WsStreamSettings = class WsStreamSettings extends XrayCommonClass {    constructor(
         acceptProxyProtocol = false,
         path = '/',
         host = '',
@@ -514,8 +516,7 @@ class WsStreamSettings extends XrayCommonClass {
     }
 }
 
-class GrpcStreamSettings extends XrayCommonClass {
-    constructor(
+var GrpcStreamSettings = class GrpcStreamSettings extends XrayCommonClass {    constructor(
         serviceName = "",
         authority = "",
         multiMode = false,
@@ -543,8 +544,7 @@ class GrpcStreamSettings extends XrayCommonClass {
     }
 }
 
-class HTTPUpgradeStreamSettings extends XrayCommonClass {
-    constructor(
+var HTTPUpgradeStreamSettings = class HTTPUpgradeStreamSettings extends XrayCommonClass {    constructor(
         acceptProxyProtocol = false,
         path = '/',
         host = '',
@@ -598,7 +598,7 @@ class HTTPUpgradeStreamSettings extends XrayCommonClass {
 // table is compared by value. They are handled explicitly in
 // Inbound.collectXhttpShareFields instead (see xhttpShareDefaults in
 // sub/subService.go, where putting a map here would be an outright panic).
-const XHTTP_SHARE_DEFAULTS = {
+var XHTTP_SHARE_DEFAULTS = {
     scMaxBufferedPosts: 30,
     scMaxEachPostBytes: "1000000",
     scStreamUpServerSecs: "20-80",
@@ -613,7 +613,7 @@ Object.freeze(XHTTP_SHARE_DEFAULTS);
 // The xPadding* / headers / noSSEHeader / noGRPCHeader fields need shaping and
 // xmux / downloadSettings are objects, so all of those are handled explicitly
 // rather than from this list.
-const XHTTP_SHARE_FIELDS = [
+var XHTTP_SHARE_FIELDS = [
     "scMaxBufferedPosts",
     "scMaxEachPostBytes",
     "scStreamUpServerSecs",
@@ -635,7 +635,7 @@ Object.freeze(XHTTP_SHARE_FIELDS);
 // the outbound have to agree here: an admin who reads "16-32" on one form and a
 // blank on the other has no way to tell which side is actually in force.
 // Mirrored on the Go side by xhttpXmuxDefaults in sub/subService.go.
-const XHTTP_XMUX_DEFAULTS = {
+var XHTTP_XMUX_DEFAULTS = {
     maxConcurrency: "16-32",
     maxConnections: 0,
     cMaxReuseTimes: 0,
@@ -645,8 +645,7 @@ const XHTTP_XMUX_DEFAULTS = {
 };
 Object.freeze(XHTTP_XMUX_DEFAULTS);
 
-class xHTTPStreamSettings extends XrayCommonClass {
-    constructor(
+var xHTTPStreamSettings = class xHTTPStreamSettings extends XrayCommonClass {    constructor(
         path = '/',
         host = '',
         headers = [],
@@ -1061,8 +1060,7 @@ xHTTPStreamSettings.STRUCTURED_KEYS = new Set([
     'serverMaxHeaderBytes', 'xmux', 'downloadSettings',
 ]);
 
-class HysteriaStreamSettings extends XrayCommonClass {
-    constructor(
+var HysteriaStreamSettings = class HysteriaStreamSettings extends XrayCommonClass {    constructor(
         protocol,
         version = 2,
         auth = '',
@@ -1105,8 +1103,7 @@ class HysteriaStreamSettings extends XrayCommonClass {
     }
 };
 
-class HysteriaMasquerade extends XrayCommonClass {
-    constructor(
+var HysteriaMasquerade = class HysteriaMasquerade extends XrayCommonClass {    constructor(
         type = 'proxy',
         dir = '',
         url = '',
@@ -1161,8 +1158,7 @@ class HysteriaMasquerade extends XrayCommonClass {
         };
     }
 };
-class TlsStreamSettings extends XrayCommonClass {
-    constructor(
+var TlsStreamSettings = class TlsStreamSettings extends XrayCommonClass {    constructor(
         serverName = '',
         minVersion = TLS_VERSION_OPTION.TLS12,
         maxVersion = TLS_VERSION_OPTION.TLS13,
@@ -1353,8 +1349,7 @@ TlsStreamSettings.Settings = class extends XrayCommonClass {
 TlsStreamSettings.Settings.STRUCTURED_KEYS = new Set(['fingerprint', 'echConfigList']);
 
 
-class RealityStreamSettings extends XrayCommonClass {
-    constructor(
+var RealityStreamSettings = class RealityStreamSettings extends XrayCommonClass {    constructor(
         show = false,
         xver = 0,
         target = '',
@@ -1474,8 +1469,7 @@ RealityStreamSettings.Settings.STRUCTURED_KEYS = new Set([
     'publicKey', 'fingerprint', 'serverName', 'spiderX', 'mldsa65Verify',
 ]);
 
-class SockoptStreamSettings extends XrayCommonClass {
-    constructor(
+var SockoptStreamSettings = class SockoptStreamSettings extends XrayCommonClass {    constructor(
         acceptProxyProtocol = false,
         tcpFastOpen = false,
         mark = 0,
@@ -1679,8 +1673,7 @@ function invalidInboundExprArgs(args) {
     return !Array.isArray(args) || args.length === 0 || args.some(arg => !arg || [arg.bytes !== undefined, arg.u64 !== undefined, !!arg.reuse, !!arg.metadata, !!arg.transform].filter(Boolean).length !== 1);
 }
 
-class UdpMask extends XrayCommonClass {
-    constructor(type = 'salamander', settings = {}) {
+var UdpMask = class UdpMask extends XrayCommonClass {    constructor(type = 'salamander', settings = {}) {
         super();
         this.type = type;
         this.settings = this._getDefaultSettings(type, settings);
@@ -1774,8 +1767,7 @@ function normalizeInboundUdpMask(type, settings) {
     return {type:'mkcp-legacy',settings:{...settings,header,value:header==='dns'?(settings.domain||''):(settings.value||settings.password||'')}};
 }
 
-class TcpMask extends XrayCommonClass {
-    constructor(type = 'fragment', settings = {}) {
+var TcpMask = class TcpMask extends XrayCommonClass {    constructor(type = 'fragment', settings = {}) {
         super();
         this.type = type;
         this.settings = this._getDefaultSettings(type, settings);
@@ -1850,8 +1842,7 @@ class TcpMask extends XrayCommonClass {
     }
 }
 
-class QuicParams extends XrayCommonClass {
-    constructor(
+var QuicParams = class QuicParams extends XrayCommonClass {    constructor(
         congestion = 'bbr',
         debug = false,
         brutalUp = '',
@@ -1944,8 +1935,7 @@ class QuicParams extends XrayCommonClass {
     }
 }
 
-class FinalMaskStreamSettings extends XrayCommonClass {
-    constructor(tcp = [], udp = [], quicParams = undefined) {
+var FinalMaskStreamSettings = class FinalMaskStreamSettings extends XrayCommonClass {    constructor(tcp = [], udp = [], quicParams = undefined) {
         super();
         this.tcp = Array.isArray(tcp) ? tcp.map(t => t instanceof TcpMask ? t : new TcpMask(t.type, t.settings)) : [];
         this.udp = Array.isArray(udp) ? udp.map(u => u instanceof UdpMask ? u : UdpMask.fromJson(u)) : [UdpMask.fromJson(udp)];
@@ -1983,8 +1973,7 @@ class FinalMaskStreamSettings extends XrayCommonClass {
     }
 }
 
-class StreamSettings extends XrayCommonClass {
-    constructor(network = 'tcp',
+var StreamSettings = class StreamSettings extends XrayCommonClass {    constructor(network = 'tcp',
         security = 'none',
         externalProxy = [],
         tlsSettings = new TlsStreamSettings(),
@@ -2158,8 +2147,7 @@ StreamSettings.STRUCTURED_KEYS = new Set([
     'masqueSettings', 'finalmask', 'sockopt',
 ]);
 
-class Sniffing extends XrayCommonClass {
-    constructor(
+var Sniffing = class Sniffing extends XrayCommonClass {    constructor(
         enabled = false,
         destOverride = ['http', 'tls', 'quic', 'fakedns'],
         metadataOnly = false,
@@ -2208,8 +2196,7 @@ Sniffing.STRUCTURED_KEYS = new Set([
     'enabled', 'destOverride', 'metadataOnly', 'routeOnly', 'ipsExcluded', 'domainsExcluded',
 ]);
 
-class Inbound extends XrayCommonClass {
-    static setFinalMaskItemKind(item, kind) { setInboundMaskItemKind(item, kind); }
+var Inbound = class Inbound extends XrayCommonClass {    static setFinalMaskItemKind(item, kind) { setInboundMaskItemKind(item, kind); }
     constructor(
         port = RandomUtil.randomInteger(10000, 60000),
         listen = '',
@@ -2229,6 +2216,9 @@ class Inbound extends XrayCommonClass {
         this.tag = tag;
         this.sniffing = sniffing;
         this.clientStats = clientStats;
+        // Which engine runs this inbound: '' = Xray (the default), 'singbox' =
+        // the sing-box core. Mirrors model.Inbound.Core on the Go side.
+        this.core = '';
     }
     getClientStats() {
         return this.clientStats;
@@ -6498,7 +6488,7 @@ function greSetPeerField(client, i, field, value) {
 // backend refuses to start telemt on such an inbound rather than write per-account
 // mode entries that are EMPTY, which its patched reader takes for "unrestricted":
 // the exact opposite of what was asked.
-const MTPROTO_LAST_MODE_WARNING =
+var MTPROTO_LAST_MODE_WARNING =
   "At least one connection mode must stay enabled: an inbound with none has no usable link.";
 
 // MTProto Proxy (Telegram) inbound settings.
@@ -7441,3 +7431,4 @@ Inbound.TunSettings = class extends Inbound.Settings {
         };
     }
 };
+

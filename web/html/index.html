@@ -1077,7 +1077,7 @@
   // derivatives before "arch". A mark here must have a matching
   // web/assets/img/distro/<mark>.svg and a .bo-distro--<mark> rule in
   // components.css; see the header of that file's distro section.
-  const DISTRO_MARKS = [
+  var DISTRO_MARKS = [
     ['ubuntu mate', 'ubuntu-mate'], ['ubuntu-mate', 'ubuntu-mate'],
     ['kubuntu', 'kubuntu'], ['xubuntu', 'xubuntu'], ['lubuntu', 'lubuntu'],
     ['pop!_os', 'pop'], ['pop_os', 'pop'], ['pop os', 'pop'],
@@ -1377,7 +1377,7 @@
   })
 
 
-  class CurTotal {
+  var CurTotal = class CurTotal {
 
     constructor(current, total) {
       this.current = current;
@@ -1403,7 +1403,7 @@
     }
   }
 
-  class Status {
+  var Status = class Status {
     constructor(data) {
       this.cpu = new CurTotal(0, 0);
       this.cpuCores = 0;
@@ -1490,7 +1490,7 @@
     }
   }
 
-  const versionModal = {
+  var versionModal = {
     visible: false,
     versions: [],
     show(versions) {
@@ -1502,7 +1502,7 @@
     },
   };
 
-  const logModal = {
+  var logModal = {
     visible: false,
     logs: [],
     rows: 20,
@@ -1611,7 +1611,7 @@
     },
   };
 
-  const xraylogModal = {
+  var xraylogModal = {
       visible: false,
       logs: [],
       live: false,
@@ -1692,7 +1692,7 @@
         }
       },
     };
-  const backupModal = {
+  var backupModal = {
     visible: false,
     show() {
       this.visible = true;
@@ -1708,7 +1708,7 @@
   //
   // All four to start with: the picker exists to let an operator take parts AWAY
   // from the full name, so the default has to be the full name.
-  const backupNameModal = {
+  var backupNameModal = {
     visible: false,
     parts: ['panelName', 'domain', 'date', 'time'],
     show() {
@@ -1722,15 +1722,15 @@
   // The order the components appear in, which is the SERVER's order and not the
   // order they were ticked in. Kept beside the state so the preview and the
   // request cannot disagree about it.
-  const BACKUP_NAME_ORDER = ['panelName', 'domain', 'date', 'time'];
+  var BACKUP_NAME_ORDER = ['panelName', 'domain', 'date', 'time'];
 
-  const customGeoColumns = [
+  var customGeoColumns = [
     { title: '{{ i18n "pages.index.customGeoExtColumn" }}', key: 'extDat', scopedSlots: { customRender: 'extDat' }, ellipsis: true },
     { title: '{{ i18n "pages.index.customGeoLastUpdated" }}', key: 'lastUpdatedAt', scopedSlots: { customRender: 'lastUpdatedAt' }, width: 160 },
     { title: '{{ i18n "pages.index.customGeoActions" }}', key: 'action', scopedSlots: { customRender: 'action' }, width: 120, fixed: 'right' },
   ];
 
-  const app = new Vue({
+  var app = new Vue({
     delimiters: ['[[', ']]'],
     el: '#app',
     mixins: [MediaQueryMixin],
@@ -2878,7 +2878,7 @@
       // derived here from its status rather than fetched, which is also why the
       // Core Settings page does not grow start/stop cards for them.
       vpnCoreStatuses() {
-        const order = ['xray', 'l2tp', 'ipsec', 'pptp', 'openvpn', 'openconnect', 'sstp', 'ikev2', 'wgc', 'awg', 'gre', 'mtproto', 'ssh', 'radius'];
+        const order = ['xray', 'singbox', 'l2tp', 'ipsec', 'pptp', 'openvpn', 'openconnect', 'sstp', 'ikev2', 'wgc', 'awg', 'gre', 'mtproto', 'ssh', 'radius'];
         const byName = {};
         (this.coreStatuses || []).forEach(c => { byName[c.name] = c; });
         const rows = order.map(n => byName[n] || { name: n, state: 'unknown' });
@@ -2898,7 +2898,7 @@
         return rows;
       },
       coreLabel(name) {
-        return { xray: 'Xray', anytls: 'AnyTLS', tuic: 'TUIC', naive: 'NaiveProxy', l2tp: 'L2TP', ipsec: 'IPsec', pptp: 'PPTP', openvpn: 'OpenVPN', openconnect: 'OpenConnect (cisco)', sstp: 'SSTP', ikev2: 'IKEv2', wgc: 'WireGuard (C)', awg: 'AmneziaWG', gre: 'GRE', mtproto: 'MTProto Proxy', ssh: 'SSH', radius: 'RADIUS' }[name] || name;
+        return { xray: 'Xray', singbox: 'Sing-Box', anytls: 'AnyTLS', tuic: 'TUIC', naive: 'NaiveProxy', l2tp: 'L2TP', ipsec: 'IPsec', pptp: 'PPTP', openvpn: 'OpenVPN', openconnect: 'OpenConnect (cisco)', sstp: 'SSTP', ikev2: 'IKEv2', wgc: 'WireGuard (C)', awg: 'AmneziaWG', gre: 'GRE', mtproto: 'MTProto Proxy', ssh: 'SSH', radius: 'RADIUS' }[name] || name;
       },
       coreStateColor(state) {
         return { running: '#52c41a', idle: '#1890ff', stopped: '#faad14', not_installed: '#8c8c8c', error: '#f5222d' }[state] || '#8c8c8c';

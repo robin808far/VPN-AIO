@@ -20,7 +20,34 @@
                 </template> Target <a-icon @click="randomizeRealityTarget()" type="sync"></a-icon>
             </a-tooltip>
         </template>
+        <div style="margin-bottom:6px;">
+            <a-button-group>
+                <a-button @click="scanRealityTarget">
+                    <a-icon type="scan"></a-icon> Scan
+                </a-button>
+                <a-button @click="openRealityFinder">
+                    <a-icon type="search"></a-icon> Find Targets
+                </a-button>
+            </a-button-group>
+        </div>
         <a-input v-model.trim="inbound.stream.reality.target"></a-input>
+    </a-form-item>
+    <a-form-item v-if="realityScanResult" :wrapper-col="{ span: 24 }">
+        <a-alert :type="realityScanResult.feasible ? 'success' : 'error'" :message="realityScanTitleText">
+            <template slot="description">
+                <div v-if="realityScanResult.error" style="white-space: pre-wrap;">[[ realityScanResult.error ]]</div>
+                <template v-else>
+                    <div>SNI used: <b>[[ realityScanResult.sni || '—' ]]</b></div>
+                    <div>TLS: <b>[[ realityScanResult.tlsVersion ]]</b></div>
+                    <div>ALPN: <b>[[ realityScanResult.alpn || '—' ]]</b></div>
+                    <div v-if="realityScanResult.keyExchange">Key Exchange: <b>[[ realityScanResult.keyExchange ]]</b></div>
+                    <div v-if="realityScanResult.certificate">Certificate: <b>[[ realityScanResult.certificate ]]</b></div>
+                    <div v-if="realityScanResult.certExpires">Certificate expires: <b>[[ realityScanResult.certExpires ]] UTC</b></div>
+                    <div>Cert chain: <b>[[ realityScanResult.certChain ]] B</b></div>
+                    <div>Latency: <b>[[ realityScanResult.latencyMs ]] ms</b></div>
+                </template>
+            </template>
+        </a-alert>
     </a-form-item>
     <a-form-item>
         <template slot="label">
@@ -79,5 +106,24 @@
             <a-button danger @click="clearMldsa65">Clear</a-button>
         </a-space>
     </a-form-item>
+    <a-modal v-model="realityFinderOpen" title="REALITY Target Scanner" :footer="null" :width="900"
+        :dialog-style="{ top: '60px' }">
+        <p style="margin-top:-8px;">Validate a domain, or scan an IP / CIDR range to discover new REALITY
+            targets from their certificates. Leave the box empty to probe common candidates.</p>
+        <a-input-search v-model="realityFinderQuery" placeholder="IP, CIDR, or domain — leave empty for common candidates"
+            enter-button="Scan" @search="runRealityFinder" :disabled="realityFinderBusy"></a-input-search>
+        <a-table :columns="realityFinderColumns" :data-source="realityFinderRows" :loading="realityFinderBusy"
+            :pagination="{ pageSize: 10 }" row-key="target" size="small" style="margin-top:12px;">
+            <template slot="status" slot-scope="text, record">
+                <a-tag :color="record.feasible ? 'green' : 'red'">[[ record.feasible ? 'Feasible' : 'Unusable' ]]</a-tag>
+            </template>
+            <template slot="use" slot-scope="text, record">
+                <a v-if="record.feasible" @click="useRealityFinderRow(record)">Use</a>
+            </template>
+        </a-table>
+        <div style="text-align:right; margin-top:8px;">
+            <a-button type="primary" @click="runRealityFinder" :loading="realityFinderBusy">Rescan</a-button>
+        </div>
+    </a-modal>
 </template>
 {{end}}

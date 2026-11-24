@@ -131,7 +131,7 @@
   @media(max-width:600px){.bo-host-grid{grid-template-columns:1fr}.bo-host-toolbar .ant-input-search{max-width:none!important;flex:1 1 100%}}
 </style>
 <script>
-const app = new Vue({
+var app = new Vue({
   el:'#app',delimiters:['[[',']]'],
   data:{themeSwitcher,pageTitle:'{{i18n "pages.hosts.title"}}',pageClass:'hosts-page',spinning:false,saving:false,groups:[],inbounds:[],selected:[],search:'',visible:false,editing:'',draft:null,addresses:'',tab:'basic',
     canEdit:{{if .perms.editInbound}}true{{else}}false{{end}},

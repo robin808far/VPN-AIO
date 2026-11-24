@@ -380,7 +380,7 @@ html[data-theme='ultra-dark'] body.dark #app.login-app .lgt-card {
         <h2>VPN-AIO</h2>
         <p>{{ i18n "pages.login.introText" }}</p>
         <ul>
-          <li><svg class="lgt-icon lgt-icon-18" aria-hidden="true"><use href="#lgt-i-check"></use></svg><span>Xray · Vless / Vmess / Trojan · WireGuard · L2TP · PPTP · OpenVPN · OpenConnect (Cisco) · SSTP · IKEv2 Idle · AmneziaWG · GRE · MTProto Proxy · SSH</span></li>
+          <li><svg class="lgt-icon lgt-icon-18" aria-hidden="true"><use href="#lgt-i-check"></use></svg><span>Xray · Vless / Vmess / Trojan · Sing-Box · WireGuard · L2TP · PPTP · OpenVPN · OpenConnect (Cisco) · SSTP · IKEv2 Idle · AmneziaWG · GRE · MTProto Proxy · SSH</span></li>
           <li><svg class="lgt-icon lgt-icon-18" aria-hidden="true"><use href="#lgt-i-check"></use></svg><span>{{ i18n "pages.login.introFeats" }}</span></li>
         </ul>
       </div>
@@ -981,9 +981,9 @@ html[data-theme='ultra-dark'] body.dark #app.login-app .lgt-card {
     };
   }
 
-  let ground = null;
+  var ground = null;
 
-  const app = new Vue({
+  var app = new Vue({
     delimiters: ['[[', ']]'],
     el: '#app',
     data: {
@@ -1080,16 +1080,16 @@ html[data-theme='ultra-dark'] body.dark #app.login-app .lgt-card {
     },
   });
 
-  const pm_input_selector = '.lgt-control input';
-  const pm_form_selector = 'form.lgt-form';
-  const pm_strip_props = [
+  var pm_input_selector = '.lgt-control input';
+  var pm_form_selector = 'form.lgt-form';
+  var pm_strip_props = [
     'background',
     'background-color',
     'background-image',
     'color'
   ];
 
-  const pm_observed_forms = new WeakSet();
+  var pm_observed_forms = new WeakSet();
 
   function pm_strip_inline(el) {
     if (!el || el.nodeType !== 1 || !el.matches?.(pm_input_selector)) return;

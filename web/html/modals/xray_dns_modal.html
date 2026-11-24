@@ -57,7 +57,7 @@
   </a-form>
 </a-modal>
 <script>
-  const defaultDnsObject = {
+  var defaultDnsObject = {
     address: "localhost",
     port: 53,
     domains: [],
@@ -69,7 +69,7 @@
     finalQuery: false
   }
 
-  const dnsModal = {
+  var dnsModal = {
     title: '',
     visible: false,
     okText: '{{ i18n "confirm" }}',

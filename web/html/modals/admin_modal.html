@@ -98,7 +98,7 @@
   // Labels for the permission slugs the server publishes. Keyed by slug so the
   // server stays the source of truth for WHICH permissions exist; this only names
   // them. An unknown slug falls back to the raw slug rather than rendering blank.
-  const PERMISSION_LABELS = {
+  var PERMISSION_LABELS = {
     accessInbounds: '{{ i18n "pages.admins.accessInbounds" }}',
     createInbound: '{{ i18n "pages.admins.createInbound" }}',
     editInbound: '{{ i18n "pages.admins.editInbound" }}',
@@ -115,7 +115,7 @@
     manageOverview: '{{ i18n "pages.admins.manageOverview" }}',
   };
 
-  const adminModal = {
+  var adminModal = {
     title: '',
     visible: false,
     confirmLoading: false,

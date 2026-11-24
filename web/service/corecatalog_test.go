@@ -423,11 +423,12 @@ func TestEveryVpnProtocolMapsToItsCore(t *testing.T) {
 		}
 	}
 
-	// Protocols that genuinely need no host setup: the Xray-native ones and the
-	// in-binary cores. Gating these would block an inbound that works perfectly.
+	// Protocols that genuinely need no host setup: the Xray-native ones, the
+	// protocols the patched Xray core carries (hysteria2/tuic/anytls — they map
+	// to a core only via the inbound's Core field), and the in-binary cores.
 	for _, protocol := range []string{
 		"ssh", "xray", "vmess", "vless", "trojan", "shadowsocks", "hysteria",
-		"anytls", "tuic", "naive", "",
+		"hysteria2", "tuic", "anytls", "naive", "",
 	} {
 		if got := protocolCoreName(protocol); got != "" {
 			t.Errorf("protocolCoreName(%q) = %q, want \"\": it needs no core install", protocol, got)
@@ -438,7 +439,7 @@ func TestEveryVpnProtocolMapsToItsCore(t *testing.T) {
 	// is the only thing the operator can ever do with it.
 	served := map[string]bool{}
 	for _, p := range []string{"l2tp", "pptp", "openvpn", "openconnect", "sstp",
-		"ikev2", "wg-c", "awg", "gre", "mtproto"} {
+		"ikev2", "wg-c", "awg", "gre", "mtproto", "shadowtls"} {
 		served[protocolCoreName(p)] = true
 	}
 	for _, core := range installableCores() {

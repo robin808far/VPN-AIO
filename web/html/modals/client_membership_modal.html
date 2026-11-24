@@ -391,7 +391,7 @@
 </a-modal>
 
 <script>
-  const clientMembershipModal = {
+  var clientMembershipModal = {
     visible: false,
     confirmLoading: false,
     isEdit: false,
@@ -1231,7 +1231,7 @@
     },
   };
 
-  const clientMembershipModalApp = new Vue({
+  var clientMembershipModalApp = new Vue({
     delimiters: ['[[', ']]'],
     el: '#client-membership-modal',
     data: {
