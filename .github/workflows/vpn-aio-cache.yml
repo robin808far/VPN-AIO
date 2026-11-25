@@ -1,0 +1,60 @@
+name: VPN-AIO build cache
+
+# Caches created by the tag-triggered release workflow are scoped to that tag
+# and are NOT restorable by the next tag's run, so the release build rebuilt
+# the (very slow, qemu-emulated) arm64 daemon bundle every time and could hit
+# its 120-minute timeout. This workflow builds both arch bundles on main and
+# saves them under the same cache key scheme; caches from the default branch
+# are restorable by tag runs, so the release build finds the bundles already
+# present and skips the slow Docker/Alpine steps entirely.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'build.sh'
+      - 'build/backend/**'
+      - 'build/core/**'
+      - 'third_party/**'
+      - '.github/workflows/vpn-aio-cache.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vpn-aio-cache
+  cancel-in-progress: true
+
+jobs:
+  cache:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.x'
+      - name: Compute build cache key
+        id: cachekey
+        run: echo "pins=$(git submodule status | sha256sum | cut -c1-12)" >> "$GITHUB_OUTPUT"
+      - name: Restore cached bundles
+        uses: actions/cache@v4
+        with:
+          path: |
+            backend/bin
+            corebundle/core
+          key: vpn-aio-build-${{ runner.os }}-${{ steps.cachekey.outputs.pins }}
+          restore-keys: vpn-aio-build-${{ runner.os }}-
+      - name: Install arm64 cross-compiler
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq gcc-aarch64-linux-gnu
+      - name: Register qemu binfmt for arm64 containers
+        run: docker run --rm --privileged tonistiigi/binfmt:latest --install arm64
+      - name: Build amd64 bundle
+        run: bash build.sh --arch amd64
+      - name: Build arm64 bundle
+        env:
+          CC: aarch64-linux-gnu-gcc
+        run: bash build.sh --arch arm64
