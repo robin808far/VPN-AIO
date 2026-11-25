@@ -79,4 +79,3 @@ jobs:
             build/out/VPN-AIO-amd64
             build/out/VPN-AIO-arm64
             build/out/SHA256SUMS
-          generate_release_notes: true
