@@ -43,11 +43,19 @@ jobs:
         run: sudo apt-get update -qq && sudo apt-get install -y -qq gcc-aarch64-linux-gnu
       - name: Register qemu binfmt for arm64 containers
         run: docker run --rm --privileged tonistiigi/binfmt:latest --install arm64
+      # GEO_LEAN=1 embeds only the base geo pair (geoip.dat + geosite.dat), leaving
+      # out the ~118MB of Iran/Russia country files. The panel downloads a country
+      # file itself the first time a routing rule names it (web/service/geofile.go),
+      # and the Geofiles page can always fetch one by hand, so fresh installs and
+      # updates keep working — the release binary is just ~118MB smaller.
       - name: Build amd64 bundle
+        env:
+          GEO_LEAN: '1'
         run: bash build.sh --arch amd64
       - name: Build arm64 bundle
         env:
           CC: aarch64-linux-gnu-gcc
+          GEO_LEAN: '1'
         run: bash build.sh --arch arm64
       - name: Collect artifacts and checksums
         run: |
