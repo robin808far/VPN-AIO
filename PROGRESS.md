@@ -85,7 +85,11 @@ Last updated: 2026-11-27 (v6.6.0 tag pushed, release CI in progress at save time
   `[pages.core]` in fa_IR (version/stop/restart/logs/state*) + Persian
   `singboxCoreLocked`; dashboard `coreStateText` now uses i18n. TOML parsed
   OK. Commit/tag `v6.6.0` -> `1fb52746`, pushed. Release CI 46055354122 +
-  Ubuntu validation 46055349392 started; asset verification pending.
+  Ubuntu validation 46055349392 both succeeded. Public assets verified on
+  sweden: amd64 409488560 B `80ca3a74...`, arm64 403823312 B `7121e090...`,
+  SHA256SUMS `223e6db4...`; `sha256sum -c` OK both; amd64 `-v` = 6.6.0; both
+  contain `vpn-aio-limits`; amd64 contains `bo-t-sbox`. Temp dir removed.
+  NEXT: user deploys 6.6.0 on live host, then assistant verifies.
   Earlier temp UI check (dashboard, 1000px): sbox tile under Xray, Manage
   under it — OK; Core settings page and >=1180px not visually checked by
   assistant (user will check on live host after deploying 6.6.0).
