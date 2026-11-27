@@ -3,20 +3,31 @@
 Last updated: 2026-11-27 (v6.5.0 publication verified; release and Ubuntu CI succeeded; both downloaded assets match checksums and report 6.5.0; bundled patched sing-box verified; no production deployment)
 
 > Current truth supersedes earlier candidate/release-preparation notes below.
-> Remote `main`, local detached HEAD, and peeled tag `v6.5.0` all point to
-> `a52abcd71639f74c6d3b3f57102ea435125ae4eb` (verified with `git ls-remote`).
-> Annotated tag object: `81be9cb954743edafd993d03a6c5f088d993af21`.
-> Source/picker fixes are committed and pushed; only `PROGRESS.md` and
-> `HANDOFF.md` have local changes. The original `VPN-AIO` checkout and live
-> host panel/database/service were not modified by this continuation.
+> Peeled tag `v6.5.0` = `a52abcd71639f74c6d3b3f57102ea435125ae4eb`
+> (annotated tag object `81be9cb954743edafd993d03a6c5f088d993af21`).
+> `main` = `origin/main` = `f129f173` (docs-only commit after v6.5.0) plus
+> the relocation-note docs commit below. No source change since v6.5.0.
+> The user reports having updated the live host to v6.5.0 themselves
+> (2026-11-27); verification of that is recorded below when done.
+
+## Project relocation (2026-11-27)
+
+- Main checkout moved to `C:\Users\mef\Documents\OpenCode Projects\VPN-AIO`
+  (full copy incl. `.git`); old `Default Project\VPN-AIO` deleted after copy.
+- Old uncommitted node-feature WIP saved as branch `backup/local-node-wip`
+  (pushed to origin). Local `main` fast-forwarded to `f129f173` (= origin/main).
+- Worktree `Default Project\VPN-AIO-review-6.1.0` repaired and still attached.
+- Continue work in a new OpenCode session rooted at the new folder.
 
 ## Next step (open requests)
 
-- No open execution task. Production deployment of v6.5.0 to the live host
-  requires separate explicit user authorization.
+- Production: user updated the live host to v6.5.0 themselves (2026-11-27);
+  assistant only verifies, does not redeploy.
 - Optional remaining qualification: full ARM64 runtime, VM/systemd/kernel, and
   physical mobile tests (not performed).
-- Decide whether to commit/push these two status-document updates (not yet done).
+- (Done) Status docs committed/pushed. Current queue (user order, 2026-11-27):
+  1) docs consistency commit, 2) fix non-interactive installer `/dev/tty`
+  defect, 3) verify live host runs 6.5.0, 4) new feature (to be specified).
 
 ## systemd/kernel install test on WSL2 (2026-11-27, fresh observation)
 
