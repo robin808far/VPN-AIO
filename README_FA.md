@@ -1,10 +1,22 @@
-[English](/README.md) | [فارسی](/README_FA.md) | [العربية](/README_AR.md) | [中文](/README_ZH.md) | [Español](/README_ES.md) | [Русский](/README_RU.md) | [Türkçe](/README_TR.md)
+[English](/README.md) | [فارسی](/README_FA.md)
 
 <p align="center">
   <img src="web/assets/img/vpn-aio.svg" alt="VPN-AIO" width="260">
 </p>
 
-هدف این نسخه **Ubuntu 24.04 amd64** است. هستهٔ Xray **26.11.9**، پروتکل‌های بومی AnyTLS، TUIC، NaiveProxy و MASQUE، انتقال XDRIVE و AmneziaWG **3.1.20261113-02** با کنترل‌ها و خروجی‌های ۳.۱ در دسترس‌اند. نسخهٔ ۴.۰.۰ مدیریت چند-پنلی **Nodes** را اضافه می‌کند؛ نسخهٔ ۳.۱.۰ تنظیمات بومی اشتراک Happ را اضافه می‌کند؛ نسخهٔ ۳.۰.۰ [مدیریت Hosts](docs/guides/HOSTS.md) را به پنل افزود. پیش از ارتقا، [یادداشت انتشار ۴.۰.۰](https://github.com/robin808far/VPN-AIO/releases/tag/v4.0.0) و [گزارش بررسی](docs/releases/validation/VPN-AIO-3.1.0.md) را بخوانید؛ ماتریس VM/کرنل بین‌توزیعی طبق توافق اجرا نشده است. برای فهرست و دسته‌بندی مستندات پروژه، [راهنمای مستندات](docs/README.md) را ببینید.
+هدف این نسخه **Ubuntu 24.04 amd64** است. هستهٔ Xray **26.11.9**، هستهٔ پچ‌شدهٔ **sing-box 1.14.5**، پروتکل‌های بومی AnyTLS، TUIC، NaiveProxy و MASQUE، انتقال XDRIVE و AmneziaWG **3.1.20261113-02** در دسترس‌اند. نسخهٔ ۷.۰.۰ هستهٔ sing-box را به 1.14.5 رساند و قابلیت‌های حذف‌شدهٔ sing-box را مهاجرت داد؛ نسخهٔ ۷.۰.۱ تغییر نام به VPN-AIO را کامل می‌کند (پایین‌تر). پیش‌تر: ۴.۰.۰ مدیریت چند-پنلی **Nodes**، ۳.۱.۰ تنظیمات بومی اشتراک Happ و ۳.۰.۰ [مدیریت Hosts](docs/guides/HOSTS.md) را اضافه کردند. پیش از ارتقا [یادداشت‌های انتشار](https://github.com/robin808far/VPN-AIO/releases) را بخوانید؛ ماتریس VM/کرنل بین‌توزیعی طبق توافق اجرا نشده است. برای فهرست مستندات، [راهنمای مستندات](docs/README.md) را ببینید.
+
+### هستهٔ sing-box (از ۷.۰.۰)
+
+- **sing-box 1.14.5** همراه با پچ محدودیت‌های VPN-AIO داخل باینری است؛ پس ترافیک، سهمیه، سرعت، تعداد IP و تعداد stream هر حساب روی inbound های sing-box هم اعمال می‌شود. هسته **قفل** است و فقط با انتشار نسخهٔ جدید پنل به‌روز می‌شود (نسخهٔ رسمی sing-box این پچ را ندارد).
+- inbound های sing-box: Hysteria2، TUIC، AnyTLS، Shadowsocks، VMess، Trojan و ShadowTLS v3 (با زنجیره‌کردن ShadowTLS به inbound دیگر از داخل پنل).
+- گزینه‌های جدید فرم inbound: حداقل/حداکثر نسخهٔ TLS، ALPN، `curve_preferences`، مهلت handshake، kTLS TX/RX، احراز هویت mTLS کلاینت؛ obfs برای Hysteria2 (salamander/gecko)، `bbr_profile`، masquerade؛ `strict_mode` و `wildcard_sni` برای ShadowTLS؛ دکمهٔ «Set Cert from Panel».
+- تنظیمات پایه: strategy، timeout و optimistic برای DNS، و قوانین مسیریابی با ساختار جدید 1.12 به بعد: `block` به اکشن `reject`، `dns-out` به اکشن `hijack-dns` و `geosite` به `rule_set` راه دور (`.srs` از SagerNet). قوانین ذخیره‌شدهٔ قدیمی هم خوانده می‌شوند.
+- کارت sing-box در داشبورد (وضعیت، نسخه، مدت اجرا، Logs/Stop/Restart).
+
+### تغییر نام به VPN-AIO (۷.۰.۱)
+
+همهٔ نام‌های قدیمی (پوشه‌های اجرایی مثل `/etc/vpn-aio-singbox`، بسته‌ها در `/usr/libexec/vpn-aio*`، socket کنترل، فایل لاگ، متغیرهای محیطی `VPNAIO_*`، cookie نشست، هویت IKE تونل GRE و نام گواهی OpenConnect) حالا `vpn-aio` هستند. نسخهٔ ۷.۰.۱ در اولین اجرا، پیش از راه‌اندازی هسته‌ها، ساختار قدیمی را خودکار به نام‌های جدید منتقل می‌کند؛ فقط یک بار باید دوباره وارد پنل شوید.
 
 ![نمای کلی](https://raw.githubusercontent.com/robin808far/VPN-AIO/main/media/overview.png)
 

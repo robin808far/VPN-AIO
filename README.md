@@ -1,10 +1,22 @@
-[English](/README.md) | [فارسی](/README_FA.md) | [العربية](/README_AR.md) | [中文](/README_ZH.md) | [Español](/README_ES.md) | [Русский](/README_RU.md) | [Türkçe](/README_TR.md)
+[English](/README.md) | [فارسی](/README_FA.md)
 
 <p align="center">
   <img src="web/assets/img/vpn-aio.svg" alt="VPN-AIO" width="260">
 </p>
 
-This version targets **Ubuntu 24.04 amd64** installations. It integrates Xray **26.11.9**, native AnyTLS/TUIC/NaiveProxy and MASQUE, XDRIVE, and AmneziaWG **3.1.20261113-02** with the 3.1 controls and exports. Version 4.0.0 adds multi-panel **Nodes** management; version 3.1.0 added native Happ subscription settings; version 3.0.0 added [managed Hosts](docs/guides/HOSTS.md). Read the [4.0.0 release notes](https://github.com/robin808far/VPN-AIO/releases/tag/v4.0.0) and [validation record](docs/releases/validation/VPN-AIO-3.1.0.md) before upgrading; the cross-distribution VM/kernel matrix remains explicitly waived.
+This version targets **Ubuntu 24.04 amd64** installations. It integrates Xray **26.11.9**, a bundled and patched **sing-box 1.14.5**, native AnyTLS/TUIC/NaiveProxy and MASQUE, XDRIVE, and AmneziaWG **3.1.20261113-02**. Version 7.0.0 moved the sing-box core to 1.14.5 and migrated removed sing-box features; 7.0.1 completes the rename to VPN-AIO (see below). Earlier: 4.0.0 added multi-panel **Nodes**, 3.1.0 native Happ subscription settings, 3.0.0 [managed Hosts](docs/guides/HOSTS.md). Read the [release notes](https://github.com/robin808far/VPN-AIO/releases) before upgrading; the cross-distribution VM/kernel matrix remains explicitly waived.
+
+### sing-box core (7.0.0+)
+
+- Bundled **sing-box 1.14.5** with the VPN-AIO limits patch, so per-account traffic, quota, speed, IP and stream limits apply to sing-box inbounds too. The core is **locked**: it is updated only with a panel release (upstream archives lack the patch).
+- Inbounds served by sing-box: Hysteria2, TUIC, AnyTLS, Shadowsocks, VMess, Trojan and ShadowTLS v3 (including panel-managed ShadowTLS chaining to another inbound).
+- New options in the inbound form: TLS min/max version, ALPN, `curve_preferences`, handshake timeout, kTLS TX/RX, mTLS client authentication; Hysteria2 obfs (salamander/gecko), `bbr_profile`, masquerade; ShadowTLS `strict_mode` / `wildcard_sni`; "Set Cert from Panel".
+- Base config: DNS strategy/timeout/optimistic, and routing rules written in the 1.12+ shape — `block` → `reject` action, `dns-out` → `hijack-dns` action, `geosite` → remote `rule_set` (SagerNet `.srs`). Older saved rules are still read.
+- Dashboard tile for sing-box (state, version, uptime, Logs/Stop/Restart).
+
+### Rename to VPN-AIO (7.0.1)
+
+Every legacy name (runtime directories such as `/etc/vpn-aio-singbox`, bundles under `/usr/libexec/vpn-aio*`, the control socket, log file, `VPNAIO_*` environment variables, session cookie, GRE IKE identity, OpenConnect certificate name) is now `vpn-aio`. On its first start, 7.0.1 moves an older layout to the new names automatically before any core starts; you only need to log in again once.
 
 Project documentation is organized under [`docs/`](docs/README.md).
 
