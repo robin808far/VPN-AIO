@@ -105,8 +105,33 @@ Last updated: 2026-11-27 (v6.6.0 tag pushed, release CI in progress at save time
   their images, vpn-aio-managed-accounts-20261125 (build cache for core),
   patched sing-box `/tmp/vpn-aio-managed-accounts-singbox-limits-20261126`,
   live /opt/VPN-AIO (service active).
-- Then item 1: sing-box 1.14.5. `singbox-limits.patch` fails on 1.14.5
-  (`experimental/v2rayapi/stats.go:98`); needs rewrite + full runtime tests.
+- Live host on 6.6.0 (user-deployed, verified 2026-11-27): `-v` 6.6.0, service
+  active since 19:29:22 UTC, no `noises` warning in journal since start. The
+  "-" uptime was because no sing-box ran under the new panel; user created an
+  inbound and uptime then showed. Stray old panel PID 510411 + its sing-box PID
+  531113 (`server-4`) seen on the host, NOT touched (needs user decision).
+- (Pushed `072812df`, not released) user items 2026-11-27: sing-box card
+  "Edit config" now opens the base-config editor (was showing configNoTargets
+  because `coreConfigTargets` has no singbox case); "Set Cert from Panel"
+  button in sing-box TLS form (`singboxSetDefaultCert`, uses
+  app.defaultCert/defaultKey); VPN Services chips now 2-line grid (name row,
+  state row). Not built/visually checked yet.
+- sing-box 1.14.5 port (2026-11-27, local changes, NOT committed at this note):
+  `singbox-limits.patch` regenerated for v1.14.5 (only the RoutedPacketConnection
+  hunk needed manual port; limiter.go/limiter_test.go unchanged). Clean
+  `git apply --check` on fresh v1.14.5 clone; marker present. `build.sh`:
+  SINGBOX_VERSION 1.14.5, builder image golang:1.25.5-alpine (1.14.5 needs
+  go 1.25.5). Release workflow cache key now also hashes build.sh + patch so CI
+  rebuilds the daemon bundle instead of reusing the cached 1.12.14 sing-box.
+  Verified on sweden: docker-built (golang:1.25.5-alpine) amd64 binary
+  62021780 B, SHA-256 `dfe79582...`, `version` 1.14.5 with with_v2ray_api;
+  `go test -run TestSingboxAudit ./web/service` in private netns with it:
+  26 PASS, 1 SKIP (StartupFailureRestores..., skipped by design with real
+  binary), 0 FAIL (stats/quota, speed/IP/stream limits, TUIC, AnyTLS,
+  Hysteria2, Shadowsocks, VMess, Trojan, ShadowTLS v3 + managed chaining).
+  Existing live `server-5` config passes `sing-box check` with 1.14.5.
+  Not tested: arm64 build, full lifecycle matrix, browser. Work dir on sweden:
+  `/home/ubuntu/sb-1145-port` (remove after release).
 - Next: 4) new feature — awaiting user specification.
 
 ## systemd/kernel install test on WSL2 (2026-11-27, fresh observation)

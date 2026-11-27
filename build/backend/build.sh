@@ -35,7 +35,7 @@ declare -A PLATFORM=(
 ARCHES=("${@:-amd64}")
 
 # sing-box release to bundle (pinned, like every other daemon source here).
-SINGBOX_VERSION="1.12.14"
+SINGBOX_VERSION="1.14.5"
 SINGBOX_PATCH="$REPO_ROOT/build/backend/singbox-limits.patch"
 
 build_arch() {
@@ -262,7 +262,7 @@ build_arch() {
     docker run --rm ${DOCKER_NET:-} --platform "$platform" \
         -v "$outdir:/out" \
         -v "$SINGBOX_PATCH:/vpn-aio-limits.patch:ro" \
-        golang:1.23.1-alpine sh -euc "
+        golang:1.25.5-alpine sh -euc "
         apk add --no-cache git ca-certificates &&
         git clone --depth 1 --branch v${SINGBOX_VERSION} https://github.com/SagerNet/sing-box.git /src/sing-box &&
         cd /src/sing-box &&
