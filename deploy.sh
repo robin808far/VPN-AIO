@@ -424,6 +424,12 @@ else
     obtain_letsencrypt_cert() { warn "real SSL needs ${MENU}, which failed to install. Skipping."; return 1; }
 fi
 
+# Is there a usable controlling terminal to prompt on? OPEN /dev/tty instead of
+# testing it with -r: the device node is 0666, so -r passes even with no
+# controlling terminal (cloud-init, CI, setsid), and the prompt then dies on
+# ENXIO. Defined locally so it works even when the menu failed to install.
+deploy_have_tty() { { : < /dev/tty; } 2>/dev/null; }
+
 # Configure + install/refresh the systemd unit. Fresh installs get randomized
 # credentials (--random); updates DO NOT, so the operator's existing port, login
 # and web path survive the upgrade.
@@ -464,7 +470,7 @@ if [[ "$MODE" == "install" ]]; then
             # real-cert request; the sourced SSL function picks the challenge.
             if [[ -n "$DOMAIN" || -n "${DEPLOY_CF_TOKEN:-}" ]]; then
                 tls_choice="letsencrypt"
-            elif [[ -r /dev/tty ]]; then
+            elif deploy_have_tty; then
                 {
                     printf '%s::%s %sPanel access mode%s\n' "$B$BLUE" "$R" "$WHITE" "$R"
                     printf "    %s1)%s HTTPS  (real cert via Let's Encrypt: Cloudflare token, manual, or this server's IP)\n" "$GREEN" "$R"
@@ -502,7 +508,7 @@ if [[ "$MODE" == "install" ]]; then
         # The import brought its own admin login; randomizing now would throw it
         # away. Keep it and just install the unit (the port was preserved too).
         cred_mode="keep"
-    elif [[ -r /dev/tty ]]; then
+    elif deploy_have_tty; then
         {
             printf '%s::%s %sPanel login / access%s\n' "$B$BLUE" "$R" "$WHITE" "$R"
             printf '    %s1)%s Randomize  (port, username, password, web path) %s[default]%s\n' "$GREEN" "$R" "$D" "$R"
