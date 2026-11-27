@@ -1,6 +1,6 @@
 # Project Progress & State
 
-Last updated: 2026-11-27 (status checkpoint saved; panel-managed ShadowTLS chaining, full Linux tests/vet/build, and final isolated amd64 candidate verified; no commit/push/release/deploy)
+Last updated: 2026-11-27 (pushed 122e8866 to origin/main; picker-fix rebuilt candidate 6bdbeb42 passed 13/13 disposable container userland lifecycle matrix; no release/deployment)
 Path: `C:\Users\mef\Documents\Default Project\VPN-AIO-review-6.1.0`
 
 ## Goal
@@ -14,9 +14,11 @@ patched bundled sing-box via `XRAY_SPEEDLIMIT_FILE`); physical-device counting
 is not supported and is rejected. A separate `StreamLimit` field caps concurrent
 routed streams/UDP associations. Then confirm and fix defects in the external
 report `C:\Users\mef\Desktop\Bug.md` against this checkout, changing only
-issues reproduced in current code. No production/live-database, commit, push, or
-release action was made for this local remediation. Earlier audit-host
-provisioning, performed separately, is documented in `HANDOFF.md`.
+issues reproduced in current code. No production/live-database, release, or
+deployment action was made for this local remediation. Commit `122e8866` was
+explicitly pushed to `origin/main`; the follow-up ShadowTLS picker fix remains
+uncommitted locally. Earlier audit-host provisioning, performed separately, is
+documented in `HANDOFF.md`.
 
 New active requirement (2026-11-27 continuation): implement panel-managed
 ShadowTLS multi-inbound chaining. Sing-box runs one process/config per inbound
@@ -53,6 +55,10 @@ account traffic, while per-member inbound rows remain emitted.
 - UI support was added: `web/html/form/protocol/singbox.html` has a detour
   target selector, and `web/html/modals/inbound_modal.html` has
   `singboxDetourTarget`/`singboxDetourTargets`/`singboxSetDetourTarget`.
+- The browser smoke exposed and the local tree fixed a separate UI omission:
+  `Protocols.SHADOWTLS` and the `ShadowTLS` picker label are now present in
+  `web/assets/js/model/inbound.js`, so the Add inbound dropdown can create a
+  ShadowTLS inbound instead of requiring an API-created draft.
 - `web/service/singbox_chain_test.go` gained pure unit tests plus a stale-tag
   recovery assertion; `singbox_protocol_runtime_test.go` gained the managed
   multi-inbound runtime test.
@@ -75,12 +81,30 @@ account traffic, while per-member inbound rows remain emitted.
   The `vpn-aio-limits` marker is embedded and `-v` reports 6.1.0. Built with
   `bash ./build.sh --quick --skip-bundle --geo-lean`, reusing cached core and
   daemon bundle. This is a verification candidate, not a release artifact.
+- Rebuilt isolated candidate after the picker fix:
+  `/home/ubuntu/vpn-aio-managed-accounts-20261125/build/out/VPN-AIO-amd64`,
+  271,661,032 bytes, SHA-256
+  `6bdbeb42dcdb7f55199235a83428d46466baa3bd2a77fa7428a3bded741cbae2`;
+  `-v` reports 6.1.0. It reused the cached patched core and was copied only
+  into the disposable UI container for smoke testing.
+- Fresh observation (2026-11-27, this session): the 13-distro disposable
+  container userland lifecycle matrix passed 13/13 for the rebuilt picker-fix
+  candidate (`test_unit/container-matrix.py --binary build/out/VPN-AIO-amd64
+  --expected-version 6.1.0`, run as root in
+  `/home/ubuntu/vpn-aio-managed-accounts-20261125` on sweden). Reported
+  results path:
+  `/home/ubuntu/vpn-aio-managed-accounts-20261125/test_unit/results/containers-20261127-035332`.
+  The matrix script reports "container userland only; no VM/systemd/kernel
+  qualification". After the run, that workspace/results path was not found on
+  sweden during a later check; the pass result is recorded from the observed
+  command output, not a re-read of `results.json`.
 - The earlier candidate hash `a079aeba5b2db399814fe5512cc83be8c4ee5dd066f4022104c791aa69601401`
   (271,609,888 bytes) is superseded by the rebuilt candidate above.
 - Previously recorded state: four pre-existing review/audit containers and
   port 12301 owned by PID 724485. This continuation used private namespaces
   and did not access those containers or the listener.
-- No commit, push, release, or production deployment has been made.
+- Commit `122e8866b5e294254144b16a8d5ba88e681294cf` was pushed to
+  `origin/main`. No release or production deployment has been made.
 
 ## Work State
 
@@ -108,9 +132,32 @@ account traffic, while per-member inbound rows remain emitted.
   no-op after the first successful pass.
 
 ### Active
-- Optionally browser-check the detour selector against the refreshed candidate;
-  Node coverage now verifies target filtering and select/clear behavior, but no
-  browser run has been done for this final candidate.
+- Browser smoke was completed in disposable container
+  `vpn-aio-ui-final-20261127` through SSH tunnel `127.0.0.1:22345`, then the
+  container and tunnel endpoint were removed. Login, inbound list, and the
+  Add/Edit inbound modal rendered. The patched sing-box 1.12.14 (SHA-256
+  `6ea33f44f4d1bec1c640538e637378032786be0b9282618f851779a405adfc35`) was
+  installed and provisioned in that container DB only. The Shadowsocks target
+  on port 23457 was created in the UI. Before the picker fix, the ShadowTLS
+  front on port 23458 was created through the API; its UI detour selector then
+  listed only the managed sing-box target, selecting it wrote raw
+  `detour: "inbound-127.0.0.1:23457"`, and saving returned HTTP 200.
+  The resulting runtime had one active `server-2` sing-box process containing
+  both inbounds and one stats API group; the old standalone `server-3` process
+  was not running. The saved group config contained both tags and the detour.
+  After adding `Protocols.SHADOWTLS` and its label, the rebuilt candidate's Add
+  dropdown visibly listed `ShadowTLS`; a new UI-created ShadowTLS inbound on
+  port 23459 was accepted with HTTP 200 and persisted with version 3, a users
+  array, and the entered handshake server. The UI-created no-detour inbound
+  ran as a separate `server-4` process, confirming group separation.
+- The full end-to-end chained traffic path is covered by the passing private
+  Go runtime test, not by this browser run. Browser clear-and-resave after the
+  final rebuild was not repeated. No production/live listener or database was
+  touched; port 12301 remains untouched.
+- The follow-up source fix is uncommitted: `inbound.js` and
+  `test_unit/export_test/singbox.test.js` are dirty alongside the existing
+  documentation changes. Do not commit or release it without explicit
+  authorization.
 - Keep preserving the dirty tree; any release/deployment decision requires
   separate authorization and additional platform qualification.
 - ARM64 packaging lacks `aarch64-linux-gnu-gcc`, QEMU, and binfmt support.
@@ -123,12 +170,13 @@ account traffic, while per-member inbound rows remain emitted.
   private namespaces.
 
 ## Next Move
-1. If continuing UI qualification, launch only the refreshed candidate in a
-   disposable isolated panel and verify detour target selection, save, and
-   group restart without touching the live listener.
-2. For broader release readiness, use a runner with ARM64 cross-compiler/QEMU
-   and separately qualify systemd/kernel and physical mobile behavior.
-3. Do not commit, push, release, or deploy without explicit authorization.
+1. Review the uncommitted ShadowTLS picker fix and decide whether to authorize
+   a follow-up commit; the explicit push of `122e8866` is complete.
+2. For broader release readiness of `6bdbeb42...`, rerun/confirm installer
+   contract and full browser harness as needed, then qualify ARM64 packaging,
+   VM/systemd/kernel behavior, and physical mobile behavior. Container userland
+   lifecycle matrix (13/13) already passed for `6bdbeb42...`.
+3. Do not release or deploy without explicit authorization.
 
 ## Relevant Files (chaining stage)
 - `database/model/model.go`: new `SingboxDetourInboundID` field.
@@ -141,19 +189,23 @@ account traffic, while per-member inbound rows remain emitted.
 - `web/service/singbox_clients.go`: group-aware account projection rendering.
 - `web/html/form/protocol/singbox.html`: ShadowTLS UI, detour control.
 - `web/html/modals/inbound_modal.html`: inbound form, detour control.
+- `web/assets/js/model/inbound.js`: ShadowTLS protocol-picker constant/label.
+- `test_unit/export_test/singbox.test.js`: picker regression assertion.
 - `web/service/singbox_protocol_runtime_test.go`: managed multi-inbound
   runtime test.
 
 ## Important Context
-- Worktree remains dirty and uncommitted at
-  `60951c62e3d5624cb1694868ac1387ae6d1d2144`; unrelated changes must be
+- Worktree is detached at committed HEAD
+  `122e8866b5e294254144b16a8d5ba88e681294cf`; the ShadowTLS picker fix and
+  documentation updates remain uncommitted. Unrelated changes must be
   preserved.
 - The earlier exact candidate
   `a079aeba5b2db399814fe5512cc83be8c4ee5dd066f4022104c791aa69601401` is
   superseded by the final candidate hash recorded above.
 - The previously recorded state had four review/audit containers and port
   12301 owned by PID 724485. This continuation did not access either.
-- No commit, push, release, or production deployment has been made.
+- Commit `122e8866` was pushed to `origin/main`; no release or production
+  deployment has been made.
 
 ## Decisions (chaining stage)
 - Sing-box policy remains account-owned in `accounts`/`client_traffics`;
@@ -182,6 +234,12 @@ account traffic, while per-member inbound rows remain emitted.
 - Focused chaining/runtime tests passed in a private network namespace on
   `sweden` against patched sing-box.
 - `node test_unit/export_test/singbox.test.js` passed locally.
+- Fresh observation (2026-11-27): picker-fix candidate `6bdbeb42...` passed the
+  13-distro disposable container userland lifecycle matrix (13/13) on sweden
+  (`test_unit/container-matrix.py --binary build/out/VPN-AIO-amd64
+  --expected-version 6.1.0`, run as root). Container userland only; not
+  VM/systemd/kernel qualification. Reported results path was not found during a
+  later sweden check; recorded from observed command output.
 - The frontend regression exercises detour-selector behavior: it filters the
   current inbound and Xray-only targets, writes the selected raw `detour`, and
   removes it when cleared. This is VM-based Node coverage, not a browser smoke.
@@ -247,12 +305,18 @@ account traffic, while per-member inbound rows remain emitted.
   `a079aeba5b2db399814fe5512cc83be8c4ee5dd066f4022104c791aa69601401`
   passed the corrected 13-distro lifecycle matrix (13/13, 30/30 each), the
   installer contract (8/8), and the corrected live UI harness (60/60). Those
-  results apply to that earlier candidate; the new candidate has not yet had
-  those disposable browser/lifecycle checks repeated.
-- An intermediate chaining build (`650197fc...`) is superseded because its
-  isolated copy lacked the two new UI templates. The final candidate is
-  `cb476c47...` as recorded above; disposable browser/lifecycle checks remain
-  pending for this final artifact.
+  results apply to that earlier candidate.
+- Intermediate candidate `cb476c47...` (refreshed UI templates) is superseded
+  by the picker-fix candidate `6bdbeb42...`.
+- Fresh observation (2026-11-27): picker-fix candidate `6bdbeb42...` passed the
+  13-distro disposable container userland lifecycle matrix (13/13) on sweden
+  via `test_unit/container-matrix.py`; this is container userland only, not
+  VM/systemd/kernel qualification. The results path reported by the run was
+  not found during a later sweden check, so the pass is recorded from observed
+  command output. Targeted disposable Playwright smoke for the ShadowTLS picker
+  also passed on `6bdbeb42...`. Full browser harness (60/60), installer
+  contract, ARM64 packaging, VM/systemd/kernel, and physical mobile checks have
+  not been rerun/reported for `6bdbeb42...` in this session.
 - The earlier candidate's browser checks resolved the Clients URL and
   `StreamLimit` visibility. Two font HTTP 500s and an Ant Design notification
   TypeError were observed once, then not reproduced by the corrected 60/60

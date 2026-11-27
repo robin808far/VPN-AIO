@@ -43,6 +43,11 @@ function inline(file) {
 }
 
 (async () => {
+    assert.equal(context.Protocols.SHADOWTLS, 'shadowtls',
+        'ShadowTLS must be available in the inbound protocol picker');
+    assert.equal(context.ProtocolLabels.shadowtls, 'ShadowTLS',
+        'ShadowTLS must have a protocol-picker label');
+
     const raw = { type: 'vless', listen: '127.0.0.1', listen_port: 34567,
         users: [{ name: 'alice', uuid: '11111111-1111-4111-8111-111111111111' }],
         transport: { type: 'ws', path: '/original' }, future_option: { keep: true } };
