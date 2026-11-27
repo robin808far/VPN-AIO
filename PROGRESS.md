@@ -44,7 +44,21 @@ Last updated: 2026-11-27 (v6.5.0 publication verified; release and Ubuntu CI suc
 - `install.sh` always fetches `deploy.sh` from `main` (`BRANCH="main"`); the
   version argument only pins the binary. So deploy.sh fixes reach all installs
   immediately (also when pinning older tags) — main must stay installable.
-- Next: user asked for 2 small improvements, then 4) new feature.
+- (Done) Small improvements (2026-11-27, pushed):
+  a) `90ab5caa`: `deploy.sh` unattended custom login via env
+     `PANEL_USER/PANEL_PASS/PANEL_PORT/PANEL_PATH` (any set -> custom mode, no
+     prompt; checked after import-keep, before tty prompt) + new
+     `test_unit/deploy-tty-check.py` (5/5 PASS on sweden; `bash -n` OK).
+     Full install with PANEL_* env not run end-to-end.
+  b) `01fb60fd`: `stripEmptyFreedomNoises` in `web/service/xray.go` removes
+     empty `noises` from freedom outbounds at config build (non-empty kept);
+     removed `"noises": []` from `web/service/config.json` and
+     `sub/default.json`. `TestStripEmptyFreedomNoises` passed, `go vet
+     ./web/service` clean, gofmt clean (after CRLF strip) on sweden.
+     Takes effect on the live host only after a new release/deploy.
+- Not released: deploy.sh changes are live via `main`; the Xray fix needs a
+  new binary release (not done, needs user decision).
+- Next: 4) new feature — awaiting user specification.
 
 ## systemd/kernel install test on WSL2 (2026-11-27, fresh observation)
 
