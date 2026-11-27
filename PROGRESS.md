@@ -1,6 +1,94 @@
 # Project Progress & State
 
-Last updated: 2026-11-27 (picker fix committed+pushed as 359ee7f4; 6bdbeb42 passed installer contract 8/8, live UI harness 60/60, detour runtime check 18/18; version bumped to 6.5.0 locally; tag/release NOT pushed — awaiting final confirmation)
+Last updated: 2026-11-27 (v6.5.0 publication verified; release and Ubuntu CI succeeded; both downloaded assets match checksums and report 6.5.0; bundled patched sing-box verified; no production deployment)
+
+> Current truth supersedes earlier candidate/release-preparation notes below.
+> Remote `main`, local detached HEAD, and peeled tag `v6.5.0` all point to
+> `a52abcd71639f74c6d3b3f57102ea435125ae4eb` (verified with `git ls-remote`).
+> Annotated tag object: `81be9cb954743edafd993d03a6c5f088d993af21`.
+> Source/picker fixes are committed and pushed; only `PROGRESS.md` and
+> `HANDOFF.md` have local changes. The original `VPN-AIO` checkout and live
+> host panel/database/service were not modified by this continuation.
+
+## Next step (open requests)
+
+- No open execution task. Production deployment of v6.5.0 to the live host
+  requires separate explicit user authorization.
+- Optional remaining qualification: full ARM64 runtime, VM/systemd/kernel, and
+  physical mobile tests (not performed).
+- Decide whether to commit/push these two status-document updates (not yet done).
+
+## systemd/kernel install test on WSL2 (2026-11-27, fresh observation)
+
+- User chose WSL2 + Ubuntu 24.04 on the Windows desktop (no KVM on sweden).
+  Installed distro `Ubuntu-24.04`, enabled `systemd=true` in `/etc/wsl.conf`,
+  and created `%USERPROFILE%\.wslconfig` (`networkingMode=mirrored`,
+  `autoProxy=true`). Kernel `6.18.58.1-microsoft-standard-WSL2` (Microsoft
+  kernel, not a stock Ubuntu kernel; not a full VM qualification).
+- Windows proxy `127.0.0.1:10808` is unreachable from WSL; installs ran with
+  proxy variables unset (direct GitHub returned 200).
+- Public `install.sh v6.5.0` with stdin `/dev/null`: download OK, then hung
+  on `read < /dev/tty` (credential prompt). With `setsid` (no ctty): failed at
+  `deploy.sh` line 458 `/dev/tty: No such device or address`.
+  **Installer defect (unfixed):** `[[ -r /dev/tty ]]` is true without a usable
+  controlling terminal, so non-interactive installs (cloud-init/CI) hang or
+  fail, contrary to the script's own comments. Not changed in source.
+- Succeeded via pseudo-tty (`script`) + `PANEL_TLS=http`, default random
+  credentials: exit 0, `VPN-AIO is running`. Verified: `-v` = 6.5.0, binary
+  SHA-256 `9a26f831...` (= release), unit enabled/active, `Restart=on-failure`;
+  `systemctl restart` OK; `kill -9` -> auto-restarted (NRestarts=1, new PID);
+  survived `wsl --terminate` restart (active after boot); no failed units;
+  journal only Xray deprecation warning about Freedom `noises`.
+- Panel HTTP 200 via `localhost`/`[::1]`; `127.0.0.1` times out because
+  mirrored mode routes 127.0.0.1 to the Windows host (table 127) — WSL
+  artifact, not a product defect.
+- Not tested: real VM/stock kernel, AWG/kernel modules, protocol traffic,
+  ARM64 runtime, mobile. User accepted the test results as sufficient.
+- Cleanup done (user-approved): `wsl --unregister Ubuntu-24.04` (no distros
+  remain), `.wslconfig` deleted, temp download dir removed.
+- Status docs committed and pushed to `main` (docs only; no source change since
+  v6.5.0, so no 6.6.0 release per user instruction). Next: user's next stage.
+
+## Release verification (2026-11-27, complete)
+
+- [Release CI 45991545057](https://github.com/robin808far/VPN-AIO/actions/runs/45991545057)
+  and [Ubuntu validation 45991539428](https://github.com/robin808far/VPN-AIO/actions/runs/45991539428)
+  both completed successfully for `a52abcd7`.
+- [v6.5.0](https://github.com/robin808far/VPN-AIO/releases/tag/v6.5.0) is public,
+  not draft/prerelease, published `2026-11-27T11:35:52Z`; unauthenticated latest
+  API returns this tag. Assets: two architecture binaries plus `SHA256SUMS`.
+- Downloaded all three public assets to a new temporary directory on `sweden`.
+  Both complete binary hashes match `SHA256SUMS` and GitHub asset digests:
+
+| Asset | Bytes | SHA-256 | Executed `-v` |
+| --- | ---: | --- | --- |
+| `VPN-AIO-amd64` | 409479064 | `9a26f83110b3b7654c309b75ae8277ce41121bde723e350280ffb8945db88cc7` | `6.5.0` natively on x86_64 Linux |
+| `VPN-AIO-arm64` | 403822560 | `9224c5456a9d0a17c495bcf5053e2ebcdb9d02a45e22efa17884acc74d975e78` | `6.5.0` under QEMU user emulation |
+
+- `SHA256SUMS`: 160 bytes, SHA-256
+  `db30cbdbe23a49b7790bcde8b3a61e5024430afcb635be57e23b49f8ec09b2b3`.
+- CI reused cached daemon bundles, so verified the actual architecture-specific
+  embedded sing-box bytes using ELF symbols and Go embed metadata (without
+  starting a panel). Both cores contain `vpn-aio-limits`, execute `version` as
+  `1.12.14`, and report `with_v2ray_api` plus revision
+  `f56d9ab94569d46a48bfc2bcd97eea566ad365c8`.
+  amd64 core: 46985351 bytes, SHA-256
+  `6ea33f44f4d1bec1c640538e637378032786be0b9282618f851779a405adfc35`
+  (identical to the previously runtime-tested core).
+  arm64 core: 45219975 bytes, SHA-256
+  `00c6e6bb55333de24cafb5b5eaff718a1fc35651f097d8857f28cd18b6ee7396`.
+- QEMU and its ARM64 userspace libraries were downloaded/extracted inside the
+  disposable verification directory only; no host packages/binfmt were installed.
+  Removed that entire created directory and the empty directory from an initial
+  failed command after verification; no test service/container was started.
+- Resolved installer line-ending uncertainty: Git index has LF for `install.sh`
+  and `deploy.sh`; both public raw `main` URLs return HTTP 200 with LF and no CR
+  (81 and 587 LF respectively). Local Windows working copies are CRLF. No source
+  line-ending changes or installer execution were needed.
+- This continuation changed only the two status documents. The existing
+  candidate's matrix/UI/runtime results below apply to that candidate; they
+  were not rerun against the larger public CI binaries. Full ARM64 runtime,
+  VM/systemd/kernel and physical mobile qualification remain unperformed.
 
 ## Latest session (2026-11-27, fresh observations)
 
@@ -25,17 +113,19 @@ Last updated: 2026-11-27 (picker fix committed+pushed as 359ee7f4; 6bdbeb42 pass
      This is API/process level, not a click-through of the selector.
    - Container, tunnel, headless Chrome, and temp files removed. Live listener
      12301 still present and untouched.
-4. Release prep: `config/version` changed 6.1.0 -> 6.5.0 (uncommitted at time
-   of writing). Release workflow `.github/workflows/vpn-aio-release.yml` runs on
+4. Release: `config/version` changed 6.1.0 -> 6.5.0, committed as `a52abcd7`
+   and pushed to main; annotated tag `v6.5.0` pushed (user-authorized). Release workflow `.github/workflows/vpn-aio-release.yml` runs on
    `v*` tag push and builds amd64+arm64 in CI (installs gcc-aarch64 and qemu
    binfmt there), so the local ARM64 toolchain gap does not block CI.
-   Not yet done: commit of the bump, tag `v6.5.0`, push of tag (= public
-   release). VM/systemd/kernel and physical mobile checks were NOT run.
+   Done: bump commit, tag push, successful release/validation CI, and public
+   asset verification recorded above. VM/systemd/kernel and physical mobile
+   checks were NOT run.
 Path: `C:\Users\mef\Documents\Default Project\VPN-AIO-review-6.1.0`
 
 ## Goal
 
-Finish the local, uncommitted sing-box managed-account remediation in
+Completed sing-box managed-account remediation and user-authorized v6.5.0
+publication in
 `VPN-AIO-review-6.1.0`: raw sing-box `users` map to `Account`,
 `AccountInbound`, and `ClientTraffic`; account edits project back into native
 `users`; quota/expiry enforcement works. Speed and IP limits are now enforced
@@ -44,15 +134,13 @@ patched bundled sing-box via `XRAY_SPEEDLIMIT_FILE`); physical-device counting
 is not supported and is rejected. A separate `StreamLimit` field caps concurrent
 routed streams/UDP associations. Then confirm and fix defects in the external
 report `C:\Users\mef\Desktop\Bug.md` against this checkout, changing only
-issues reproduced in current code. No production/live-database, release, or
-deployment action was made for this local remediation. Commit `122e8866` was
-explicitly pushed to `origin/main`; the follow-up ShadowTLS picker fix remains
-uncommitted locally. Earlier audit-host provisioning, performed separately, is
-documented in `HANDOFF.md`.
+issues reproduced in current code. Commits `122e8866` (remediation), `359ee7f4`
+(picker fix), and `a52abcd7` (6.5.0 version) are pushed and released as v6.5.0.
+No production/live-database deployment was made. Earlier audit-host provisioning,
+performed separately, is documented in `HANDOFF.md`.
 
-New active requirement (2026-11-27 continuation): implement panel-managed
-ShadowTLS multi-inbound chaining. Sing-box runs one process/config per inbound
-today; the chaining must be modeled as a detour graph (`SingboxDetourInboundID`
+Implemented requirement (2026-11-27): panel-managed ShadowTLS multi-inbound
+chaining replaces the earlier one-process-per-inbound design with a detour graph (`SingboxDetourInboundID`
 plus raw `detour`), resolved into connected process groups, with one root owner
 per group for process/config/stats API port. Cycles, self-detours, missing
 targets, and non-sing-box targets must be rejected. Deleted targets clear
@@ -62,8 +150,8 @@ account traffic, while per-member inbound rows remain emitted.
 
 ## Current State
 
-- Panel-managed ShadowTLS multi-inbound chaining is implemented in the local
-  uncommitted tree. A chained ShadowTLS front plus its Shadowsocks detour target
+- Panel-managed ShadowTLS multi-inbound chaining is committed and published in
+  v6.5.0. A chained ShadowTLS front plus its Shadowsocks detour target
   now runs in one shared sing-box process/config, with one root owner, and the
   runtime test `TestSingboxAuditBundledShadowTLSV3ManagedMultiInboundRuntime`
   passed in a private network namespace with a real patched sing-box binary.
@@ -133,8 +221,8 @@ account traffic, while per-member inbound rows remain emitted.
 - Previously recorded state: four pre-existing review/audit containers and
   port 12301 owned by PID 724485. This continuation used private namespaces
   and did not access those containers or the listener.
-- Commit `122e8866b5e294254144b16a8d5ba88e681294cf` was pushed to
-  `origin/main`. No release or production deployment has been made.
+- Commit `122e8866b5e294254144b16a8d5ba88e681294cf` and the picker/version
+  follow-ups are included in public v6.5.0. No production deployment was made.
 
 ## Work State
 
@@ -161,7 +249,7 @@ account traffic, while per-member inbound rows remain emitted.
   migration; focused regression confirms it preserves raw settings and is a
   no-op after the first successful pass.
 
-### Active
+### Completed private-candidate browser verification
 - Browser smoke was completed in disposable container
   `vpn-aio-ui-final-20261127` through SSH tunnel `127.0.0.1:22345`, then the
   container and tunnel endpoint were removed. Login, inbound list, and the
@@ -184,29 +272,26 @@ account traffic, while per-member inbound rows remain emitted.
   Go runtime test, not by this browser run. Browser clear-and-resave after the
   final rebuild was not repeated. No production/live listener or database was
   touched; port 12301 remains untouched.
-- The follow-up source fix is uncommitted: `inbound.js` and
-  `test_unit/export_test/singbox.test.js` are dirty alongside the existing
-  documentation changes. Do not commit or release it without explicit
-  authorization.
-- Keep preserving the dirty tree; any release/deployment decision requires
-  separate authorization and additional platform qualification.
-- ARM64 packaging lacks `aarch64-linux-gnu-gcc`, QEMU, and binfmt support.
-- Physical mobile/systemd/kernel qualification remains pending.
+- The picker fix is committed/pushed as `359ee7f4` and released in v6.5.0.
+  The later full harness passed 60/60 and API/process detour checks passed
+  18/18 on candidate `6bdbeb42...` (see Latest session).
+- Preserve pre-existing local documentation changes; this continuation adds
+  release-verification evidence without a new commit/push.
 
-### Blocked
-- ARM64 packaging lacks `aarch64-linux-gnu-gcc`, QEMU, and binfmt support.
-- Physical mobile/systemd/kernel qualification remains pending.
+### Remaining coverage and constraints
+- CI built/published ARM64 successfully, and the public binary/core version
+  probes passed under temporary user emulation. Full ARM64 runtime and physical
+  mobile/systemd/kernel qualification remain unperformed.
 - The live listener on port 12301 must remain untouched; network tests require
   private namespaces.
 
 ## Next Move
-1. Review the uncommitted ShadowTLS picker fix and decide whether to authorize
-   a follow-up commit; the explicit push of `122e8866` is complete.
-2. For broader release readiness of `6bdbeb42...`, rerun/confirm installer
-   contract and full browser harness as needed, then qualify ARM64 packaging,
-   VM/systemd/kernel behavior, and physical mobile behavior. Container userland
-   lifecycle matrix (13/13) already passed for `6bdbeb42...`.
-3. Do not release or deploy without explicit authorization.
+1. Requested continuation through release CI/assets verification is complete;
+   no pending release workflow or source fix was identified in this stage.
+2. If requested, separately scope full ARM64 runtime, VM/systemd/kernel and
+   physical mobile qualification; existing container tests do not cover those.
+3. Production deployment requires separate user authorization. This release
+   verification is not authorization to replace the live panel or its database.
 
 ## Relevant Files (chaining stage)
 - `database/model/model.go`: new `SingboxDetourInboundID` field.
@@ -225,17 +310,15 @@ account traffic, while per-member inbound rows remain emitted.
   runtime test.
 
 ## Important Context
-- Worktree is detached at committed HEAD
-  `122e8866b5e294254144b16a8d5ba88e681294cf`; the ShadowTLS picker fix and
-  documentation updates remain uncommitted. Unrelated changes must be
-  preserved.
+- Worktree is detached at `a52abcd71639f74c6d3b3f57102ea435125ae4eb`, the
+  release/main commit. Only status documents are dirty. Unrelated changes in
+  the original sibling `VPN-AIO` checkout must be preserved.
 - The earlier exact candidate
   `a079aeba5b2db399814fe5512cc83be8c4ee5dd066f4022104c791aa69601401` is
   superseded by the final candidate hash recorded above.
 - The previously recorded state had four review/audit containers and port
   12301 owned by PID 724485. This continuation did not access either.
-- Commit `122e8866` was pushed to `origin/main`; no release or production
-  deployment has been made.
+- v6.5.0 is published and verified; production deployment has not been made.
 
 ## Decisions (chaining stage)
 - Sing-box policy remains account-owned in `accounts`/`client_traffics`;
@@ -283,6 +366,11 @@ account traffic, while per-member inbound rows remain emitted.
 - `git diff --check` passed; Git emitted existing LF/CRLF working-copy notices.
 
 ## Failed Attempts / Lessons (chaining stage)
+- Release verification: an initial PowerShell/SSH trap quoting attempt failed
+  before downloading; removed its empty temporary directory. Prefer a literal
+  PowerShell here-string piped to `ssh ... 'python3 -'` for multi-line scripts.
+  Public downloads need an executable bit on Linux before `-v`; after applying
+  it only to the temporary files, both version probes passed.
 - The first managed multi-inbound runtime test failed because the loopback
   interface was down in the private namespace; bringing `lo` up fixed it.
 - The first `SingboxDetourInboundID` was exposed as a JSON field; it was
@@ -311,8 +399,9 @@ account traffic, while per-member inbound rows remain emitted.
 
 ## Historical state (earlier remediation; retained summary)
 
-- The underlying worktree is detached, dirty, and uncommitted at
-  `60951c62e3d5624cb1694868ac1387ae6d1d2144`; preserve unrelated user changes.
+- (Historical) The worktree was then detached and uncommitted at
+  `60951c62e3d5624cb1694868ac1387ae6d1d2144`. Superseded: on 2026-11-27 HEAD is
+  `a52abcd7` (= v6.5.0) and only PROGRESS.md/HANDOFF.md are modified.
   The published/installed 6.1.0 binary was not replaced by this local work.
 - Earlier managed-account work maps native sing-box `users` into
   `accounts`/`account_inbounds`/`client_traffics`, keeps native users
@@ -357,7 +446,9 @@ account traffic, while per-member inbound rows remain emitted.
   mistakes. The current corrected full Linux run is the authoritative latest
   result. Run network tests only in private namespaces; keep port 12301
   untouched.
-- No commit, push, release, or production deployment has been made.
+- (Historical, superseded) At that stage no commit/push/release had been made.
+  Current truth: commits are pushed and released as v6.5.0 (see top); still no
+  production deployment.
 
 ## Important Files (chaining stage)
 

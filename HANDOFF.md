@@ -1,8 +1,49 @@
 # HANDOFF
 
-Last updated: 2026-11-27 (pushed 122e8866 to origin/main; picker-fix 6bdbeb42 passed 13/13 container userland lifecycle matrix; no release/deploy)
+Last updated: 2026-11-27 (v6.5.0 publication verified; release/Ubuntu CI succeeded; both public assets pass checksums and -v; no production deployment)
 
-## Current status — independent 6.1.0 review on sweden (2026-11-25)
+## Current status — v6.5.0 release verification complete
+
+- Remote main, local detached HEAD and peeled `v6.5.0` tag all resolve to
+  `a52abcd71639f74c6d3b3f57102ea435125ae4eb`. Source and picker fixes are
+  committed/pushed. Earlier statements below about uncommitted fixes or no
+  release are historical; current evidence is here and in [PROGRESS.md](PROGRESS.md).
+- [Release CI 45991545057](https://github.com/robin808far/VPN-AIO/actions/runs/45991545057)
+  and [Ubuntu validation 45991539428](https://github.com/robin808far/VPN-AIO/actions/runs/45991539428)
+  completed successfully. [v6.5.0](https://github.com/robin808far/VPN-AIO/releases/tag/v6.5.0)
+  is public Latest, not draft/prerelease, with amd64/arm64 binaries and SHA256SUMS.
+- Downloaded both complete public binaries on `sweden`: checksums match the
+  downloaded manifest and GitHub digests; both execute `-v` as `6.5.0` (amd64
+  natively, ARM64 under temporary QEMU user emulation). Full artifact hashes and
+  sizes are in PROGRESS.md.
+- Examined actual architecture-specific embedded sing-box files because CI
+  reused daemon caches. Both have the `vpn-aio-limits` marker and execute
+  `version` as `1.12.14` with `with_v2ray_api`. amd64 core SHA-256 matches the
+  previously runtime-tested `6ea33f44...`; ARM64 core SHA-256 is `00c6e6bb...`.
+- Installer caveat resolved: Git index and public raw `main` copies of both
+  `install.sh`/`deploy.sh` use LF; CRLF is confined to local working copies.
+  No source changes or installer execution were required.
+- Removed only this continuation's verification directories (including extracted
+  QEMU/sysroot); no host packages installed, panel/container started, or live
+  service/database/listener changed. The original sibling `VPN-AIO` checkout's
+  unfinished Nodes changes were only inspected and remain untouched.
+- This continuation changes PROGRESS.md and HANDOFF.md only, without a new
+  commit/push. Private candidate matrix/UI/runtime results remain attributed to
+  that candidate, not the public CI binaries. Full ARM64 runtime, VM/systemd/kernel
+  and physical mobile qualification remain unperformed. Release verification is
+  complete; production deployment still requires separate user authorization.
+
+## systemd install test on WSL2 Ubuntu 24.04 (2026-11-27)
+
+- Public v6.5.0 installed and runs under systemd (enable, restart, kill -9
+  recovery, distro restart all OK; panel HTTP 200). Microsoft WSL2 kernel, so
+  not a full VM/stock-kernel qualification.
+- Unfixed installer defect: non-interactive installs hang/fail on `/dev/tty`
+  prompts (`deploy.sh` ~458/505). Details in PROGRESS.md.
+- Test distro, `.wslconfig` and temp files removed (user-approved). Docs pushed;
+  no source change since v6.5.0, so no 6.6.0 release.
+
+## Historical audit — independent 6.1.0 review on sweden (2026-11-25)
 
 The current user authorized review and isolated testing on `ssh sweden`, plus handoff updates. The published 6.1.0 sing-box integration has important defects; the local managed-account remediation below has passed isolated Linux verification but is not deployed or released. Read [the full review](docs/releases/6.1.0-audit-20261125.md) before deploying customer sing-box inbounds.
 
@@ -291,3 +332,4 @@ Sources: https://github.com/MHSanaei/3x-ui (tree + raw files, fetched 2026-11-23
 ## 2026-11-27 release v6.5.0
 - Picker fix 359ee7f4 pushed to main. Candidate 6bdbeb42 passed installer contract 8/8, live UI harness 60/60, disposable detour runtime check 18/18 (select/clear/reselect/delete-target/self-detour). config/version bumped to 6.5.0 and tagged v6.5.0; CI release workflow builds amd64+arm64. VM/systemd/kernel and physical mobile checks were not run. Live listener 12301 untouched.
 
+- Historical checkpoint 15:05 +0330: release run 45991545057 and validation run 45991539428 were in_progress. Both later completed successfully; public Latest assets, hashes, versions and embedded patched cores are now verified in Current status above. No production deployment was made.
