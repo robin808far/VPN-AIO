@@ -34,7 +34,17 @@ Last updated: 2026-11-27 (v6.5.0 publication verified; release and Ubuntu CI suc
 - (Done) 3) Live host (sweden) verified: `/opt/VPN-AIO/VPN-AIO-amd64` 409479064
   bytes, SHA-256 `9a26f831...` (= v6.5.0 release), `-v` 6.5.0, service
   active/running since 2026-11-27 16:11:50 UTC, port 12301 listening.
-- Next: 4) new feature — awaiting user specification.
+- (Done) Full unattended install verified (2026-11-27, WSL2 Ubuntu 24.04,
+  systemd, mirrored networking): public `main/install.sh` run under `setsid`
+  with stdin `/dev/null`, no PANEL_TLS -> completed without hang: HTTP default,
+  random credentials, `-v` 6.5.0, unit enabled/active, panel HTTP 200 on
+  localhost, NRestarts=0. Exit code not captured cleanly (PowerShell escaping
+  printed `EXIT=True`), but log reached "Deploy complete". Cleanup: distro
+  unregistered, `.wslconfig` removed.
+- `install.sh` always fetches `deploy.sh` from `main` (`BRANCH="main"`); the
+  version argument only pins the binary. So deploy.sh fixes reach all installs
+  immediately (also when pinning older tags) — main must stay installable.
+- Next: user asked for 2 small improvements, then 4) new feature.
 
 ## systemd/kernel install test on WSL2 (2026-11-27, fresh observation)
 
