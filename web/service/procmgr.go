@@ -117,8 +117,9 @@ type managedProc struct {
 	env     []string
 	dir     string
 	cmd     *exec.Cmd
-	stopped bool // Stop() called → suppress auto-restart
-	gen     int  // bumped on every (re)start/stop; supervisors compare against it
+	started time.Time // when the current instance was launched (uptime)
+	stopped bool      // Stop() called → suppress auto-restart
+	gen     int       // bumped on every (re)start/stop; supervisors compare against it
 }
 
 // ProcManager supervises the bundled VPN daemons as child processes.
@@ -201,6 +202,7 @@ func (p *managedProc) launchLocked() error {
 		return err
 	}
 	p.cmd = cmd
+	p.started = time.Now()
 	p.log.add("[procmgr] started: " + p.bin + " " + strings.Join(p.args, " "))
 	gen := p.gen
 	go p.supervise(cmd, gen)
@@ -326,6 +328,27 @@ func (m *ProcManager) AnyRunningWithPrefix(prefix string) bool {
 		}
 	}
 	return false
+}
+
+// OldestStartWithPrefix returns the launch time of the longest-running live
+// daemon whose name has the given prefix (zero if none is running). Used for
+// the sing-box dashboard uptime, where one core spans several processes.
+func (m *ProcManager) OldestStartWithPrefix(prefix string) time.Time {
+	var oldest time.Time
+	for _, n := range m.namesWithPrefix(prefix) {
+		p := m.get(n)
+		if p == nil {
+			continue
+		}
+		p.mu.Lock()
+		alive := !p.stopped && p.cmd != nil && p.cmd.Process != nil && p.cmd.ProcessState == nil
+		st := p.started
+		p.mu.Unlock()
+		if alive && !st.IsZero() && (oldest.IsZero() || st.Before(oldest)) {
+			oldest = st
+		}
+	}
+	return oldest
 }
 
 // Logs returns the captured output of the named daemon (most recent lines).

@@ -275,7 +275,7 @@ body.dark .bo-theme-toggle .bo-i-moon { display:block; }
 .bo-bento {
   display:grid; grid-template-columns:1fr; gap:var(--gap-sm);
   grid-template-areas:
-    "ident" "flow" "xray" "users" "manage" "vpnui" "vit" "svc";
+    "ident" "flow" "xray" "sbox" "users" "manage" "vpnui" "vit" "svc";
 }
 @media (min-width:760px) {
   .bo-bento {
@@ -284,6 +284,7 @@ body.dark .bo-theme-toggle .bo-i-moon { display:block; }
       "ident ident ident ident"
       "flow flow flow flow"
       "xray xray users users"
+      "sbox sbox vpnui vpnui"
       "manage manage vpnui vpnui"
       "vit vit vit vit"
       "svc svc svc svc";
@@ -292,9 +293,13 @@ body.dark .bo-theme-toggle .bo-i-moon { display:block; }
 @media (min-width:1180px) {
   .bo-bento {
     grid-template-columns:repeat(12,1fr); gap:var(--gap-lg);
+    /* The sing-box tile sits under Xray and the Manage tile takes the half row
+       below it, so the left column reads Xray / sing-box / Manage while vpnui
+       spans both lower rows on the right. */
     grid-template-areas:
       "ident ident ident ident flow flow flow flow vit vit vit vit"
       "xray xray xray xray users users users users vit vit vit vit"
+      "sbox sbox sbox sbox vpnui vpnui vpnui vpnui vit vit vit vit"
       "manage manage manage manage vpnui vpnui vpnui vpnui vit vit vit vit"
       "svc svc svc svc svc svc svc svc svc svc svc svc";
     /* Tiles STRETCH to fill their row (grid's default) rather than sizing to
@@ -312,6 +317,7 @@ body.dark .bo-theme-toggle .bo-i-moon { display:block; }
 .bo-t-vit { grid-area:vit; }
 .bo-t-svc { grid-area:svc; }
 .bo-t-xray { grid-area:xray; }
+.bo-t-sbox { grid-area:sbox; }
 .bo-t-vpnui { grid-area:vpnui; }
 .bo-t-users { grid-area:users; }
 .bo-t-manage { grid-area:manage; }

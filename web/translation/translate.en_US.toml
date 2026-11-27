@@ -321,6 +321,7 @@
 "coreLockedTag" = "Locked"
 "xrayCoreLockedTitle" = "Xray Core Locked"
 "xrayCoreLocked" = "This panel ships a pinned, patched Xray core bundled into the binary. Changing or updating the core version is not allowed."
+"singboxCoreLocked" = "This panel ships a pinned, patched sing-box core (VPN-AIO limits + stats) bundled into the binary. Updating it from upstream is not allowed; it is updated only with a panel release."
 "xraySwitchClick" = "Choose the version you want to switch to."
 "xraySwitchClickDesk" = "Choose carefully, as older versions may not be compatible with current configurations."
 "xrayStatusUnknown" = "Unknown"

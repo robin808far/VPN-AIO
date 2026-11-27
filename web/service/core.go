@@ -335,6 +335,9 @@ func (s *CoreService) MissingDokodemoPorts() []int {
 func (s *CoreService) GetCoresStatus() []CoreStatus {
 	all := []CoreStatus{
 		s.xrayStatus(),
+		// sing-box sits right after Xray: both are bundled, patched proxy cores,
+		// so the Core settings page shows them side by side.
+		s.singboxStatus(),
 		s.l2tpStatus(),
 		s.ipsecStatus(),
 		s.pptpStatus(),
@@ -346,7 +349,6 @@ func (s *CoreService) GetCoresStatus() []CoreStatus {
 		s.awgStatus(),
 		s.greStatus(),
 		s.mtprotoStatus(),
-		s.singboxStatus(),
 		s.sshStatus(),
 		s.radiusStatus(),
 	}
@@ -771,6 +773,9 @@ func (s *CoreService) singboxStatus() CoreStatus {
 		cs.State = CoreIdle
 	case procMgr.AnyRunningWithPrefix("singbox-server-"):
 		cs.State = CoreRunning
+		if st := procMgr.OldestStartWithPrefix("singbox-server-"); !st.IsZero() {
+			cs.Extra = map[string]any{"uptime": int64(time.Since(st).Seconds())}
+		}
 	default:
 		cs.State = CoreStopped
 	}

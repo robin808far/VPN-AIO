@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/mhsanaei/3x-ui/v2/database/model"
@@ -181,16 +182,14 @@ func (a *CoreController) restart(c *gin.Context) {
 	jsonMsg(c, I18nWeb(c, "pages.core.toasts.restarted"), err)
 }
 
-// updateSingbox downloads the latest upstream sing-box release, replaces the
-// binary and restarts every singbox inbound process on it.
+// updateSingbox is locked, like the Xray core: the panel bundles a pinned,
+// patched sing-box (vpn-aio-limits + with_v2ray_api). Upstream release
+// archives lack that patch, so an in-place update could only fail (or, if the
+// guard were bypassed, silently drop speed/IP/stream enforcement). The route
+// stays registered so old clients get a clear refusal instead of a 404; the
+// core is updated only by installing a new panel release.
 func (a *CoreController) updateSingbox(c *gin.Context) {
-	var svc service.SingboxService
-	version, err := svc.UpdateSingbox()
-	if err != nil {
-		jsonMsg(c, "", err)
-		return
-	}
-	jsonObj(c, gin.H{"version": version, "success": true}, nil)
+	jsonMsg(c, "", errors.New("sing-box core is locked: this panel bundles a pinned, patched sing-box; it is updated only with a panel release"))
 }
 
 // restartAll restarts every core.

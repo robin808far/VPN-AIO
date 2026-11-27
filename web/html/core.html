@@ -123,6 +123,11 @@
                     <div class="core-kv">
                       <span class="core-kv-label">{{ i18n "pages.core.version" }}</span>
                       <span class="core-kv-value">[[ core.version || '—' ]]
+                        <a-tooltip v-if="core.name === 'singbox'" title='{{ i18n "pages.index.singboxCoreLocked" }}'>
+                          <a-tag color="blue" :style="{ marginInlineStart: '6px' }">
+                            <a-icon type="lock"></a-icon> {{ i18n "pages.index.coreLockedTag" }}
+                          </a-tag>
+                        </a-tooltip>
                         <a-tooltip v-if="core.name === 'xray'" title='{{ i18n "pages.index.xrayCoreLocked" }}'>
                           <a-tag color="blue" :style="{ marginInlineStart: '6px' }">
                             <a-icon type="lock"></a-icon> {{ i18n "pages.index.coreLockedTag" }}
@@ -155,10 +160,6 @@
                       </a-button>
                       <a-button size="small" @click="showLogs(core.name)">
                         <a-icon type="file-text"></a-icon>{{ i18n "pages.core.logs" }}
-                      </a-button>
-                      <a-button size="small" v-if="core.name === 'singbox'" :loading="singboxUpdating"
-                        @click="updateSingbox()">
-                        <a-icon type="cloud-download"></a-icon>{{ i18n "pages.core.updateFromSource" }}
                       </a-button>
                       <a-button size="small" v-if="core.name === 'xray'"
                         :href="basePath + 'panel/xray'">
@@ -802,7 +803,6 @@
       // the modal remounts its body and a leaked instance stacks a second editor
       // on top of the first.
       cfgCm: null,
-      singboxUpdating: false,
       // --- sing-box base config + maintenance -----------------------------
       singboxMaintenance: { active: false },
       singboxCoreBusy: false,
@@ -822,22 +822,6 @@
       },
     },
     methods: {
-      async updateSingbox() {
-        this.$confirm({
-          title: '{{ i18n "pages.core.updateFromSource" }}',
-          content: '{{ i18n "pages.core.updateFromSourceConfirm" }}',
-          onOk: async () => {
-            this.singboxUpdating = true;
-            const msg = await HttpUtil.post('/panel/core/singbox/update');
-            this.singboxUpdating = false;
-            if (msg && msg.success) {
-              this.$message.success(msg.obj && msg.obj.version ? 'Sing-Box ' + msg.obj.version : '');
-            }
-            await this.loadStatus(false);
-          },
-          onCancel: () => { this.singboxUpdating = false; },
-        });
-      },
       async loadStatus(showSpin) {
         if (showSpin) this.spinning = true;
         const msg = await HttpUtil.get('/panel/core/status');

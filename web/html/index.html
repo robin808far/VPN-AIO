@@ -401,6 +401,44 @@
       </div>
     </article>
 
+    <!-- ===== sing-box ===== -->
+    <!-- Mirrors the Xray tile for the second bundled, patched proxy core. State,
+         version and uptime come from the singbox row of /panel/core/status (the
+         same feed as the services chips), so it is shown under the Core Settings
+         permission; the actions reuse the Core page routes under manageOverview. -->
+    {{ if .perms.accessCoreSettings }}
+    <article class="bo-tile bo-t-sbox" aria-label="Sing-Box">
+      <div class="bo-tile-head">
+        <h3 class="bo-tile-title">Sing-Box</h3>
+        <span class="bo-status-pill" :class="singboxPillClass" aria-live="polite">
+          <span class="bo-dot" :class="singboxDotClass"></span>[[ coreStateText(singboxCore.state) ]]
+        </span>
+      </div>
+      <div class="bo-kv-row">
+        <span class="bo-kv-label">{{ i18n "pages.core.version" }}</span>
+        <span class="bo-kv-value num">[[ singboxCore.version ? 'v' + singboxCore.version : '-' ]]</span>
+      </div>
+      <div class="bo-kv-row">
+        <span class="bo-kv-label">{{ i18n "pages.index.operationHours" }}</span>
+        <span class="bo-kv-value num">[[ singboxUptime ]]</span>
+      </div>
+      <div class="bo-divider"></div>
+      <div class="bo-btn-row">
+        {{ if .perms.manageOverview }}
+        <button type="button" class="bo-icon-btn" @click="openCoreLogs('singbox')">
+          <svg class="bo-icon bo-icon-16" aria-hidden="true"><use href="#bo-i-file"></use></svg>{{ i18n "pages.index.logs" }}
+        </button>
+        <button type="button" class="bo-icon-btn bo-icon-btn--danger" @click="singboxCoreAction('stop')">
+          <svg class="bo-icon bo-icon-16" aria-hidden="true"><use href="#bo-i-stop"></use></svg>{{ i18n "pages.core.stop" }}
+        </button>
+        <button type="button" class="bo-icon-btn" @click="singboxCoreAction('restart')">
+          <svg class="bo-icon bo-icon-16" aria-hidden="true"><use href="#bo-i-refresh"></use></svg>{{ i18n "pages.core.restart" }}
+        </button>
+        {{ end }}
+      </div>
+    </article>
+    {{ end }}
+
     <!-- ===== manage ===== -->
     <!-- Every button here is escalation-class: the logs name other admins'
          inbounds, clients and IPs; config.json carries every inbound's secrets;
@@ -2121,6 +2159,21 @@
           red: 'bo-dot--error',
         }[this.status.xray.color] || '';
       },
+      // The sing-box tile reads the same /panel/core/status row the services
+      // chips use; it has no feed of its own.
+      singboxCore() {
+        return (this.coreStatuses || []).find(c => c.name === 'singbox') || { name: 'singbox', state: 'unknown' };
+      },
+      singboxPillClass() {
+        return { running: 'bo-status-pill--ok', idle: 'bo-status-pill--ok', stopped: 'bo-status-pill--warn', error: 'bo-status-pill--error' }[this.singboxCore.state] || '';
+      },
+      singboxDotClass() {
+        return { running: 'bo-dot--ok', idle: 'bo-dot--ok', stopped: 'bo-dot--warn', error: 'bo-dot--error' }[this.singboxCore.state] || '';
+      },
+      singboxUptime() {
+        const s = this.singboxCore.extra && this.singboxCore.extra.uptime;
+        return this.singboxCore.state === 'running' && s ? TimeFormatter.formatUptime(s) : '-';
+      },
       // The sparkline paints `stroke` as an SVG presentation attribute, where
       // a CSS var() never resolves, so the token has to be read out to a
       // concrete colour here. Touching currentTheme/isUltra keeps this
@@ -3251,6 +3304,18 @@
         this.loading(false);
         if (!msg.success) {
           return;
+        }
+      },
+      // Stop / Restart on the sing-box tile, through the same Core page routes
+      // (and so the same server-side checks) as the Core Settings card.
+      async singboxCoreAction(action) {
+        this.loading(true);
+        try {
+          await HttpUtil.post('/panel/core/' + action + '/singbox');
+          const msg = await HttpUtil.get('/panel/core/status');
+          if (msg && msg.success && msg.obj) this.coreStatuses = msg.obj.cores || [];
+        } finally {
+          this.loading(false);
         }
       },
       async restartXrayService() {
