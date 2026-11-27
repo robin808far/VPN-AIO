@@ -1,0 +1,685 @@
+diff --git a/experimental/v2rayapi/limiter.go b/experimental/v2rayapi/limiter.go
+new file mode 100644
+index 0000000..5d9167b
+--- /dev/null
++++ b/experimental/v2rayapi/limiter.go
+@@ -0,0 +1,399 @@
++package v2rayapi
++
++import (
++	"context"
++	"encoding/json"
++	"errors"
++	"io"
++	"net"
++	"os"
++	"sync"
++	"time"
++
++	"github.com/sagernet/sing-box/adapter"
++	"github.com/sagernet/sing/common/buf"
++	M "github.com/sagernet/sing/common/metadata"
++	N "github.com/sagernet/sing/common/network"
++	"golang.org/x/time/rate"
++)
++
++const vpnAIOLimiterMarker = "vpn-aio-limits"
++
++// speedLimit sidecar entries are shared with VPN-AIO's Xray core. sing-box
++// consumes the same file so account policy changes do not require a core
++// restart. streamLimit is deliberately named for what it measures: routed
++// streams/connections, not physical devices.
++type sidecarUserLimit struct {
++	Email       string `json:"email"`
++	DownBps     int64  `json:"downBps"`
++	UpBps       int64  `json:"upBps"`
++	IPLimit     int    `json:"ipLimit"`
++	StreamLimit int    `json:"streamLimit"`
++	Strategy    string `json:"strategy"`
++}
++
++type sidecarDocument struct {
++	Users []sidecarUserLimit `json:"users"`
++}
++
++type limiterPolicy struct {
++	downBps, upBps int64
++	ipLimit        int
++	streamLimit    int
++	strategy       string
++}
++
++type limiterRates struct {
++	uplink   *rate.Limiter
++	downlink *rate.Limiter
++}
++
++type activeSession struct {
++	started time.Time
++	close   func()
++}
++
++type limiterState struct {
++	path    string
++	marker  string
++	modTime time.Time
++	size    int64
++
++	mu       sync.Mutex
++	policies map[string]limiterPolicy
++	rates    map[string]limiterRates
++	sessions map[string]map[string]map[uint64]activeSession
++	streams  map[string]int
++	nextID   uint64
++}
++
++func newLimiterState(path string) *limiterState {
++	return &limiterState{
++		path:     path,
++		marker:   vpnAIOLimiterMarker,
++		policies: make(map[string]limiterPolicy),
++		rates:    make(map[string]limiterRates),
++		sessions: make(map[string]map[string]map[uint64]activeSession),
++		streams:  make(map[string]int),
++	}
++}
++
++func setRateLimit(limiter *rate.Limiter, bps int64) {
++	if limiter == nil {
++		return
++	}
++	if bps <= 0 {
++		limiter.SetLimit(rate.Inf)
++		limiter.SetBurst(64 * 1024)
++		return
++	}
++	burst := int(bps)
++	if burst < 1 {
++		burst = 1
++	}
++	if burst > 64*1024 {
++		burst = 64 * 1024
++	}
++	limiter.SetLimit(rate.Limit(bps))
++	limiter.SetBurst(burst)
++}
++
++func (s *limiterState) updateRatesLocked() {
++	for user, rates := range s.rates {
++		policy := s.policies[user]
++		setRateLimit(rates.uplink, policy.upBps)
++		setRateLimit(rates.downlink, policy.downBps)
++		if policy.upBps <= 0 && policy.downBps <= 0 && len(s.sessions[user]) == 0 {
++			delete(s.rates, user)
++		}
++	}
++}
++
++func (s *limiterState) reloadLocked() {
++	if s.path == "" {
++		s.policies = map[string]limiterPolicy{}
++		s.updateRatesLocked()
++		return
++	}
++	info, err := os.Stat(s.path)
++	if err != nil {
++		if errors.Is(err, os.ErrNotExist) {
++			s.policies = map[string]limiterPolicy{}
++			s.modTime = time.Time{}
++			s.size = 0
++			s.updateRatesLocked()
++		}
++		return
++	}
++	if info.ModTime().Equal(s.modTime) && info.Size() == s.size {
++		return
++	}
++	data, err := os.ReadFile(s.path)
++	if err != nil {
++		return
++	}
++	var document sidecarDocument
++	if err := json.Unmarshal(data, &document); err != nil {
++		return
++	}
++	policies := make(map[string]limiterPolicy, len(document.Users))
++	for _, user := range document.Users {
++		if user.Email == "" {
++			continue
++		}
++		policies[user.Email] = limiterPolicy{
++			downBps:     user.DownBps,
++			upBps:       user.UpBps,
++			ipLimit:     user.IPLimit,
++			streamLimit: user.StreamLimit,
++			strategy:    user.Strategy,
++		}
++	}
++	s.policies = policies
++	s.modTime = info.ModTime()
++	s.size = info.Size()
++	s.updateRatesLocked()
++}
++
++func (s *limiterState) admit(metadata adapter.InboundContext, closeConn func()) (func(), limiterPolicy, *rate.Limiter, *rate.Limiter, bool) {
++	user := metadata.User
++	if user == "" {
++		return func() {}, limiterPolicy{}, nil, nil, true
++	}
++	source := ""
++	if metadata.Source.IsValid() {
++		source = metadata.Source.Addr.String()
++	}
++	s.mu.Lock()
++	s.reloadLocked()
++	policy := s.policies[user]
++	if policy.ipLimit > 0 && source == "" {
++		s.mu.Unlock()
++		return func() {}, policy, nil, nil, false
++	}
++	if policy.streamLimit > 0 && s.streams[user] >= policy.streamLimit {
++		s.mu.Unlock()
++		return func() {}, policy, nil, nil, false
++	}
++	var evicted []func()
++	if policy.ipLimit > 0 {
++		active := s.sessions[user]
++		if active[source] == nil && len(active) >= policy.ipLimit {
++			if policy.strategy != "accept" {
++				s.mu.Unlock()
++				return func() {}, policy, nil, nil, false
++			}
++			oldestIP := ""
++			var oldest time.Time
++			for ip, sessions := range active {
++				for _, session := range sessions {
++					if oldest.IsZero() || session.started.Before(oldest) {
++						oldestIP, oldest = ip, session.started
++					}
++				}
++			}
++			for id, session := range active[oldestIP] {
++				delete(active[oldestIP], id)
++				s.streams[user]--
++				if session.close != nil {
++					evicted = append(evicted, session.close)
++				}
++			}
++			delete(active, oldestIP)
++		}
++	}
++
++	s.nextID++
++	id := s.nextID
++	active := s.sessions[user]
++	if active == nil {
++		active = make(map[string]map[uint64]activeSession)
++		s.sessions[user] = active
++	}
++	byIP := active[source]
++	if byIP == nil {
++		byIP = make(map[uint64]activeSession)
++		active[source] = byIP
++	}
++	byIP[id] = activeSession{started: time.Now(), close: closeConn}
++	s.streams[user]++
++	rates := s.rates[user]
++	if rates.uplink == nil {
++		rates.uplink = newRate(policy.upBps)
++	}
++	if rates.downlink == nil {
++		rates.downlink = newRate(policy.downBps)
++	}
++	s.rates[user] = rates
++	uplink, downlink := rates.uplink, rates.downlink
++	s.mu.Unlock()
++	for _, closeOld := range evicted {
++		closeOld()
++	}
++
++	var once sync.Once
++	release := func() {
++		once.Do(func() {
++			s.mu.Lock()
++			if sessions := s.sessions[user]; sessions != nil {
++				if byIP := sessions[source]; byIP != nil {
++					if _, exists := byIP[id]; exists {
++						delete(byIP, id)
++						s.streams[user]--
++						if len(byIP) == 0 {
++							delete(sessions, source)
++						}
++					}
++					if len(sessions) == 0 {
++						delete(s.sessions, user)
++						delete(s.streams, user)
++						if current := s.policies[user]; current.upBps <= 0 && current.downBps <= 0 {
++							delete(s.rates, user)
++						}
++					}
++				}
++			}
++			s.mu.Unlock()
++		})
++	}
++	return release, policy, uplink, downlink, true
++}
++
++func limiterContextRelease(ctx context.Context, release func()) func() {
++	if release == nil {
++		return func() {}
++	}
++	stop := context.AfterFunc(ctx, release)
++	return func() {
++		if stop() {
++			release()
++		}
++	}
++}
++
++func newRate(bps int64) *rate.Limiter {
++	if bps <= 0 {
++		return rate.NewLimiter(rate.Inf, 64*1024)
++	}
++	burst := int(bps)
++	if burst < 1 {
++		burst = 1
++	}
++	if burst > 64*1024 {
++		burst = 64 * 1024
++	}
++	return rate.NewLimiter(rate.Limit(bps), burst)
++}
++
++func waitRate(ctx context.Context, limiter *rate.Limiter, n int) error {
++	if limiter == nil || n <= 0 {
++		return nil
++	}
++	if n > limiter.Burst() {
++		n = limiter.Burst()
++	}
++	return limiter.WaitN(ctx, n)
++}
++
++type limitedConn struct {
++	net.Conn
++	ctx       context.Context
++	uplink    *rate.Limiter
++	downlink  *rate.Limiter
++	release   func()
++	closeOnce sync.Once
++}
++
++type rejectedConn struct {
++	net.Conn
++}
++
++func (c *rejectedConn) Read([]byte) (int, error) {
++	return 0, errors.New("vpn-aio: connection rejected by limit")
++}
++
++func (c *rejectedConn) Write([]byte) (int, error) {
++	return 0, errors.New("vpn-aio: connection rejected by limit")
++}
++
++func (c *limitedConn) Read(p []byte) (int, error) {
++	if c.uplink != nil && len(p) > c.uplink.Burst() {
++		p = p[:c.uplink.Burst()]
++	}
++	if err := waitRate(c.ctx, c.uplink, len(p)); err != nil {
++		return 0, err
++	}
++	return c.Conn.Read(p)
++}
++
++func (c *limitedConn) Write(p []byte) (int, error) {
++	written := 0
++	for len(p) > 0 {
++		chunk := p
++		if c.downlink != nil && len(chunk) > c.downlink.Burst() {
++			chunk = chunk[:c.downlink.Burst()]
++		}
++		if err := waitRate(c.ctx, c.downlink, len(chunk)); err != nil {
++			return written, err
++		}
++		n, err := c.Conn.Write(chunk)
++		written += n
++		p = p[n:]
++		if err != nil {
++			return written, err
++		}
++		if n == 0 {
++			return written, io.ErrShortWrite
++		}
++	}
++	return written, nil
++}
++
++func (c *limitedConn) Close() error {
++	c.closeOnce.Do(c.release)
++	return c.Conn.Close()
++}
++
++type limitedPacketConn struct {
++	N.PacketConn
++	ctx       context.Context
++	uplink    *rate.Limiter
++	downlink  *rate.Limiter
++	release   func()
++	closeOnce sync.Once
++}
++
++type rejectedPacketConn struct {
++	N.PacketConn
++}
++
++func (c *rejectedPacketConn) ReadPacket(*buf.Buffer) (M.Socksaddr, error) {
++	return M.Socksaddr{}, errors.New("vpn-aio: packet connection rejected by limit")
++}
++
++func (c *rejectedPacketConn) WritePacket(*buf.Buffer, M.Socksaddr) error {
++	return errors.New("vpn-aio: packet connection rejected by limit")
++}
++
++func (c *limitedPacketConn) ReadPacket(buffer *buf.Buffer) (M.Socksaddr, error) {
++	destination, err := c.PacketConn.ReadPacket(buffer)
++	if err != nil {
++		return destination, err
++	}
++	if err := waitRate(c.ctx, c.uplink, buffer.Len()); err != nil {
++		return destination, err
++	}
++	return destination, nil
++}
++
++func (c *limitedPacketConn) WritePacket(buffer *buf.Buffer, destination M.Socksaddr) error {
++	if err := waitRate(c.ctx, c.downlink, buffer.Len()); err != nil {
++		return err
++	}
++	return c.PacketConn.WritePacket(buffer, destination)
++}
++
++func (c *limitedPacketConn) Close() error {
++	c.closeOnce.Do(c.release)
++	return c.PacketConn.Close()
++}
+diff --git a/experimental/v2rayapi/limiter_test.go b/experimental/v2rayapi/limiter_test.go
+new file mode 100644
+index 0000000..ff5ec45
+--- /dev/null
++++ b/experimental/v2rayapi/limiter_test.go
+@@ -0,0 +1,125 @@
++package v2rayapi
++
++import (
++	"encoding/json"
++	"net"
++	"os"
++	"path/filepath"
++	"testing"
++	"time"
++
++	"github.com/sagernet/sing-box/adapter"
++	M "github.com/sagernet/sing/common/metadata"
++)
++
++func writeLimiterPolicy(t *testing.T, path string, user sidecarUserLimit) {
++	t.Helper()
++	data, err := json.Marshal(sidecarDocument{Users: []sidecarUserLimit{user}})
++	if err != nil {
++		t.Fatal(err)
++	}
++	if err := os.WriteFile(path, data, 0o600); err != nil {
++		t.Fatal(err)
++	}
++	// Ensure a subsequent same-size policy edit is observable even on a filesystem
++	// whose timestamp resolution is coarser than the test's write interval.
++	future := time.Now().Add(2 * time.Second)
++	if err := os.Chtimes(path, future, future); err != nil {
++		t.Fatal(err)
++	}
++}
++
++func limiterMetadata(user, ip string) adapter.InboundContext {
++	return adapter.InboundContext{
++		User:   user,
++		Source: M.ParseSocksaddr(net.JoinHostPort(ip, "12345")),
++	}
++}
++
++func TestLimiterStateRejectsNewIPAndConcurrentStreamAtCaps(t *testing.T) {
++	path := filepath.Join(t.TempDir(), "limits.json")
++	writeLimiterPolicy(t, path, sidecarUserLimit{Email: "alice", IPLimit: 1, StreamLimit: 2})
++	state := newLimiterState(path)
++	firstRelease, _, _, _, ok := state.admit(limiterMetadata("alice", "192.0.2.1"), nil)
++	if !ok {
++		t.Fatal("first session was rejected")
++	}
++	secondRelease, _, _, _, ok := state.admit(limiterMetadata("alice", "192.0.2.1"), nil)
++	if !ok {
++		t.Fatal("second session from the same source IP was rejected")
++	}
++	if _, _, _, _, ok := state.admit(limiterMetadata("alice", "192.0.2.2"), nil); ok {
++		t.Fatal("new source IP exceeded the IP cap")
++	}
++	if _, _, _, _, ok := state.admit(limiterMetadata("alice", "192.0.2.1"), nil); ok {
++		t.Fatal("new session exceeded the stream cap")
++	}
++	firstRelease()
++	secondRelease()
++	if _, _, _, _, ok := state.admit(limiterMetadata("alice", "192.0.2.2"), nil); !ok {
++		t.Fatal("released sessions did not free the IP and stream slots")
++	}
++}
++
++func TestLimiterStateAcceptStrategyEvictsOldestIP(t *testing.T) {
++	path := filepath.Join(t.TempDir(), "limits.json")
++	writeLimiterPolicy(t, path, sidecarUserLimit{Email: "alice", IPLimit: 1, Strategy: "accept"})
++	state := newLimiterState(path)
++	closed := 0
++	firstRelease, _, _, _, ok := state.admit(limiterMetadata("alice", "192.0.2.1"), func() { closed++ })
++	if !ok {
++		t.Fatal("first source IP was rejected")
++	}
++	secondRelease, _, _, _, ok := state.admit(limiterMetadata("alice", "192.0.2.2"), func() { closed++ })
++	if !ok {
++		t.Fatal("accept strategy rejected the new source IP")
++	}
++	if closed != 1 {
++		t.Fatalf("closed sessions = %d, want oldest source session closed once", closed)
++	}
++	firstRelease() // Eviction already removed this session; release must be idempotent.
++	secondRelease()
++	state.mu.Lock()
++	defer state.mu.Unlock()
++	if state.streams["alice"] != 0 || len(state.sessions["alice"]) != 0 {
++		t.Fatalf("session state leaked after release: streams=%d ips=%d", state.streams["alice"], len(state.sessions["alice"]))
++	}
++}
++
++func TestLimiterStateSharesAndHotUpdatesPerAccountRates(t *testing.T) {
++	path := filepath.Join(t.TempDir(), "limits.json")
++	writeLimiterPolicy(t, path, sidecarUserLimit{Email: "alice", DownBps: 2048, UpBps: 1024})
++	state := newLimiterState(path)
++	firstRelease, _, firstUp, firstDown, ok := state.admit(limiterMetadata("alice", "192.0.2.1"), nil)
++	if !ok {
++		t.Fatal("first session was rejected")
++	}
++	secondRelease, _, secondUp, secondDown, ok := state.admit(limiterMetadata("alice", "192.0.2.2"), nil)
++	if !ok {
++		t.Fatal("second session was rejected")
++	}
++	if firstUp != secondUp || firstDown != secondDown {
++		t.Fatal("same-account sessions do not share rate buckets")
++	}
++	if got := firstUp.Limit(); got != 1024 {
++		t.Fatalf("upload rate = %v, want 1024 B/s", got)
++	}
++	if got := firstDown.Limit(); got != 2048 {
++		t.Fatalf("download rate = %v, want 2048 B/s", got)
++	}
++	writeLimiterPolicy(t, path, sidecarUserLimit{Email: "alice", DownBps: 4096, UpBps: 2048})
++	// The test writer sets a future timestamp, causing the next admission to reload.
++	thirdRelease, _, _, _, ok := state.admit(limiterMetadata("alice", "192.0.2.3"), nil)
++	if !ok {
++		t.Fatal("third session was rejected")
++	}
++	if got := firstUp.Limit(); got != 2048 {
++		t.Fatalf("existing upload bucket was not hot-updated: %v", got)
++	}
++	if got := firstDown.Limit(); got != 4096 {
++		t.Fatalf("existing download bucket was not hot-updated: %v", got)
++	}
++	firstRelease()
++	secondRelease()
++	thirdRelease()
++}
+diff --git a/experimental/v2rayapi/stats.go b/experimental/v2rayapi/stats.go
+index c7b2b49..fccb951 100644
+--- a/experimental/v2rayapi/stats.go
++++ b/experimental/v2rayapi/stats.go
+@@ -3,6 +3,7 @@ package v2rayapi
+ import (
+ 	"context"
+ 	"net"
++	"os"
+ 	"regexp"
+ 	"runtime"
+ 	"strings"
+@@ -33,6 +34,7 @@ type StatsService struct {
+ 	users     map[string]bool
+ 	access    sync.Mutex
+ 	counters  map[string]*atomic.Int64
++	limits    *limiterState
+ }
+ 
+ func NewStatsService(options option.V2RayStatsServiceOptions) *StatsService {
+@@ -57,10 +59,19 @@ func NewStatsService(options option.V2RayStatsServiceOptions) *StatsService {
+ 		outbounds: outbounds,
+ 		users:     users,
+ 		counters:  make(map[string]*atomic.Int64),
++		limits:    newLimiterState(os.Getenv("XRAY_SPEEDLIMIT_FILE")),
+ 	}
+ }
+ 
+ func (s *StatsService) RoutedConnection(ctx context.Context, conn net.Conn, metadata adapter.InboundContext, matchedRule adapter.Rule, matchOutbound adapter.Outbound) net.Conn {
++	release, _, uplink, downlink, allowed := s.limits.admit(metadata, func() {
++		_ = conn.Close()
++	})
++	if !allowed {
++		_ = conn.Close()
++		return &rejectedConn{Conn: conn}
++	}
++	release = limiterContextRelease(ctx, release)
+ 	inbound := metadata.Inbound
+ 	user := metadata.User
+ 	outbound := matchOutbound.Tag()
+@@ -69,27 +80,44 @@ func (s *StatsService) RoutedConnection(ctx context.Context, conn net.Conn, meta
+ 	countInbound := inbound != "" && s.inbounds[inbound]
+ 	countOutbound := outbound != "" && s.outbounds[outbound]
+ 	countUser := user != "" && s.users[user]
+-	if !countInbound && !countOutbound && !countUser {
+-		return conn
+-	}
+-	s.access.Lock()
+-	if countInbound {
+-		readCounter = append(readCounter, s.loadOrCreateCounter("inbound>>>"+inbound+">>>traffic>>>uplink"))
+-		writeCounter = append(writeCounter, s.loadOrCreateCounter("inbound>>>"+inbound+">>>traffic>>>downlink"))
++	if countInbound || countOutbound || countUser {
++		s.access.Lock()
++		if countInbound {
++			readCounter = append(readCounter, s.loadOrCreateCounter("inbound>>>"+inbound+">>>traffic>>>uplink"))
++			writeCounter = append(writeCounter, s.loadOrCreateCounter("inbound>>>"+inbound+">>>traffic>>>downlink"))
++		}
++		if countOutbound {
++			readCounter = append(readCounter, s.loadOrCreateCounter("outbound>>>"+outbound+">>>traffic>>>uplink"))
++			writeCounter = append(writeCounter, s.loadOrCreateCounter("outbound>>>"+outbound+">>>traffic>>>downlink"))
++		}
++		if countUser {
++			readCounter = append(readCounter, s.loadOrCreateCounter("user>>>"+user+">>>traffic>>>uplink"))
++			writeCounter = append(writeCounter, s.loadOrCreateCounter("user>>>"+user+">>>traffic>>>downlink"))
++		}
++		s.access.Unlock()
+ 	}
+-	if countOutbound {
+-		readCounter = append(readCounter, s.loadOrCreateCounter("outbound>>>"+outbound+">>>traffic>>>uplink"))
+-		writeCounter = append(writeCounter, s.loadOrCreateCounter("outbound>>>"+outbound+">>>traffic>>>downlink"))
++	var tracked net.Conn = conn
++	if len(readCounter)+len(writeCounter) > 0 {
++		tracked = bufio.NewInt64CounterConn(conn, readCounter, writeCounter)
+ 	}
+-	if countUser {
+-		readCounter = append(readCounter, s.loadOrCreateCounter("user>>>"+user+">>>traffic>>>uplink"))
+-		writeCounter = append(writeCounter, s.loadOrCreateCounter("user>>>"+user+">>>traffic>>>downlink"))
++	return &limitedConn{
++		Conn:     tracked,
++		ctx:      ctx,
++		uplink:   uplink,
++		downlink: downlink,
++		release:  release,
+ 	}
+-	s.access.Unlock()
+-	return bufio.NewInt64CounterConn(conn, readCounter, writeCounter)
+ }
+ 
+ func (s *StatsService) RoutedPacketConnection(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext, matchedRule adapter.Rule, matchOutbound adapter.Outbound) N.PacketConn {
++	release, _, uplink, downlink, allowed := s.limits.admit(metadata, func() {
++		_ = conn.Close()
++	})
++	if !allowed {
++		_ = conn.Close()
++		return &rejectedPacketConn{PacketConn: conn}
++	}
++	release = limiterContextRelease(ctx, release)
+ 	inbound := metadata.Inbound
+ 	user := metadata.User
+ 	outbound := matchOutbound.Tag()
+@@ -98,24 +126,33 @@ func (s *StatsService) RoutedPacketConnection(ctx context.Context, conn N.Packet
+ 	countInbound := inbound != "" && s.inbounds[inbound]
+ 	countOutbound := outbound != "" && s.outbounds[outbound]
+ 	countUser := user != "" && s.users[user]
+-	if !countInbound && !countOutbound && !countUser {
+-		return conn
+-	}
+-	s.access.Lock()
+-	if countInbound {
+-		readCounter = append(readCounter, s.loadOrCreateCounter("inbound>>>"+inbound+">>>traffic>>>uplink"))
+-		writeCounter = append(writeCounter, s.loadOrCreateCounter("inbound>>>"+inbound+">>>traffic>>>downlink"))
++	if countInbound || countOutbound || countUser {
++		s.access.Lock()
++		if countInbound {
++			readCounter = append(readCounter, s.loadOrCreateCounter("inbound>>>"+inbound+">>>traffic>>>uplink"))
++			writeCounter = append(writeCounter, s.loadOrCreateCounter("inbound>>>"+inbound+">>>traffic>>>downlink"))
++		}
++		if countOutbound {
++			readCounter = append(readCounter, s.loadOrCreateCounter("outbound>>>"+outbound+">>>traffic>>>uplink"))
++			writeCounter = append(writeCounter, s.loadOrCreateCounter("outbound>>>"+outbound+">>>traffic>>>downlink"))
++		}
++		if countUser {
++			readCounter = append(readCounter, s.loadOrCreateCounter("user>>>"+user+">>>traffic>>>uplink"))
++			writeCounter = append(writeCounter, s.loadOrCreateCounter("user>>>"+user+">>>traffic>>>downlink"))
++		}
++		s.access.Unlock()
+ 	}
+-	if countOutbound {
+-		readCounter = append(readCounter, s.loadOrCreateCounter("outbound>>>"+outbound+">>>traffic>>>uplink"))
+-		writeCounter = append(writeCounter, s.loadOrCreateCounter("outbound>>>"+outbound+">>>traffic>>>downlink"))
++	var tracked N.PacketConn = conn
++	if len(readCounter)+len(writeCounter) > 0 {
++		tracked = bufio.NewInt64CounterPacketConn(conn, readCounter, nil, writeCounter, nil)
+ 	}
+-	if countUser {
+-		readCounter = append(readCounter, s.loadOrCreateCounter("user>>>"+user+">>>traffic>>>uplink"))
+-		writeCounter = append(writeCounter, s.loadOrCreateCounter("user>>>"+user+">>>traffic>>>downlink"))
++	return &limitedPacketConn{
++		PacketConn: tracked,
++		ctx:        ctx,
++		uplink:     uplink,
++		downlink:   downlink,
++		release:    release,
+ 	}
+-	s.access.Unlock()
+-	return bufio.NewInt64CounterPacketConn(conn, readCounter, nil, writeCounter, nil)
+ }
+ 
+ func (s *StatsService) GetStats(ctx context.Context, request *GetStatsRequest) (*GetStatsResponse, error) {

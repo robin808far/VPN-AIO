@@ -2871,8 +2871,10 @@ html[data-theme-animations='off'] .log-live-dot { animation:none; }
 [dir="rtl"] .bo-inbound-modal .ant-form-item-control { display:block; width:100%; }
 /* The rail/pane flex row is laid out with physical order for LTR;
    reverse it so the rail keeps its side in RTL. */
-[dir="rtl"] .bo-cf { flex-direction:row-reverse; }
-[dir="rtl"] .bo-cf-rail { border-inline-end:none; border-inline-start:1px solid var(--border); }
+@media (min-width: 641px) {
+  [dir="rtl"] .bo-cf { flex-direction:row-reverse; }
+  [dir="rtl"] .bo-cf-rail { border-inline-end:none; border-inline-start:1px solid var(--border); }
+}
 
 /* The modal close button: ant places it top-right physically; under RTL
    the title starts from the right, so park the X top-left. */

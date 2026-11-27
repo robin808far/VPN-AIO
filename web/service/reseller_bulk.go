@@ -718,7 +718,8 @@ func (s *ResellerService) ApplyBulkCharges(t BulkTicket) error {
 		return nil
 	}
 
-	return database.GetDB().Transaction(func(tx *gorm.DB) error {
+	var touchedInboundIds []int
+	if err := database.GetDB().Transaction(func(tx *gorm.DB) error {
 		ids, err := servingInboundIds(tx, emails...)
 		if err != nil {
 			return err
@@ -768,23 +769,43 @@ func (s *ResellerService) ApplyBulkCharges(t BulkTicket) error {
 				Update("settings", string(patched)).Error; err != nil {
 				return err
 			}
+			touchedInboundIds = append(touchedInboundIds, inbound.Id)
 		}
 
 		for _, c := range wanted {
-			updates := map[string]any{}
+			trafficUpdates := map[string]any{}
+			accountUpdates := map[string]any{}
 			if c.SetTotal {
-				updates["total"] = c.NewTotal
+				trafficUpdates["total"] = c.NewTotal
+				accountUpdates["total_gb"] = c.NewTotal
 			}
 			if c.ForceExpiry {
-				updates["expiry_time"] = c.ExpiryTime
+				trafficUpdates["expiry_time"] = c.ExpiryTime
+				accountUpdates["expiry_time"] = c.ExpiryTime
+			}
+			if err := tx.Model(&model.Account{}).Where("LOWER(TRIM(email)) = ?", emailKey(c.Email)).
+				Updates(accountUpdates).Error; err != nil {
+				return err
 			}
 			if err := tx.Model(&xray.ClientTraffic{}).Where("email = ?", c.Email).
-				Updates(updates).Error; err != nil {
+				Updates(trafficUpdates).Error; err != nil {
+				return err
+			}
+		}
+		accounts := &AccountService{}
+		for _, inboundId := range touchedInboundIds {
+			if err := accounts.SyncInboundAccounts(tx.Session(&gorm.Session{NewDB: true}), inboundId); err != nil {
 				return err
 			}
 		}
 		return nil
-	})
+	}); err != nil {
+		return err
+	}
+	if err := singboxService.RefreshAccounts(emails); err != nil {
+		return fmt.Errorf("bulk charges applied; could not refresh sing-box accounts: %w", err)
+	}
+	return nil
 }
 
 // RollbackBulk undoes a reservation whose batch then failed to apply.

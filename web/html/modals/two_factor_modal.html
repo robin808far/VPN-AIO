@@ -30,7 +30,7 @@
 </a-modal>
 
 <script>
-    const twoFactorModal = {
+    var twoFactorModal = {
         title: '',
         description: '',
         fileName: '',
@@ -99,7 +99,7 @@
         },
     };
 
-    const twoFactorModalApp = new Vue({
+    var twoFactorModalApp = new Vue({
         delimiters: ['[[', ']]'],
         el: '#two-factor-modal',
         data: {

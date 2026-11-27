@@ -101,7 +101,10 @@ func (s *CoreService) CanUninstallCores(names []string, inbounds string) error {
 		return fmt.Errorf("no installable core selected")
 	}
 	installed := s.provisionedProtocolSet()
-	counts := s.inboundCountsByCore()
+	counts, err := countCoreInbounds()
+	if err != nil {
+		return fmt.Errorf("cannot determine core inbound ownership: %w", err)
+	}
 	for _, n := range selected {
 		if !installed[n] {
 			return fmt.Errorf("%s is not installed", coreDisplayName(n))
@@ -132,7 +135,7 @@ func (s *CoreService) deleteCoreInbounds(names []string) (int, error) {
 	}
 	removed := 0
 	for _, in := range all {
-		if !wanted[protocolCoreName(string(in.Protocol))] {
+		if !wanted[inboundCoreName(in)] {
 			continue
 		}
 		if _, err := inboundService.DelInbound(in.Id); err != nil {
@@ -218,6 +221,11 @@ func (s *CoreService) UninstallCores(names []string, inbounds string) (*CoreUnin
 	}
 	selected := validCoreNames(names)
 	rep := &CoreUninstallReport{Cores: selected}
+	if inbounds == InboundsDelete {
+		if _, err := s.deleteCoreInbounds(selected); err != nil {
+			return nil, err
+		}
+	}
 	rep.Kept = s.runCoreUninstall(selected, func(st ProvisionStep) {
 		rep.Steps = append(rep.Steps, st)
 	})

@@ -20,6 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', inputs.tag) || github.ref }}
           submodules: recursive
           # No fetch-tags here: on a tag push it makes git try to fetch the tag
           # and the checked-out SHA into the same refspec and fails

@@ -261,6 +261,9 @@ func validateClientLimits(clients []model.Client) error {
 		if c.UserLimitOverride != nil && *c.UserLimitOverride < 0 {
 			return common.NewErrorf("the device limit for %q cannot be negative.", c.Email)
 		}
+		if c.StreamLimit < 0 {
+			return common.NewErrorf("the concurrent stream limit for %q cannot be negative.", c.Email)
+		}
 	}
 	return nil
 }

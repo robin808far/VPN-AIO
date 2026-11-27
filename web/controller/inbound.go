@@ -1001,6 +1001,10 @@ func (a *InboundController) addInboundClient(c *gin.Context) {
 		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
 		return
 	}
+	if err := a.admitClientMemberships(membershipIds, postedClientEmails(data)); err != nil {
+		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
+		return
+	}
 	// Prices the account against the reseller's balance, clamps the posted client to
 	// their limits, and RESERVES the bytes before the account exists. Inactive for an
 	// admin, who has no balance to reserve against.
@@ -1045,14 +1049,17 @@ func (a *InboundController) addInboundClient(c *gin.Context) {
 	// re-projects the account onto every inbound serving it (the account-wide fields
 	// it just changed have to reach all of them), so the reconcile below has to cover
 	// those too or a daemon keeps serving the settings JSON it no longer matches.
-	var projected []int
+	var (
+		projected          []int
+		membershipFailures []string
+	)
 	if emails := postedClientEmails(data); len(emails) > 1 {
 		a.syncInboundAccounts(data.Id)
 		if membershipsExplicit {
 			for _, email := range emails {
 				touched, merr := a.applyClientMemberships(c, email, data.Id, membershipIds, membershipsExplicit)
 				if merr != nil {
-					logger.Warning("applying client memberships for ", email, ": ", merr)
+					membershipFailures = append(membershipFailures, fmt.Sprintf("%s: %v", email, merr))
 				}
 				projected = unionInboundIds(projected, touched)
 			}
@@ -1060,14 +1067,25 @@ func (a *InboundController) addInboundClient(c *gin.Context) {
 	} else {
 		touched, merr := a.applyClientMemberships(c, postedClientEmail(data), data.Id, membershipIds, membershipsExplicit)
 		if merr != nil {
-			logger.Warning("applying client memberships: ", merr)
+			membershipFailures = append(membershipFailures, merr.Error())
 		}
 		projected = unionInboundIds(projected, touched)
+	}
+	if len(membershipFailures) > 0 {
+		syncErr := a.syncInboundAccounts(data.Id)
+		a.reconcileForInbounds(unionInboundIds([]int{data.Id}, unionInboundIds(membershipIds, projected)), needRestart)
+		details := strings.Join(membershipFailures, "; ")
+		if syncErr != nil {
+			details += "; syncing the saved account also failed: " + syncErr.Error()
+		}
+		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), fmt.Errorf(
+			"client data was saved on inbound %d, but requested membership updates failed: %s", data.Id, details))
+		return
 	}
 
 	jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.inboundClientAddSuccess"), nil)
 
-	a.reconcileForInbounds(unionInboundIds(membershipIds, projected), needRestart)
+	a.reconcileForInbounds(unionInboundIds([]int{data.Id}, unionInboundIds(membershipIds, projected)), needRestart)
 }
 
 // saveAccountClient writes a client that NO inbound addresses, and sets which
@@ -1193,16 +1211,25 @@ func (a *InboundController) delAccountClient(c *gin.Context) {
 // (see upsertAccountFromEntry): a struct cannot tell an omitted speedLimitDown from
 // an explicit null, and those mean "inherit the inbound" and "no limit here".
 func singlePostedClientEntry(settings string) (map[string]any, error) {
-	var parsed struct {
-		Clients []map[string]any `json:"clients"`
-	}
-	if err := json.Unmarshal([]byte(settings), &parsed); err != nil {
+	var root map[string]any
+	if err := json.Unmarshal([]byte(settings), &root); err != nil {
 		return nil, err
 	}
-	if len(parsed.Clients) != 1 {
-		return nil, fmt.Errorf("expected exactly one client, got %d", len(parsed.Clients))
+	if clients, ok := root["clients"].([]any); ok {
+		if len(clients) != 1 {
+			return nil, fmt.Errorf("expected exactly one client, got %d", len(clients))
+		}
+		entry, ok := clients[0].(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("client entry is not an object")
+		}
+		return entry, nil
 	}
-	return parsed.Clients[0], nil
+	entries, ok := service.SingboxEntriesForSettings(root)
+	if !ok || len(entries) != 1 {
+		return nil, fmt.Errorf("expected exactly one client, got %d", len(entries))
+	}
+	return entries[0], nil
 }
 
 // copyInboundClients copies clients from source inbound to target inbound.
@@ -1373,6 +1400,32 @@ func (a *InboundController) updateInboundClient(c *gin.Context) {
 		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
 		return
 	}
+	storedInbound, err := a.inboundService.GetInbound(inbound.Id)
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
+		return
+	}
+	previousEmail := a.clientEmailOnInbound(storedInbound, clientId)
+	var existingMemberships []int
+	if previousEmail != "" {
+		existingMemberships, err = accountService.InboundIdsForEmail(previousEmail)
+		if err != nil {
+			jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
+			return
+		}
+	}
+	if membershipsExplicit {
+		newMemberships := subtractInboundIds(membershipIds, existingMemberships)
+		// UpdateInboundClient replaces the account on its addressed inbound in place,
+		// including on rename, so that inbound does not consume an additional slot.
+		newMemberships = subtractInboundIds(newMemberships, []int{inbound.Id})
+		if email := postedClientEmail(inbound); email != "" {
+			if err := a.admitClientMemberships(newMemberships, []string{email}); err != nil {
+				jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
+				return
+			}
+		}
+	}
 	// Prices the edit and moves the balance by the delta. This also carries the
 	// ownership assertion for a reseller, which the grant check above cannot make:
 	// the inbound is shared, so holding it says nothing about who created THIS
@@ -1381,16 +1434,6 @@ func (a *InboundController) updateInboundClient(c *gin.Context) {
 	if err != nil {
 		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
 		return
-	}
-
-	// The email as STORED, read before the write replaces it. An edit may rename the
-	// account, and after the write there is nothing left to learn the old identity
-	// from: UpdateInboundClient rewrites the entry in place. ticket.Email holds the
-	// same thing but only for a reseller, and a rename by an admin splits the account
-	// exactly as badly.
-	previousEmail := ""
-	if stored, gerr := a.inboundService.GetInbound(inbound.Id); gerr == nil {
-		previousEmail = a.clientEmailOnInbound(stored, clientId)
 	}
 
 	needRestart, err := a.inboundService.UpdateInboundClient(inbound, clientId)
@@ -1405,11 +1448,17 @@ func (a *InboundController) updateInboundClient(c *gin.Context) {
 	// a rename would orphan the ownership row: the reseller loses the account from
 	// their own view and the refund path could never find it again. Carried across
 	// after the write, since until then the old email is still the stored one.
+	resellerRenamedEmail := ""
 	if ticket.Active {
 		if newEmail := postedClientEmail(inbound); newEmail != "" && newEmail != ticket.Email {
 			if rerr := resellerService.RenameClient(ticket.Email, newEmail); rerr != nil {
 				logger.Warning("carrying reseller ownership across a client rename: ", rerr)
+				a.reconcileForInbounds(unionInboundIds([]int{inbound.Id}, existingMemberships), needRestart)
+				jsonMsg(c, I18nWeb(c, "somethingWentWrong"), fmt.Errorf(
+					"client data was saved on inbound %d, but reseller ownership rename failed: %w", inbound.Id, rerr))
+				return
 			}
+			resellerRenamedEmail = newEmail
 		}
 	}
 	// An edit can change the membership set, so this both re-projects the account
@@ -1435,6 +1484,16 @@ func (a *InboundController) updateInboundClient(c *gin.Context) {
 		var rerr error
 		if renamed, rerr = accountService.RenameAccount(previousEmail, email); rerr != nil {
 			logger.Warning("carrying the account across a client rename: ", rerr)
+			a.reconcileForInbounds(unionInboundIds([]int{inbound.Id}, existingMemberships), needRestart)
+			partialErr := fmt.Errorf("client data was saved on inbound %d, but account rename failed: %w", inbound.Id, rerr)
+			if resellerRenamedEmail != "" {
+				if ledgerErr := resellerService.RenameClient(resellerRenamedEmail, ticket.Email); ledgerErr != nil {
+					logger.Warning("restoring reseller ownership after an account rename failure: ", ledgerErr)
+					partialErr = fmt.Errorf("%w; restoring reseller ownership also failed: %v", partialErr, ledgerErr)
+				}
+			}
+			jsonMsg(c, I18nWeb(c, "somethingWentWrong"), partialErr)
+			return
 		}
 	}
 	previous, perr := accountService.InboundIdsForEmail(email)
@@ -1443,7 +1502,16 @@ func (a *InboundController) updateInboundClient(c *gin.Context) {
 	}
 	projected, merr := a.applyClientMemberships(c, email, inbound.Id, membershipIds, membershipsExplicit)
 	if merr != nil {
-		logger.Warning("applying client memberships: ", merr)
+		syncErr := a.syncInboundAccounts(inbound.Id)
+		reconcile := unionInboundIds([]int{inbound.Id}, unionInboundIds(
+			unionInboundIds(membershipIds, previous), unionInboundIds(projected, renamed)))
+		a.reconcileForInbounds(reconcile, needRestart)
+		message := fmt.Errorf("client data was saved on inbound %d, but requested membership updates failed: %w", inbound.Id, merr)
+		if syncErr != nil {
+			message = fmt.Errorf("%w; syncing the saved account also failed: %v", message, syncErr)
+		}
+		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), message)
+		return
 	}
 
 	jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.inboundClientUpdateSuccess"), nil)
@@ -2940,10 +3008,27 @@ func distinctInboundIds(targets []service.BulkClientTarget) []int {
 // no membership, so one call is correct for all of them, including the removal of
 // the inbound itself (where it drops every membership pointing at an id that is
 // gone).
-func (a *InboundController) syncInboundAccounts(inboundId int) {
+func (a *InboundController) syncInboundAccounts(inboundId int) error {
 	if err := accountService.SyncInboundAccounts(database.GetDB(), inboundId); err != nil {
 		logger.Warning("syncing the accounts layer for inbound ", inboundId, ": ", err)
+		return err
 	}
+	return nil
+}
+
+// admitClientMemberships runs capacity checks before the client write and any
+// reseller reservation, so deterministic membership refusals cannot leave a
+// charged account saved only on its anchor inbound.
+func (a *InboundController) admitClientMemberships(inboundIds []int, emails []string) error {
+	if len(emails) == 0 {
+		return nil
+	}
+	for _, inboundId := range unionInboundIds(inboundIds, nil) {
+		if err := a.inboundService.AdmitAccounts(inboundId, emails); err != nil {
+			return fmt.Errorf("inbound %d: %w", inboundId, err)
+		}
+	}
+	return nil
 }
 
 // applyClientMemberships puts an account on exactly the given inbounds and
@@ -2998,11 +3083,19 @@ func (a *InboundController) applyClientMemberships(c *gin.Context, email string,
 // restart from one request; the old shape could only ever fire the first.
 func (a *InboundController) reconcileForInbounds(inboundIds []int, needRestart bool) {
 	protocols := map[model.Protocol]bool{}
+	hasXray := false
 	for _, id := range inboundIds {
 		inbound, err := a.inboundService.GetInbound(id)
 		if err != nil || inbound == nil {
 			continue
 		}
+		if inbound.Core == "singbox" || inbound.Protocol == "shadowtls" {
+			if err := (&service.SingboxService{}).RefreshInbound(id); err != nil {
+				logger.Warning("sing-box account reconcile failed: ", err)
+			}
+			continue
+		}
+		hasXray = true
 		protocols[inbound.Protocol] = true
 	}
 
@@ -3018,7 +3111,7 @@ func (a *InboundController) reconcileForInbounds(inboundIds []int, needRestart b
 	// each time an operator added one vmess/vless/trojan account, which is what
 	// this used to do before the reconcile fan-out was factored out of the three
 	// client handlers.
-	xrayOnly := needRestart
+	xrayOnly := needRestart && hasXray
 	for protocol := range protocols {
 		switch protocol {
 		case model.L2TP:
@@ -3075,17 +3168,26 @@ func postedClientEmail(data *model.Inbound) string {
 // membership work is about ONE account and is skipped for a batch, but the mirror
 // into the accounts layer is about the INBOUND and still has to run.
 func postedClientEmails(data *model.Inbound) []string {
-	var settings struct {
-		Clients []struct {
-			Email string `json:"email"`
-		} `json:"clients"`
-	}
-	if err := json.Unmarshal([]byte(data.Settings), &settings); err != nil {
+	var root map[string]any
+	if err := json.Unmarshal([]byte(data.Settings), &root); err != nil {
 		return nil
 	}
-	out := make([]string, 0, len(settings.Clients))
-	for _, c := range settings.Clients {
-		out = append(out, c.Email)
+	if clients, ok := root["clients"].([]any); ok {
+		out := make([]string, 0, len(clients))
+		for _, item := range clients {
+			if client, ok := item.(map[string]any); ok {
+				out = append(out, service.AccountEmailFromEntry(client))
+			}
+		}
+		return out
+	}
+	entries, ok := service.SingboxEntriesForSettings(root)
+	if !ok {
+		return nil
+	}
+	out := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		out = append(out, service.AccountEmailFromEntry(entry))
 	}
 	return out
 }

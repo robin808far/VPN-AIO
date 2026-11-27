@@ -287,6 +287,8 @@
 "customGeoErrUpdateAllIncomplete" = "有一个或多个自定义 geo 源更新失败"
 
 [pages.inbounds]
+singboxUnmanaged = "Edit native sing-box users here. Manage linked-account traffic, quota, expiry, speed/IP and concurrent-stream limits on:"
+singboxNoStats = "Per-account traffic is tracked on the Clients page."
 "inboundMembership" = "Inbounds"
 "inboundMembershipDesc" = "The inbounds this one account is served on. It keeps the same email, the same traffic allowance and the same expiry on every one of them. Unticking an inbound removes the account from it. The inbound this form was opened from stays ticked."
 "selectAllInbounds" = "Select all"
@@ -488,6 +490,8 @@
 "limitIp" = "IP 限制"
 "limitIpDesc" = "同时在线的来源地址数。0 表示跟随入站。"
 "limitDevices" = "设备限制"
+"limitStreams" = "并发流限制"
+"limitStreamsDesc" = "该账户在 Sing-Box 上可同时使用的 TCP/多路复用流或 UDP 关联数。留空或 0 表示不限制；不统计实际设备数量。"
 "limitDevicesDesc" = "该账户可同时使用的设备数。留空表示跟随入站。"
 "limitDevicesClamp" = "设备限制只能小于入站的值。更大的数字会被压到入站的值，因为每个账户的地址是按该数量成块分配的。"
 "telegramId" = "Telegram chat ID"

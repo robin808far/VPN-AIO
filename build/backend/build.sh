@@ -36,6 +36,7 @@ ARCHES=("${@:-amd64}")
 
 # sing-box release to bundle (pinned, like every other daemon source here).
 SINGBOX_VERSION="1.12.14"
+SINGBOX_PATCH="$REPO_ROOT/build/backend/singbox-limits.patch"
 
 build_arch() {
     local goarch="$1"
@@ -249,21 +250,28 @@ build_arch() {
 
     # sing-box — the modern proxy platform (hysteria2, tuic, anytls, shadowtls, …).
     # A fully-static Go binary, so like telemt it is one flat file, no relocatable
-    # tree. Downloaded from the official SagerNet/sing-box releases (pinned tag)
-    # rather than built: upstream publishes static musl binaries for both arches,
-    # which is faster and more reproducible than a source build here.
-    step "Fetching sing-box $SINGBOX_VERSION for $goarch"
+    # tree. Build from the pinned source tag because the panel requires the
+    # optional with_v2ray_api feature for per-user traffic accounting. Official
+    # release archives are built without that tag and cannot enforce quotas.
+    step "Building sing-box $SINGBOX_VERSION with stats for $goarch"
+    [[ -s "$SINGBOX_PATCH" ]] || { err "missing sing-box VPN-AIO limiter patch: $SINGBOX_PATCH"; exit 1; }
     case "$goarch" in
         amd64) singbox_arch=amd64 ;;
         arm64) singbox_arch=arm64 ;;
     esac
-    singbox_asset="sing-box-${SINGBOX_VERSION}-linux-${singbox_arch}.tar.gz"
-    docker run --rm --platform "$platform" \
+    docker run --rm ${DOCKER_NET:-} --platform "$platform" \
         -v "$outdir:/out" \
-        alpine:3.20 sh -euc "
-        wget -qO /tmp/sb.tar.gz \"https://github.com/SagerNet/sing-box/releases/download/v${SINGBOX_VERSION}/${singbox_asset}\" &&
-        tar -xzf /tmp/sb.tar.gz -C /tmp &&
-        cp /tmp/sing-box-${SINGBOX_VERSION}-linux-${singbox_arch}/sing-box /out/sing-box &&
+        -v "$SINGBOX_PATCH:/vpn-aio-limits.patch:ro" \
+        golang:1.23.1-alpine sh -euc "
+        apk add --no-cache git ca-certificates &&
+        git clone --depth 1 --branch v${SINGBOX_VERSION} https://github.com/SagerNet/sing-box.git /src/sing-box &&
+        cd /src/sing-box &&
+        git apply --check /vpn-aio-limits.patch &&
+        git apply /vpn-aio-limits.patch &&
+        grep -q 'vpn-aio-limits' experimental/v2rayapi/limiter.go &&
+        CGO_ENABLED=0 GOOS=linux GOARCH=${singbox_arch} \
+          go build -trimpath -tags 'with_gvisor,with_quic,with_dhcp,with_wireguard,with_utls,with_acme,with_clash_api,with_tailscale,with_v2ray_api' \
+          -ldflags '-X github.com/sagernet/sing-box/constant.Version=${SINGBOX_VERSION} -s -w -buildid=' -o /out/sing-box ./cmd/sing-box &&
         chmod 755 /out/sing-box &&
         /out/sing-box version"
 

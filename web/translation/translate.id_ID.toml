@@ -287,6 +287,8 @@
 "customGeoErrUpdateAllIncomplete" = "Satu atau lebih sumber geo kustom gagal diperbarui"
 
 [pages.inbounds]
+singboxUnmanaged = "Edit native sing-box users here. Manage linked-account traffic, quota, expiry, speed/IP and concurrent-stream limits on:"
+singboxNoStats = "Per-account traffic is tracked on the Clients page."
 "inboundMembership" = "Inbounds"
 "inboundMembershipDesc" = "The inbounds this one account is served on. It keeps the same email, the same traffic allowance and the same expiry on every one of them. Unticking an inbound removes the account from it. The inbound this form was opened from stays ticked."
 "selectAllInbounds" = "Select all"
@@ -487,6 +489,8 @@
 "limitIp" = "Batas IP"
 "limitIpDesc" = "Alamat sumber yang bersamaan. 0 mengikuti inbound."
 "limitDevices" = "Batas perangkat"
+"limitStreams" = "Batas stream bersamaan"
+"limitStreamsDesc" = "Jumlah maksimum stream TCP/multiplex atau asosiasi UDP bersamaan untuk akun ini di Sing-Box. Kosong atau 0 berarti tanpa batas; ini tidak menghitung perangkat fisik."
 "limitDevicesDesc" = "Perangkat yang dipakai bersamaan pada akun ini. Kosong berarti mengikuti inbound."
 "limitDevicesClamp" = "Batas perangkat hanya bisa lebih kecil daripada milik inbound. Angka yang lebih besar dipangkas ke nilai inbound, karena alamat setiap akun disusun dalam satu blok seukuran itu."
 "telegramId" = "Telegram chat ID"

@@ -4,6 +4,8 @@ import (
 	"sort"
 
 	"github.com/mhsanaei/3x-ui/v2/backend"
+	"github.com/mhsanaei/3x-ui/v2/database"
+	"github.com/mhsanaei/3x-ui/v2/database/model"
 )
 
 // The core catalog: what each installable VPN core actually needs from the host.
@@ -469,35 +471,28 @@ func (s *CoreService) CoreCatalog() []CoreOption {
 // the same per-service getters the status cards use, so the two can never
 // disagree about whether a core is in use.
 func (s *CoreService) inboundCountsByCore() map[string]int {
-	counts := map[string]int{}
-	add := func(name string, n int, err error) {
-		if err == nil {
-			counts[name] = n
-		}
-	}
-	l2tp, err := s.l2tpService.GetL2tpInbounds()
-	add("l2tp", len(l2tp), err)
-	pptp, err := s.pptpService.GetPptpInbounds()
-	add("pptp", len(pptp), err)
-	ovpn, err := s.openvpnService.GetOpenVpnInbounds()
-	add("openvpn", len(ovpn), err)
-	oc, err := s.ocservService.GetOcservInbounds()
-	add("openconnect", len(oc), err)
-	sstp, err := s.sstpService.GetSstpInbounds()
-	add("sstp", len(sstp), err)
-	ike, err := s.ikev2Service.GetIkev2Inbounds()
-	add("ikev2", len(ike), err)
-	wgc, err := s.wgcService.GetWgcInbounds()
-	add("wgc", len(wgc), err)
-	awg, err := s.awgService.GetAwgInbounds()
-	add("awg", len(awg), err)
-	gre, err := s.greService.GetGreInbounds()
-	add("gre", len(gre), err)
-	mt, err := s.mtprotoService.GetMtprotoInbounds()
-	add("mtproto", len(mt), err)
-	ssh, err := s.sshService.GetSshInbounds()
-	add("ssh", len(ssh), err)
+	counts, _ := countCoreInbounds()
 	return counts
+}
+
+func countCoreInbounds() (map[string]int, error) {
+	counts := map[string]int{}
+	var inbounds []*model.Inbound
+	if err := database.GetDB().Select("id", "core", "protocol").Find(&inbounds).Error; err != nil {
+		return nil, err
+	}
+	for _, inbound := range inbounds {
+		counts[inboundCoreName(inbound)]++
+	}
+	return counts, nil
+}
+
+// inboundCoreName includes the selected engine for protocols served by both cores.
+func inboundCoreName(inbound *model.Inbound) string {
+	if isSingboxInbound(inbound) {
+		return "singbox"
+	}
+	return protocolCoreName(string(inbound.Protocol))
 }
 
 // installedCoreNames is the set of cores this host is provisioned for, in
@@ -522,7 +517,8 @@ func coreNamesFromSet(set map[string]bool) []string {
 // for the Xray-native protocols, which need no separate core. Only "wg-c"
 // differs from its core name; the rest are identical, and the map is the single
 // place that has to know it.
-func protocolCoreName(protocol string) string {	switch protocol {
+func protocolCoreName(protocol string) string {
+	switch protocol {
 	case "wg-c":
 		return "wgc"
 	// sing-box protocols: each inbound of these runs under the sing-box core,

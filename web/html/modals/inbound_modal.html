@@ -80,7 +80,7 @@
     // Rail labels are short on purpose: 200px minus an icon, the gaps, the padding
     // and a count leaves room for about 15 characters, and an ellipsis in a
     // nine-item list reads as a defect. The pane heading carries the full name.
-    const INBOUND_SECTIONS = [
+    var INBOUND_SECTIONS = [
         { id: "identity",  group: "listener", icon: "api",                rail: "Identity" },
         // "Settings", not the protocol's name. The rail is read as a list of places
         // inside one dialog, and a row that says VLESS in a dialog already titled
@@ -95,13 +95,13 @@
         { id: "reach",     group: "policy",   icon: "share-alt",          rail: "External Proxy" },
         { id: "sniff",     group: "policy",   icon: "filter",             rail: "Sniffing" },
     ];
-    const INBOUND_GROUPS = [
+    var INBOUND_GROUPS = [
         { key: "listener", title: "Listener" },
         { key: "security", title: "Security" },
         { key: "policy",   title: "Policy" },
     ];
 
-    const inModal = (window.inModal = {
+    var inModal = (window.inModal = {
         title: "",
         visible: false,
         confirmLoading: false,
@@ -119,7 +119,20 @@
         counts: {},
         inbound: new Inbound(),
         dbInbound: new DBInbound(),
+        singboxDraft: "",
         ok() {
+            if (inModal.inbound.core === "singbox") {
+                try {
+                    const block = JSON.parse(inModal.singboxDraft);
+                    if (!block || typeof block !== 'object' || Array.isArray(block)) throw new Error('Expected a JSON object');
+                    inModal.inbound.settings = block;
+                    inModal.inbound.port = block.listen_port;
+                    inModal.inbound.listen = block.listen || '';
+                } catch (e) {
+                    inboundModalVueInstance.$message.error('Invalid sing-box JSON: ' + e.message);
+                    return;
+                }
+            }
             ObjectUtil.execute(inModal.confirm, inModal.inbound, inModal.dbInbound);
         },
         show({
@@ -146,7 +159,7 @@
             }
             // Always ensure testseed is initialized for VLESS protocol (even if vision flow is not set yet)
             // This ensures Vue reactivity works properly
-            if (this.inbound.protocol === Protocols.VLESS && this.inbound.settings) {
+            if (this.inbound.core !== 'singbox' && this.inbound.protocol === Protocols.VLESS && this.inbound.settings) {
                 if (
                     !this.inbound.settings.testseed ||
                     !Array.isArray(this.inbound.settings.testseed) ||
@@ -181,6 +194,8 @@
             if (this.dbInbound && this.dbInbound.id) {
                 this.inbound.id = this.dbInbound.id;
             }
+            this.singboxDraft = this.inbound.core === 'singbox'
+                ? JSON.stringify(this.inbound.settings, null, 2) : '';
             this.confirm = confirm;
             this.visible = true;
             this.isEdit = isEdit;
@@ -252,7 +267,7 @@
     });
 
     // Store Vue instance globally to ensure methods are always accessible
-    let inboundModalVueInstance = null;
+    var inboundModalVueInstance = null;
 
     inboundModalVueInstance = new Vue({
         delimiters: ["[[", "]]"],
@@ -278,7 +293,8 @@
                     : null;
             },
             // sing-box form state: validity of the raw inbound JSON being edited.
-            singboxDraft: "",
+            get singboxDraft() { return inModal.singboxDraft; },
+            set singboxDraft(text) { inModal.singboxDraft = text; },
             // REALITY target scanner: one-shot probe result for the Target field,
             // and the state of the Find Targets dialog.
             realityScanResult: null,
@@ -572,6 +588,31 @@
                 if (!ib) return out;
                 const okPort = p => Number.isInteger(p) && p >= 1 && p <= 65535;
                 const at = (section, where, why) => out.push({ section, where, why });
+                if (ib.core === 'singbox') {
+                    const block = this.singboxObj();
+                    if (!block || typeof block !== 'object' || Array.isArray(block)) {
+                        at('proto', 'sing-box', 'settings must be a JSON object');
+                        return out;
+                    }
+					if (block.type !== ib.protocol) at('proto', 'sing-box', 'type must match the selected protocol');
+					if (!okPort(block.listen_port)) at('proto', 'sing-box', 'listen_port must be 1 to 65535');
+					if (this.singboxHasLimits()) at('proto', 'sing-box', 'clear unsupported inbound-level limits before saving');
+					if (block.type === 'shadowtls' && block.version !== 3) {
+						at('proto', 'ShadowTLS', 'managed accounts require version 3');
+					}
+					const tls = block.tls || {};
+                    if (['tuic', 'hysteria2', 'anytls'].includes(block.type) && tls.enabled !== true) {
+                        at('proto', 'TLS', 'enable TLS and provide a server certificate and key');
+                    }
+                    if (tls.enabled && !(tls.reality && tls.reality.enabled) &&
+                        !((tls.certificate_path && tls.key_path) || (tls.certificate && tls.key))) {
+                        at('proto', 'TLS', 'provide a server certificate and key');
+                    }
+                    if (block.type === 'shadowtls' && !(block.handshake && block.handshake.server)) {
+                        at('proto', 'ShadowTLS', 'provide a handshake server');
+                    }
+                    return out;
+                }
 
                 // xhttp is the one transport whose settings can be individually
                 // valid and still combine into something the core throws out
@@ -694,6 +735,16 @@
             this.measureSections();
         },
         watch: {
+            "inModal.inbound.port"(port) {
+                if (inModal.inbound.core === 'singbox' && this.singboxGet(['listen_port']) !== port) {
+                    this.singboxSet(['listen_port'], port);
+                }
+            },
+            "inModal.inbound.listen"(listen) {
+                if (inModal.inbound.core === 'singbox' && this.singboxGet(['listen'], '') !== listen) {
+                    this.singboxSet(['listen'], listen);
+                }
+            },
             "inModal.visible"(v) {
                 if (v) this.$nextTick(() => this.measureSections());
             },
@@ -711,6 +762,7 @@
                 // over the clients could not reach the accounts the Clients page
                 // owns, so a leftover vision flow survived on them.
                 if (
+                    inModal.inbound.core !== 'singbox' &&
                     inModal.inbound.protocol == Protocols.VLESS &&
                     !inModal.inbound.canEnableTlsFlow()
                 ) {
@@ -720,6 +772,7 @@
             // Ensure testseed is always initialized when vision flow is enabled
             "inModal.inbound.settings.flow"() {
                 if (
+                    inModal.inbound.core !== 'singbox' &&
                     inModal.inbound.protocol === Protocols.VLESS &&
                     inModal.inbound.settings &&
                     inModal.inbound.settings.flow &&
@@ -970,7 +1023,9 @@
                     // only makes sense with sing-box's own JSON, but xhttp/kcp/
                     // xdrive are the ones the sing-box JSON can carry over as
                     // names while the Xray form then shows a stale pick.
-                    inb.settings = new Inbound.Settings(inb.protocol);
+                    inb.settings = Inbound.Settings.getSettings(inb.protocol);
+                    if (inb.startEmpty) inb.clearClients();
+                    this.singboxDraft = '';
                     if (["xhttp", "xdrive"].includes(inb.stream.network)) {
                         inb.stream.network = "tcp";
                     }
@@ -982,18 +1037,42 @@
                 switch (inb.protocol) {
                     case "vmess":
                     case "vless":
-                        block = { type: inb.protocol, tag: "singbox-in", listen: "::", listen_port: port, users: [{ name: "user1", uuid: RandomUtil.randomUUID(), flow: "" }] };
+                        block = { type: inb.protocol, tag: "singbox-in", listen: inb.listen || "::", listen_port: port, users: [{ name: "user1", uuid: RandomUtil.randomUUID() }] };
                         break;
                     case "trojan":
                         block = { type: "trojan", tag: "singbox-in", listen: "::", listen_port: port, users: [{ name: "user1", password: RandomUtil.randomSeq(16) }] };
                         break;
                     case "shadowsocks":
-                        block = { type: "shadowsocks", tag: "singbox-in", listen: "::", listen_port: port, method: "2022-blake3-aes-128-gcm", password: RandomUtil.randomSeq(16) };
+                        const bytes = new Uint8Array(16);
+                        crypto.getRandomValues(bytes);
+                        block = { type: "shadowsocks", tag: "singbox-in", listen: "::", listen_port: port, method: "2022-blake3-aes-128-gcm", password: btoa(String.fromCharCode(...bytes)) };
+                        break;
+                    case "tuic":
+                    case "hysteria2":
+                    case "anytls":
+                        block = { type: inb.protocol, tag: "singbox-in", listen: "::", listen_port: port,
+                            users: [{ name: "user1", password: RandomUtil.randomSeq(16) }],
+                            tls: { enabled: true, certificate_path: '', key_path: '' } };
+                        if (inb.protocol === 'tuic') block.users[0].uuid = RandomUtil.randomUUID();
+                        break;
+                    case "shadowtls":
+                        block = { type: 'shadowtls', tag: 'singbox-in', listen: '::', listen_port: port,
+                            version: 3, users: [{ name: 'user1', password: RandomUtil.randomSeq(16) }],
+                            handshake: { server: '', server_port: 443 } };
                         break;
                     default:
                         block = { type: inb.protocol, tag: "singbox-in", listen: "::", listen_port: port };
                 }
-                this.singboxDraft = JSON.stringify(block, null, 2);
+                this.singboxWrite(block);
+            },
+            singboxHasLimits() {
+                const db = inModal.dbInbound;
+                return !!(db.total || db.expiryTime || db.trafficMultiplierEnable ||
+                    db.speedLimitEnable || db.ipLimit || (db.trafficReset && db.trafficReset !== 'never'));
+            },
+            singboxClearLimits() {
+                Object.assign(inModal.dbInbound, { total: 0, expiryTime: 0, trafficReset: 'never',
+                    trafficMultiplierEnable: false, speedLimitEnable: false, ipLimit: 0 });
             },
             singboxJsonText() {
                 if (this.singboxDraft) return this.singboxDraft;
@@ -1001,7 +1080,7 @@
                 if (!inb) return "{}";
                 // Editing an existing singbox inbound: show its stored block.
                 try {
-                    const parsed = JSON.parse(inb.settings || "{}");
+                    const parsed = typeof inb.settings === 'string' ? JSON.parse(inb.settings || "{}") : inb.settings;
                     return JSON.stringify(parsed, null, 2);
                 } catch (e) {
                     return inb.settings || "{}";
@@ -1012,6 +1091,11 @@
                 try {
                     const block = JSON.parse(text);
                     const inb = inModal.inbound;
+                    if (!block || typeof block !== 'object' || Array.isArray(block)) return;
+                    if (inb) {
+                        inb.settings = block;
+                        inb.listen = block.listen || '';
+                    }
                     if (inb && Number.isInteger(block.listen_port)) {
                         inb.port = block.listen_port;
                     }
@@ -1030,6 +1114,10 @@
             singboxWrite(obj) {
                 this.singboxDraft = JSON.stringify(obj, null, 2);
                 const inb = inModal.inbound;
+                if (inb) {
+                    inb.settings = obj;
+                    inb.listen = obj.listen || '';
+                }
                 if (inb && Number.isInteger(obj.listen_port)) {
                     inb.port = obj.listen_port;
                 }
@@ -1082,6 +1170,18 @@
             singboxToggleBlock(path, on, seed) {
                 this.singboxSet(path, on ? JSON.parse(JSON.stringify(seed)) : undefined);
             },
+            singboxDetourTarget() {
+                return this.singboxGet(['detour'], undefined);
+            },
+            singboxDetourTargets() {
+                const currentId = Number(inModal.inbound && inModal.inbound.id) || 0;
+                const rows = (typeof app !== 'undefined' && Array.isArray(app.dbInbounds)) ? app.dbInbounds : [];
+                return rows.filter(row => Number(row.id) !== currentId &&
+                    (row.core === 'singbox' || row.protocol === 'shadowtls') && row.tag);
+            },
+            singboxSetDetourTarget(tag) {
+                this.singboxSet(['detour'], tag || undefined);
+            },
             singboxUsesUsers() {
                 return ["vless", "vmess", "trojan", "anytls", "shadowtls", "hysteria2", "tuic", "mixed", "socks", "http"]
                     .includes(this.singboxGet(["type"]));
@@ -1103,7 +1203,10 @@
                 const obj = this.singboxObj();
                 if (!obj) return;
                 if (!Array.isArray(obj.users)) obj.users = [];
-                obj.users.push({ name: "user" + (obj.users.length + 1) });
+                const user = { name: "user" + (obj.users.length + 1) };
+                if (['vless', 'vmess', 'tuic'].includes(obj.type)) user.uuid = RandomUtil.randomUUID();
+                if (!['vless', 'vmess'].includes(obj.type)) user.password = RandomUtil.randomSeq(16);
+                obj.users.push(user);
                 this.singboxWrite(obj);
             },
             singboxRemoveUser(i) {

@@ -66,12 +66,13 @@ import (
 // Omitting the common value is not just brevity, it keeps the compare-then-write quiet:
 // every byte that appears in the document is a byte that can differ between ticks.
 type speedLimitUser struct {
-	Email    string   `json:"email"`
-	DownBps  int64    `json:"downBps"`
-	UpBps    int64    `json:"upBps"`
-	IPLimit  int      `json:"ipLimit,omitempty"`
-	Strategy string   `json:"strategy,omitempty"`
-	IPs      []string `json:"ips"`
+	Email       string   `json:"email"`
+	DownBps     int64    `json:"downBps"`
+	UpBps       int64    `json:"upBps"`
+	IPLimit     int      `json:"ipLimit,omitempty"`
+	StreamLimit int      `json:"streamLimit,omitempty"`
+	Strategy    string   `json:"strategy,omitempty"`
+	IPs         []string `json:"ips"`
 }
 
 // speedLimitDoc is the sidecar's whole schema.
@@ -89,10 +90,11 @@ type speedLimitDoc struct {
 // resolveIPLimit), while the rate columns are nullable and can therefore mean "this account
 // is exempt" with a 0 that is genuinely distinct from "inherit".
 type speedLimitClient struct {
-	email     string
-	ipLimit   int
-	speedDown *int // KB/s, nil = inherit the inbound's rate
-	speedUp   *int
+	email       string
+	ipLimit     int
+	speedDown   *int // KB/s, nil = inherit the inbound's rate
+	speedUp     *int
+	streamLimit int // concurrent sing-box streams; 0 = unlimited
 }
 
 // hasSpeedOverride reports whether this client carries a rate of its own in either
@@ -134,6 +136,13 @@ func kbpsToBps(kbps int) int64 {
 		return 0
 	}
 	return int64(kbps) * bytesPerKB
+}
+
+func positiveOrZero(value *int) int {
+	if value == nil || *value <= 0 {
+		return 0
+	}
+	return *value
 }
 
 // inboundSpeedLimitRates resolves one inbound's columns into a candidate (down, up)
@@ -371,9 +380,10 @@ func speedLimitIPs(email string, ipMap map[string][]string) []string {
 // alone would make every tick look like a change.
 func computeSpeedLimits(policies []speedLimitPolicy, usage map[string]int64, ipMap map[string][]string) []speedLimitUser {
 	type limits struct {
-		down, up int64
-		ipLimit  int
-		strategy string
+		down, up    int64
+		ipLimit     int
+		streamLimit int
+		strategy    string
 	}
 	merged := make(map[string]limits)
 
@@ -390,7 +400,16 @@ func computeSpeedLimits(policies []speedLimitPolicy, usage map[string]int64, ipM
 		// inbound's columns alone would drop exactly the case an operator reaches for
 		// first: one throttled customer on an inbound nobody else is throttled on.
 		if inbDown == 0 && inbUp == 0 && !coreIPCap && !p.anySpeedOverride() {
-			continue
+			allStreamsZero := true
+			for _, c := range p.clients {
+				if c.streamLimit > 0 {
+					allStreamsZero = false
+					break
+				}
+			}
+			if allStreamsZero {
+				continue
+			}
 		}
 		for _, c := range p.clients {
 			if c.email == "" {
@@ -432,13 +451,16 @@ func computeSpeedLimits(policies []speedLimitPolicy, usage map[string]int64, ipM
 				// happens at a cap set somewhere else.
 				m.strategy = mergeIPLimitStrategy(m.strategy, normIPLimitStrategy(p.inbound))
 			}
+			if c.streamLimit > 0 {
+				m.streamLimit = minNonZero(m.streamLimit, c.streamLimit)
+			}
 			merged[c.email] = m
 		}
 	}
 
 	users := make([]speedLimitUser, 0, len(merged))
 	for email, r := range merged {
-		if r.down == 0 && r.up == 0 && r.ipLimit == 0 {
+		if r.down == 0 && r.up == 0 && r.ipLimit == 0 && r.streamLimit == 0 {
 			continue // fully unlimited: absent from the file, so the core allocates nothing
 		}
 		// The default is published as an ABSENCE, not as the word: r.strategy is only ever
@@ -449,11 +471,12 @@ func computeSpeedLimits(policies []speedLimitPolicy, usage map[string]int64, ipM
 			strategy = ""
 		}
 		users = append(users, speedLimitUser{
-			Email:    email,
-			DownBps:  r.down,
-			UpBps:    r.up,
-			IPLimit:  r.ipLimit,
-			Strategy: strategy,
+			Email:       email,
+			DownBps:     r.down,
+			UpBps:       r.up,
+			IPLimit:     r.ipLimit,
+			StreamLimit: r.streamLimit,
+			Strategy:    strategy,
 			// Accounts with no addresses (ssh, mtproto, native Xray) still belong here:
 			// their email arrives on the session itself, so they never touch the trie.
 			IPs: speedLimitIPs(email, ipMap),
@@ -500,6 +523,15 @@ func loadSpeedLimitPolicies() []speedLimitPolicy {
 		logger.Warning("speed limit: load inbounds failed:", err)
 		return nil
 	}
+	var accountRows []model.Account
+	if err := db.Find(&accountRows).Error; err != nil {
+		logger.Warning("speed limit: load accounts failed:", err)
+		accountRows = nil
+	}
+	accounts := make(map[string]model.Account, len(accountRows))
+	for _, account := range accountRows {
+		accounts[accountKey(account.Email)] = account
+	}
 
 	// Decoded locally, and to the fields used, rather than through
 	// InboundService.GetClients: every protocol stores its accounts under settings.clients
@@ -516,6 +548,36 @@ func loadSpeedLimitPolicies() []speedLimitPolicy {
 
 	policies := make([]speedLimitPolicy, 0, len(inbounds))
 	for _, inbound := range inbounds {
+		if isSingboxInbound(inbound) {
+			entries, ok := parseSettingsClients(inbound.Settings)
+			if !ok {
+				continue
+			}
+			clients := make([]speedLimitClient, 0, len(entries))
+			contributes := inbound.SpeedLimitEnable || inbound.IPLimit > 0
+			for _, entry := range entries {
+				email := strings.TrimSpace(AccountEmailFromEntry(entry))
+				if email == "" {
+					continue
+				}
+				account := accounts[accountKey(email)]
+				client := speedLimitClient{
+					email:       email,
+					ipLimit:     account.LimitIP,
+					speedDown:   account.SpeedLimitDown,
+					speedUp:     account.SpeedLimitUp,
+					streamLimit: account.StreamLimit,
+				}
+				clients = append(clients, client)
+				if client.ipLimit > 0 || client.hasSpeedOverride() || client.streamLimit > 0 {
+					contributes = true
+				}
+			}
+			if contributes && len(clients) > 0 {
+				policies = append(policies, speedLimitPolicy{inbound: inbound, clients: clients})
+			}
+			continue
+		}
 		coreIPCap := ipLimitEnforcedInCore(inbound)
 		if !inbound.SpeedLimitEnable && !coreIPCap && !mayCarrySpeedOverride(inbound.Settings) {
 			// A VPN/ssh/mtproto inbound with no speed limit and nobody on it overriding

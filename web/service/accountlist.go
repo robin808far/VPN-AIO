@@ -27,6 +27,7 @@ import (
 type AccountMembershipView struct {
 	InboundId int    `json:"inboundId"`
 	Protocol  string `json:"protocol"`
+	Core      string `json:"core,omitempty"`
 	Remark    string `json:"remark"`
 	Port      int    `json:"port"`
 	Enable    bool   `json:"enable"`
@@ -105,6 +106,7 @@ type AccountRow struct {
 	SpeedLimitDown    *int                    `json:"speedLimitDown"`
 	SpeedLimitUp      *int                    `json:"speedLimitUp"`
 	UserLimitOverride *int                    `json:"userLimitOverride"`
+	StreamLimit       int                     `json:"streamLimit"`
 	HostRuleIds       []int                   `json:"hostRuleIds"`
 	Up                int64                   `json:"up"`
 	Down              int64                   `json:"down"`
@@ -228,6 +230,7 @@ func (s *AccountService) ListAccounts(user *model.User, page, size int, search, 
 			Reset: account.Reset, LimitIP: account.LimitIP, TgID: account.TgID,
 			SpeedLimitDown: account.SpeedLimitDown, SpeedLimitUp: account.SpeedLimitUp,
 			UserLimitOverride: account.UserLimitOverride,
+			StreamLimit:       account.StreamLimit,
 			HostRuleIds:       account.HostRuleIds,
 			Memberships:       mine, OwnedByReseller: owner[key],
 		}
@@ -364,7 +367,7 @@ func (s *AccountService) membershipViews() (map[int][]AccountMembershipView, err
 
 	var inbounds []model.Inbound
 	if err := db.Model(&model.Inbound{}).
-		Select("id", "protocol", "remark", "port", "enable").Find(&inbounds).Error; err != nil {
+		Select("id", "core", "protocol", "remark", "port", "enable").Find(&inbounds).Error; err != nil {
 		return nil, err
 	}
 	byId := make(map[int]*model.Inbound, len(inbounds))
@@ -421,6 +424,7 @@ func (s *AccountService) membershipViews() (map[int][]AccountMembershipView, err
 		}
 		view := AccountMembershipView{
 			InboundId: inbound.Id, Protocol: string(inbound.Protocol),
+			Core:   inbound.Core,
 			Remark: inbound.Remark, Port: inbound.Port, Enable: inbound.Enable,
 			Slot: m.Slot,
 		}
@@ -521,8 +525,13 @@ func settingsHoldClients(protocol model.Protocol, settings string) bool {
 	if err := json.Unmarshal([]byte(settings), &root); err != nil || root == nil {
 		return false
 	}
-	_, ok := root["clients"].([]any)
-	return ok
+	if _, ok := root["clients"].([]any); ok {
+		return true
+	}
+	if _, ok := root["users"].([]any); ok {
+		return true
+	}
+	return false
 }
 
 func (s *AccountService) AssignableInboundsFor(user *model.User) ([]AccountMembershipView, error) {
@@ -532,7 +541,7 @@ func (s *AccountService) AssignableInboundsFor(user *model.User) ([]AccountMembe
 	db := database.GetDB()
 	var inbounds []model.Inbound
 	if err := db.Model(&model.Inbound{}).
-		Select("id", "protocol", "remark", "port", "enable", "settings").
+		Select("id", "core", "protocol", "remark", "port", "enable", "settings").
 		Order("id ASC").Find(&inbounds).Error; err != nil {
 		return nil, err
 	}
@@ -565,6 +574,7 @@ func (s *AccountService) AssignableInboundsFor(user *model.User) ([]AccountMembe
 		}
 		out = append(out, AccountMembershipView{
 			InboundId: in.Id, Protocol: string(in.Protocol),
+			Core:   in.Core,
 			Remark: in.Remark, Port: in.Port, Enable: in.Enable,
 			Method: inboundMethod(in.Settings),
 		})

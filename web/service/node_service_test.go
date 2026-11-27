@@ -64,6 +64,12 @@ func TestNodeURLAndNormalize(t *testing.T) {
 	if empty.Scheme != "http" || empty.BasePath != "/" || empty.SyncMode != "all" {
 		t.Fatalf("defaults not applied: %+v", empty)
 	}
+	for _, address := range []string{"2001:db8::1", "[2001:db8::1]"} {
+		n := &model.Node{Scheme: "https", Address: address, Port: 8443, BasePath: "/prefixed/"}
+		if got := s.url(n, "status"); got != "https://[2001:db8::1]:8443/prefixed/nodeapi/status" {
+			t.Fatalf("IPv6 URL: %s", got)
+		}
+	}
 }
 
 // Add probes the node right away, so an unreachable node is stored as "down"
@@ -71,12 +77,20 @@ func TestNodeURLAndNormalize(t *testing.T) {
 func TestNodeAddProbesUnreachable(t *testing.T) {
 	newNodeTestDB(t)
 	s := &NodeService{}
-	node, err := s.Add(&model.Node{Name: "child-1", Address: "127.0.0.1", Port: 1})
+	node, err := s.Add(&model.Node{Name: "child-1", Address: "127.0.0.1", Port: 1, Token: "test-token"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if node.Status != "down" {
 		t.Fatalf("expected status down for an unreachable node, got %q", node.Status)
+	}
+	node.Token = "kept-secret"
+	if err := database.GetDB().Save(node).Error; err != nil {
+		t.Fatal(err)
+	}
+	updated, err := s.Update(node.Id, &model.Node{Name: "renamed", Address: node.Address, Port: node.Port})
+	if err != nil || updated.Name != "renamed" || updated.Token != "kept-secret" {
+		t.Fatalf("rename/token preservation failed: %+v, %v", updated, err)
 	}
 	if err := s.Del(node.Id); err != nil {
 		t.Fatalf("del: %v", err)

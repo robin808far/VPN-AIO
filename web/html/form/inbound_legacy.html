@@ -239,6 +239,7 @@
         </a-form-item>
     </template>
 
+    <template v-if="inbound.core !== 'singbox'">
     <a-form-item>
         <template slot="label">
             <a-tooltip>
@@ -569,145 +570,150 @@
         >
         </a-persian-datepicker>
     </a-form-item>
+    </template>
 </a-form>
 
 <!-- vmess settings -->
-<template v-if="inbound.protocol === Protocols.VMESS">
+<template v-if="inbound.core !== 'singbox' && inbound.protocol === Protocols.VMESS">
     {{template "form/vmess"}}
 </template>
 
 <!-- vless settings -->
-<template v-if="inbound.protocol === Protocols.VLESS">
+<template v-if="inbound.core !== 'singbox' && inbound.protocol === Protocols.VLESS">
     {{template "form/legacy/vless"}}
 </template>
 
 <!-- trojan settings -->
-<template v-if="inbound.protocol === Protocols.TROJAN">
+<template v-if="inbound.core !== 'singbox' && inbound.protocol === Protocols.TROJAN">
     {{template "form/trojan"}}
 </template>
 
 <!-- shadowsocks -->
-<template v-if="inbound.protocol === Protocols.SHADOWSOCKS">
+<template v-if="inbound.core !== 'singbox' && inbound.protocol === Protocols.SHADOWSOCKS">
     {{template "form/shadowsocks"}}
 </template>
 
 <!-- tunnel -->
-<template v-if="inbound.protocol === Protocols.TUNNEL">
+<template v-if="inbound.core !== 'singbox' && inbound.protocol === Protocols.TUNNEL">
     {{template "form/tunnel"}}
 </template>
 
 <!-- mixed -->
-<template v-if="inbound.protocol === Protocols.MIXED">
+<template v-if="inbound.core !== 'singbox' && inbound.protocol === Protocols.MIXED">
     {{template "form/mixed"}}
 </template>
 
 <!-- http -->
-<template v-if="inbound.protocol === Protocols.HTTP">
+<template v-if="inbound.core !== 'singbox' && inbound.protocol === Protocols.HTTP">
     {{template "form/http"}}
 </template>
 
 <!-- wireguard -->
-<template v-if="inbound.protocol === Protocols.WIREGUARD">
+<template v-if="inbound.core !== 'singbox' && inbound.protocol === Protocols.WIREGUARD">
     {{template "form/wireguard"}}
 </template>
 
 <!-- tun -->
-<template v-if="inbound.protocol === Protocols.TUN">
+<template v-if="inbound.core !== 'singbox' && inbound.protocol === Protocols.TUN">
     {{template "form/tun"}}
 </template>
 
 <!-- l2tp -->
-<template v-if="inbound.protocol === Protocols.L2TP">
+<template v-if="inbound.core !== 'singbox' && inbound.protocol === Protocols.L2TP">
     {{template "form/legacy/l2tp"}}
 </template>
 
 <!-- pptp -->
-<template v-if="inbound.protocol === Protocols.PPTP">
+<template v-if="inbound.core !== 'singbox' && inbound.protocol === Protocols.PPTP">
     {{template "form/legacy/pptp"}}
 </template>
 
 <!-- openvpn -->
-<template v-if="inbound.protocol === Protocols.OPENVPN">
+<template v-if="inbound.core !== 'singbox' && inbound.protocol === Protocols.OPENVPN">
     {{template "form/legacy/openvpn"}}
 </template>
 
 <!-- openconnect -->
-<template v-if="inbound.protocol === Protocols.OPENCONNECT">
+<template v-if="inbound.core !== 'singbox' && inbound.protocol === Protocols.OPENCONNECT">
     {{template "form/legacy/openconnect"}}
 </template>
 
 <!-- sstp -->
-<template v-if="inbound.protocol === Protocols.SSTP">
+<template v-if="inbound.core !== 'singbox' && inbound.protocol === Protocols.SSTP">
     {{template "form/legacy/sstp"}}
 </template>
 
 <!-- ikev2 -->
-<template v-if="inbound.protocol === Protocols.IKEV2">
+<template v-if="inbound.core !== 'singbox' && inbound.protocol === Protocols.IKEV2">
     {{template "form/legacy/ikev2"}}
 </template>
 
 <!-- wgc (WireGuard C) -->
-<template v-if="inbound.protocol === Protocols.WGC">
+<template v-if="inbound.core !== 'singbox' && inbound.protocol === Protocols.WGC">
     {{template "form/legacy/wgc"}}
 </template>
 
 <!-- awg (AmneziaWG) -->
-<template v-if="inbound.protocol === Protocols.AWG">
+<template v-if="inbound.core !== 'singbox' && inbound.protocol === Protocols.AWG">
     {{template "form/legacy/awg"}}
 </template>
 
 <!-- gre (GRE) -->
-<template v-if="inbound.protocol === Protocols.GRE">
+<template v-if="inbound.core !== 'singbox' && inbound.protocol === Protocols.GRE">
     {{template "form/legacy/gre"}}
 </template>
 
 <!-- mtproto (MTProto Proxy) -->
-<template v-if="inbound.protocol === Protocols.MTPROTO">
+<template v-if="inbound.core !== 'singbox' && inbound.protocol === Protocols.MTPROTO">
     {{template "form/legacy/mtproto"}}
 </template>
 
 <!-- ssh (SSH relay) -->
-<template v-if="inbound.protocol === Protocols.SSH">
+<template v-if="inbound.core !== 'singbox' && inbound.protocol === Protocols.SSH">
     {{template "form/legacy/ssh"}}
 </template>
 
 <!-- hysteria -->
-<template v-if="inbound.protocol === Protocols.HYSTERIA">
+<template v-if="inbound.core !== 'singbox' && inbound.protocol === Protocols.HYSTERIA">
     {{template "form/hysteria"}}
 </template>
 
 <!-- anytls -->
-<template v-if="inbound.protocol === Protocols.ANYTLS">
+<template v-if="inbound.core !== 'singbox' && inbound.protocol === Protocols.ANYTLS">
     {{template "form/anytls"}}
 </template>
 
 <!-- tuic -->
-<template v-if="inbound.protocol === Protocols.TUIC">
+<template v-if="inbound.core !== 'singbox' && inbound.protocol === Protocols.TUIC">
     {{template "form/tuic"}}
 </template>
 
 <!-- naive -->
-<template v-if="inbound.protocol === Protocols.NAIVE">
+<template v-if="inbound.core !== 'singbox' && inbound.protocol === Protocols.NAIVE">
     {{template "form/naive"}}
 </template>
 
 <!-- masque -->
-<template v-if="inbound.protocol === Protocols.MASQUE">
+<template v-if="inbound.core !== 'singbox' && inbound.protocol === Protocols.MASQUE">
     {{template "form/masque"}}
 </template>
 
 <!-- stream settings -->
-<template v-if="inbound.canEnableStream()">
+<template v-if="inbound.core !== 'singbox' && inbound.canEnableStream()">
     {{template "form/streamSettings"}} {{template "form/externalProxy" }}
 </template>
 
 <!-- tls settings -->
-<template v-if="inbound.canEnableTls()">
+<template v-if="inbound.core !== 'singbox' && inbound.canEnableTls()">
     {{template "form/tlsSettings"}}
 </template>
 
+<template v-if="inbound.core === 'singbox'">
+    {{template "form/singbox"}}
+</template>
+
 <!-- sniffing -->
-<a-collapse>
+<a-collapse v-if="inbound.core !== 'singbox'">
     <a-collapse-panel header="Sniffing">
         {{template "form/sniffing"}}
     </a-collapse-panel>

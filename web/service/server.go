@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -60,13 +61,13 @@ type Status struct {
 	// moves on every poll. CpuSpeedMhz above is the rated speed and does not: the
 	// two are both wanted, by different readouts (the spec tile states what the
 	// chip is, the vitals row states what it is doing). 0 means unknown.
-	CpuSpeedCurMhz float64 `json:"cpuSpeedCurMhz"`
-	CpuModel    string    `json:"cpuModel"`
-	OsName      string    `json:"osName"`
-	OsVersion   string    `json:"osVersion"`
-	Kernel      string    `json:"kernel"`
-	Hostname    string    `json:"hostname"`
-	Virt        VirtInfo  `json:"virt"`
+	CpuSpeedCurMhz float64  `json:"cpuSpeedCurMhz"`
+	CpuModel       string   `json:"cpuModel"`
+	OsName         string   `json:"osName"`
+	OsVersion      string   `json:"osVersion"`
+	Kernel         string   `json:"kernel"`
+	Hostname       string   `json:"hostname"`
+	Virt           VirtInfo `json:"virt"`
 	// MemHW is the memory FITTED to the machine (capacity, DDR generation,
 	// clock), read once from SMBIOS. Mem below is the live usage and moves every
 	// poll; these are two different numbers on purpose and the overview labels
@@ -910,6 +911,22 @@ func (s *ServerService) RestartXrayService() error {
 	return nil
 }
 
+func restartImportedCoreServices(restartXray, restartSingbox func() error) error {
+	var failures []error
+	if err := restartXray(); err != nil {
+		failures = append(failures, fmt.Errorf("restart Xray: %w", err))
+	}
+	if err := restartSingbox(); err != nil {
+		failures = append(failures, fmt.Errorf("restart sing-box: %w", err))
+	}
+	return errors.Join(failures...)
+}
+
+// RestartImportedServices applies an imported database to both managed cores.
+func (s *ServerService) RestartImportedServices() error {
+	return restartImportedCoreServices(s.RestartXrayService, singboxService.RestartServices)
+}
+
 func (s *ServerService) downloadXRay(version string) (string, error) {
 	osName := runtime.GOOS
 	arch := runtime.GOARCH
@@ -1410,14 +1427,20 @@ func (s *ServerService) ImportDB(file multipart.File) error {
 	}
 
 	s.inboundService.MigrateDB()
+	// A restored older backup may predate the account mirror used by sing-box.
+	// Backfill it before restarting listeners so their users are not filtered out.
+	(&AccountService{}).MigrationAccounts()
+	ReconcileAllWireguardXrayKeys()
 
 	// Regenerate L2TP/PPTP on-disk configs from the imported DB and restart services
 	s.l2tpService.InitL2tp()
 	s.pptpService.InitPptp()
 
-	// Start Xray
-	if err = s.RestartXrayService(); err != nil {
-		return common.NewErrorf("Imported DB but failed to start Xray: %v", err)
+	// Activate both managed cores against the restored database. Each restart is
+	// attempted even if the other core fails, so sing-box inbounds do not remain
+	// tied to the pre-import data plane.
+	if err = s.RestartImportedServices(); err != nil {
+		return common.NewErrorf("Imported DB but failed to restart services: %v", err)
 	}
 
 	return nil

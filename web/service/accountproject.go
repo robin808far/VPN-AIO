@@ -49,6 +49,7 @@ import (
 var accountOwnedKeys = []string{
 	"email", "subId", "totalGB", "expiryTime", "enable",
 	"reset", "limitIp", "tgId", "comment",
+	"streamLimit",
 }
 
 // applyAccountCredential writes the credential fields the given protocol keys on.
@@ -179,6 +180,13 @@ func MembershipEnabled(membership *model.AccountInbound) bool {
 // Takes the whole inbound rather than just its protocol because shadowsocks'
 // credential depends on the inbound's cipher, not only on the protocol name.
 func renderClientEntry(account *model.Account, membership *model.AccountInbound, inbound *model.Inbound, existing map[string]any) map[string]any {
+	if isSingboxInbound(inbound) {
+		raw, err := renderSingboxUser(account, membership, inbound, existing)
+		if err == nil {
+			return singboxEntryForRawUser(inbound.Protocol, raw)
+		}
+		return map[string]any{"email": account.Email, singboxRawUserKey: map[string]any{}}
+	}
 	protocol := inbound.Protocol
 	entry := map[string]any{}
 	// Prefer the live entry we are updating; fall back to the membership's stored
@@ -253,6 +261,11 @@ func renderClientEntry(account *model.Account, membership *model.AccountInbound,
 	setOverride("speedLimitDown", account.SpeedLimitDown)
 	setOverride("speedLimitUp", account.SpeedLimitUp)
 	setOverride("userLimitOverride", account.UserLimitOverride)
+	if account.StreamLimit > 0 {
+		entry["streamLimit"] = float64(account.StreamLimit)
+	} else {
+		delete(entry, "streamLimit")
+	}
 
 	applyAccountCredential(entry, account, inbound)
 
@@ -295,6 +308,12 @@ func renderClientEntry(account *model.Account, membership *model.AccountInbound,
 //
 // Adding a membership appends; the caller must have allocated the slot first.
 func projectAccountOntoInbound(inbound *model.Inbound, account *model.Account, membership *model.AccountInbound) (string, error) {
+	if isSingboxInbound(inbound) {
+		if err := validateSingboxAccount(account); err != nil {
+			return "", err
+		}
+		return projectAccountOntoSingboxInbound(inbound, account, membership)
+	}
 	var root map[string]any
 	if err := json.Unmarshal([]byte(inbound.Settings), &root); err != nil {
 		return "", common.NewErrorf("inbound %d has unparseable settings: %v", inbound.Id, err)
@@ -379,9 +398,13 @@ func removeAccountFromInbound(inbound *model.Inbound, email string) (string, boo
 	if root == nil {
 		return inbound.Settings, false, nil
 	}
-	list, _ := root["clients"].([]any)
+	listKey, identityKey := "clients", "email"
+	if isSingboxInbound(inbound) {
+		listKey, identityKey = "users", "name"
+	}
+	list, _ := root[listKey].([]any)
 
-	key := accountKey(email)
+	wanted := accountKey(email)
 	kept := make([]any, 0, len(list))
 	removed := false
 	for _, item := range list {
@@ -390,8 +413,8 @@ func removeAccountFromInbound(inbound *model.Inbound, email string) (string, boo
 			kept = append(kept, item)
 			continue
 		}
-		entryEmail, _ := entry["email"].(string)
-		if accountKey(entryEmail) == key {
+		entryEmail, _ := entry[identityKey].(string)
+		if accountKey(entryEmail) == wanted {
 			removed = true
 			continue
 		}
@@ -401,7 +424,7 @@ func removeAccountFromInbound(inbound *model.Inbound, email string) (string, boo
 		return inbound.Settings, false, nil
 	}
 
-	root["clients"] = kept
+	root[listKey] = kept
 	out, err := json.MarshalIndent(root, "", "  ")
 	if err != nil {
 		return "", false, err
@@ -460,12 +483,23 @@ func (s *AccountService) SyncInboundAccounts(tx *gorm.DB, inboundId int) error {
 		if accountKey(email) == "" {
 			continue
 		}
-		account, err := s.upsertAccountFromEntry(tx, entry, &inbound)
+		var account *model.Account
+		var err error
+		if isSingboxInbound(&inbound) {
+			account, err = s.upsertSingboxAccountFromEntry(tx, entry, &inbound)
+		} else {
+			account, err = s.upsertAccountFromEntry(tx, entry, &inbound)
+		}
 		if err != nil {
 			return err
 		}
 		if err := s.upsertMembership(tx, account.Id, &inbound, entry, listIndex); err != nil {
 			return err
+		}
+		if isSingboxInbound(&inbound) {
+			if err := ensureSingboxTrafficRow(tx, account, &inbound); err != nil {
+				return err
+			}
 		}
 		present[account.Id] = true
 	}
@@ -615,6 +649,9 @@ func (s *AccountService) upsertAccountFromEntry(tx *gorm.DB, entry map[string]an
 	if _, mentioned := entry["userLimitOverride"]; !mentioned {
 		updated.UserLimitOverride = account.UserLimitOverride
 	}
+	if _, mentioned := entry["streamLimit"]; !mentioned {
+		updated.StreamLimit = account.StreamLimit
+	}
 	if _, mentioned := entry["hostRuleIds"]; !mentioned {
 		updated.HostRuleIds = account.HostRuleIds
 	}
@@ -687,7 +724,7 @@ func overwriteAccountCredential(account *model.Account, entry map[string]any, pr
 		set(&account.Security, str("security"))
 	case model.VLESS:
 		set(&account.UUID, str("id"))
-	case model.Trojan, model.Shadowsocks, model.ANYTLS, model.MASQUE:
+	case model.Trojan, model.Shadowsocks, model.ANYTLS, model.MASQUE, "shadowtls":
 		set(&account.Password, str("password"))
 	case model.NAIVE:
 		set(&account.Password, str("password"))
@@ -769,7 +806,7 @@ func (s *AccountService) upsertMembership(tx *gorm.DB, accountId int, inbound *m
 		}
 		membership.Flow = flow
 	}
-	if blob, err := json.Marshal(entry); err == nil {
+	if blob, err := json.Marshal(membershipEntryForStorage(entry, inbound)); err == nil {
 		membership.Extra = string(blob)
 	}
 
@@ -837,8 +874,18 @@ func (s *AccountService) pruneOrphanAccounts(tx *gorm.DB, candidates []int) erro
 	if len(orphans) == 0 {
 		return nil
 	}
-	return tx.Session(&gorm.Session{NewDB: true}).
-		Where("id IN ?", orphans).Delete(&model.Account{}).Error
+	var emails []string
+	if err := tx.Session(&gorm.Session{NewDB: true}).Model(&model.Account{}).
+		Where("id IN ?", orphans).Pluck("email", &emails).Error; err != nil {
+		return err
+	}
+	if len(emails) > 0 {
+		if err := tx.Session(&gorm.Session{NewDB: true}).
+			Where("email IN ?", emails).Delete(&xray.ClientTraffic{}).Error; err != nil {
+			return err
+		}
+	}
+	return tx.Session(&gorm.Session{NewDB: true}).Where("id IN ?", orphans).Delete(&model.Account{}).Error
 }
 
 // inboundVlessFlow is the inbound-level vless flow, which every account served on
@@ -1116,6 +1163,15 @@ func (s *AccountService) ApplyMembershipsFrom(email string, anchorInboundId int,
 			if err != nil {
 				return err
 			}
+			var inboundService InboundService
+			for _, inboundId := range wanted {
+				if containsInt(keep, inboundId) {
+					continue
+				}
+				if err := inboundService.AdmitAccounts(inboundId, []string{account.Email}); err != nil {
+					return err
+				}
+			}
 			if err := s.SetMemberships(tx, account.Id, mergeKeepSet(wanted, keep, removable)); err != nil {
 				return err
 			}
@@ -1350,6 +1406,15 @@ func mergeKeepSet(wanted, current, removable []int) []int {
 // the credential its protocol keys on, and a blank one produces an account that
 // is listed but cannot authenticate.
 func (s *AccountService) SetMemberships(tx *gorm.DB, accountId int, inboundIds []int) error {
+	if len(inboundIds) > 0 {
+		var inbounds []*model.Inbound
+		if err := tx.Where("id IN ?", inboundIds).Find(&inbounds).Error; err != nil {
+			return err
+		}
+		if err := s.ValidateMembershipSet(inbounds); err != nil {
+			return err
+		}
+	}
 	wanted := map[int]bool{}
 	for _, id := range inboundIds {
 		wanted[id] = true
@@ -1442,7 +1507,7 @@ func (s *AccountService) ensureCredentialsFor(tx *gorm.DB, accountId int, inboun
 		need(&account.Security, func() string { return "auto" })
 	case model.VLESS:
 		need(&account.UUID, dashed)
-	case model.Trojan, model.ANYTLS, model.NAIVE, model.MASQUE:
+	case model.Trojan, model.ANYTLS, model.NAIVE, model.MASQUE, "shadowtls":
 		need(&account.Password, dashless)
 	case model.Shadowsocks:
 		// A 2022-blake3 cipher does not take an arbitrary string: the user PSK must
@@ -1535,6 +1600,11 @@ func (s *AccountService) ProjectAccount(tx *gorm.DB, accountId int) ([]int, erro
 	for _, inbound := range inbounds {
 		m, isMember := member[inbound.Id]
 		if isMember {
+			if isSingboxInbound(inbound) {
+				if err := syncSingboxTrafficPolicy(tx, &account); err != nil {
+					return nil, err
+				}
+			}
 			settings, err := projectAccountOntoInbound(inbound, &account, m)
 			if err != nil {
 				return nil, err
@@ -1661,7 +1731,7 @@ func (s *AccountService) RenameAccount(oldEmail, newEmail string) ([]int, error)
 // mirror does not know about is exactly the one a rename must not strand.
 func renameInSettings(tx *gorm.DB, oldKey string, newEmail string) ([]int, error) {
 	var inbounds []*model.Inbound
-	if err := tx.Model(&model.Inbound{}).Select("id", "settings").
+	if err := tx.Model(&model.Inbound{}).Select("id", "core", "protocol", "settings").
 		Order("id ASC").Find(&inbounds).Error; err != nil {
 		return nil, err
 	}
@@ -1675,19 +1745,25 @@ func renameInSettings(tx *gorm.DB, oldKey string, newEmail string) ([]int, error
 			// the customer split, which is the thing it exists to prevent.
 			continue
 		}
-		list, _ := root["clients"].([]any)
+		listKey, identityKey := "clients", "email"
+		if isSingboxInbound(inbound) {
+			listKey, identityKey = "users", "name"
+		}
+		list, _ := root[listKey].([]any)
 		changed := false
 		for _, item := range list {
 			entry, ok := item.(map[string]any)
 			if !ok {
 				continue
 			}
-			email, _ := entry["email"].(string)
+			email, _ := entry[identityKey].(string)
 			if accountKey(email) != oldKey {
 				continue
 			}
-			entry["email"] = newEmail
-			entry["updated_at"] = time.Now().Unix() * 1000
+			entry[identityKey] = newEmail
+			if !isSingboxInbound(inbound) {
+				entry["updated_at"] = time.Now().Unix() * 1000
+			}
 			changed = true
 		}
 		if !changed {

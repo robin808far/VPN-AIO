@@ -101,7 +101,11 @@ async function inject() {
 async function rowMenu(email, label) {
   await evalJs(`(() => {
      const r = window.__rowFor(${JSON.stringify(email)});
-     const b = r && r.querySelector('.bo-lg-acts .ant-btn');
+      // The row now has an Account Info button before the overflow menu. The
+      // the first ant-btn therefore opens the read-only info modal, not the row
+      // action menu, and every menu-driven check below starts from a false
+      // premise. Target the button owned by the dropdown explicitly.
+      const b = r && r.querySelector('.bo-lg-acts .ant-dropdown-trigger');
      if (b) b.click();
      return !!b;
    })()`);

@@ -2427,6 +2427,7 @@ var Inbound = class Inbound extends XrayCommonClass {    static setFinalMaskItem
     }
 
     get clients() {
+        if (this.core === 'singbox') return null;
         switch (this.protocol) {
             case Protocols.VMESS: return this.settings.vmesses;
             case Protocols.VLESS: return this.settings.vlesses;
@@ -2598,6 +2599,7 @@ var Inbound = class Inbound extends XrayCommonClass {    static setFinalMaskItem
     }
 
     canEnableTls() {
+        if (this.core === 'singbox') return false;
         if (this.protocol === Protocols.MASQUE) return true;
         if (this.protocol === Protocols.HYSTERIA) return true;
         // TUIC's TLS lives under its own transport, not under one of the stream
@@ -2629,6 +2631,7 @@ var Inbound = class Inbound extends XrayCommonClass {    static setFinalMaskItem
 
     //this is used for xtls-rprx-vision
     canEnableTlsFlow() {
+        if (this.core === 'singbox') return false;
         if (((this.stream.security === 'tls') || (this.stream.security === 'reality')) && (this.network === "tcp")) {
             return this.protocol === Protocols.VLESS;
         }
@@ -2653,6 +2656,7 @@ var Inbound = class Inbound extends XrayCommonClass {    static setFinalMaskItem
     // sing-box's anytls outbound does; every naive client does plain TLS only, and
     // tuic is QUIC, which REALITY does not cover.
     canEnableReality() {
+        if (this.core === 'singbox') return false;
         if (![Protocols.VLESS, Protocols.TROJAN, Protocols.ANYTLS].includes(this.protocol)) return false;
         return ["tcp", "http", "grpc", "xhttp"].includes(this.network);
     }
@@ -2661,6 +2665,7 @@ var Inbound = class Inbound extends XrayCommonClass {    static setFinalMaskItem
     // silently ships an inbound with no transport and no TLS block, which for a
     // TLS-only protocol means a listener nothing can ever connect to.
     canEnableStream() {
+        if (this.core === 'singbox') return false;
         return [Protocols.VMESS, Protocols.VLESS, Protocols.TROJAN, Protocols.SHADOWSOCKS, Protocols.HYSTERIA,
             Protocols.ANYTLS, Protocols.TUIC, Protocols.NAIVE, Protocols.MASQUE].includes(this.protocol);
     }
@@ -3361,6 +3366,13 @@ var Inbound = class Inbound extends XrayCommonClass {    static setFinalMaskItem
     }
 
     static fromJson(json = {}) {
+        if (json.core === 'singbox' || json.protocol === 'shadowtls') {
+            const inbound = new Inbound(json.port, json.listen, json.protocol,
+                JSON.parse(JSON.stringify(json.settings || {})),
+                new StreamSettings(), json.tag, new Sniffing(), json.clientStats);
+            inbound.core = 'singbox';
+            return inbound;
+        }
         const stream = StreamSettings.fromJson(json.streamSettings);
         // The ONE case where rewriting a stored value on load is right. An inbound
         // stored on a transport its protocol cannot use describes something real and
@@ -3413,11 +3425,17 @@ var Inbound = class Inbound extends XrayCommonClass {    static setFinalMaskItem
     }
 
     toJson() {
+        if (this.core === 'singbox') {
+            return { core: this.core, port: this.port, listen: this.listen,
+                protocol: this.protocol, settings: JSON.parse(JSON.stringify(this.settings)),
+                tag: this.tag, clientStats: this.clientStats };
+        }
         let streamSettings;
         if (this.canEnableStream() || this.stream?.sockopt) {
             streamSettings = this.stream.toJson();
         }
         return {
+            core: this.core,
             port: this.port,
             listen: this.listen,
             protocol: this.protocol,

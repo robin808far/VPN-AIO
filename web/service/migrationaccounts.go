@@ -13,6 +13,7 @@ import (
 	"github.com/mhsanaei/3x-ui/v2/database"
 	"github.com/mhsanaei/3x-ui/v2/database/model"
 	"github.com/mhsanaei/3x-ui/v2/logger"
+	"github.com/mhsanaei/3x-ui/v2/xray"
 
 	"gorm.io/gorm"
 )
@@ -165,11 +166,12 @@ func (s *AccountService) MigrationAccounts() {
 // binary would never be picked up.
 func (s *AccountService) migrationNeeded(db *gorm.DB) (bool, int, error) {
 	var inbounds []*model.Inbound
-	if err := db.Model(&model.Inbound{}).Select("id", "protocol", "settings").Find(&inbounds).Error; err != nil {
+	if err := db.Model(&model.Inbound{}).Select("id", "protocol", "core", "settings").Find(&inbounds).Error; err != nil {
 		return false, 0, err
 	}
 
 	emails := map[string]struct{}{}
+	singboxEmails := map[string]struct{}{}
 	entries := 0
 	for _, inbound := range inbounds {
 		clients, ok := parseSettingsClients(inbound.Settings)
@@ -182,7 +184,23 @@ func (s *AccountService) migrationNeeded(db *gorm.DB) (bool, int, error) {
 				continue
 			}
 			emails[accountKey(email)] = struct{}{}
+			if isSingboxInbound(inbound) {
+				singboxEmails[accountKey(email)] = struct{}{}
+			}
 			entries++
+		}
+	}
+	if len(singboxEmails) > 0 {
+		keys := make([]string, 0, len(singboxEmails))
+		for key := range singboxEmails {
+			keys = append(keys, key)
+		}
+		var trafficEmails []string
+		if err := db.Model(&xray.ClientTraffic{}).Where("LOWER(TRIM(email)) IN ?", keys).Pluck("email", &trafficEmails).Error; err != nil {
+			return false, 0, err
+		}
+		for _, email := range trafficEmails {
+			delete(singboxEmails, accountKey(email))
 		}
 	}
 
@@ -194,15 +212,17 @@ func (s *AccountService) migrationNeeded(db *gorm.DB) (bool, int, error) {
 		return false, 0, err
 	}
 
-	if int(accountCount) == len(emails) && int(membershipCount) == entries {
+	if int(accountCount) == len(emails) && int(membershipCount) == entries && len(singboxEmails) == 0 {
 		return false, entries, nil
 	}
 	return true, entries, nil
 }
 
-// parseSettingsClients pulls the clients array out of an inbound's settings.
-// Returns ok=false for settings that cannot be parsed, which the caller must
-// treat as "skip this inbound", never as "this inbound has no clients".
+// parseSettingsClients pulls Xray clients or sing-box users into the common
+// account-entry shape. The original sing-box user is carried privately for
+// projection and is never written into the core config as metadata.
+// Returns ok=false for settings that cannot be parsed, which callers treat as
+// "skip this inbound", never as "this inbound has no clients".
 func parseSettingsClients(settings string) ([]map[string]any, bool) {
 	var root map[string]any
 	if err := json.Unmarshal([]byte(settings), &root); err != nil || root == nil {
@@ -210,6 +230,10 @@ func parseSettingsClients(settings string) ([]map[string]any, bool) {
 	}
 	list, ok := root["clients"].([]any)
 	if !ok {
+		if users, exists := root["users"].([]any); exists {
+			entries, _ := singboxUsersFromRoot(map[string]any{"type": root["type"], "users": users})
+			return entries, true
+		}
 		// A protocol whose settings legitimately carry no clients array.
 		return nil, true
 	}
@@ -295,6 +319,11 @@ func (s *AccountService) runAccountsPass(tx *gorm.DB, report *AccountsMigrationR
 					return fmt.Errorf("updating account %q: %w", email, err)
 				}
 			}
+			if isSingboxInbound(inbound) {
+				if err := ensureSingboxTrafficRow(tx, account, inbound); err != nil {
+					return fmt.Errorf("creating sing-box traffic row for %q: %w", email, err)
+				}
+			}
 
 			if seenMembership[[2]int{account.Id, inbound.Id}] {
 				continue
@@ -317,7 +346,7 @@ func (s *AccountService) runAccountsPass(tx *gorm.DB, report *AccountsMigrationR
 			// The entry VERBATIM, so the projection can overlay onto it and never
 			// drop a field this code does not model (wg-c/awg device keypairs,
 			// GRE pinned peers, anything added later).
-			if blob, err := json.Marshal(entry); err == nil {
+			if blob, err := json.Marshal(membershipEntryForStorage(entry, inbound)); err == nil {
 				membership.Extra = string(blob)
 			}
 			if err := tx.Create(&membership).Error; err != nil {
@@ -590,12 +619,16 @@ func newAccountFromEntry(entry map[string]any) *model.Account {
 		data, _ := json.Marshal(raw)
 		_ = json.Unmarshal(data, &hostRuleIDs)
 	}
+	enable := boolean("enable")
+	if entry[singboxRawUserKey] != nil {
+		enable = true
+	}
 	return &model.Account{
 		Email:             str("email"),
 		SubID:             str("subId"),
 		TotalGB:           num("totalGB"),
 		ExpiryTime:        num("expiryTime"),
-		Enable:            boolean("enable"),
+		Enable:            enable,
 		Reset:             int(num("reset")),
 		LimitIP:           int(num("limitIp")),
 		TgID:              num("tgId"),
@@ -603,6 +636,7 @@ func newAccountFromEntry(entry map[string]any) *model.Account {
 		SpeedLimitDown:    nullableInt("speedLimitDown"),
 		SpeedLimitUp:      nullableInt("speedLimitUp"),
 		UserLimitOverride: nullableInt("userLimitOverride"),
+		StreamLimit:       int(num("streamLimit")),
 		HostRuleIds:       hostRuleIDs,
 	}
 }
@@ -668,7 +702,7 @@ func extractAccountCredential(account *model.Account, entry map[string]any, prot
 		set("security", &account.Security, str("security"))
 	case model.VLESS:
 		set("uuid", &account.UUID, str("id"))
-	case model.Trojan, model.Shadowsocks, model.ANYTLS, model.MASQUE:
+	case model.Trojan, model.Shadowsocks, model.ANYTLS, model.MASQUE, "shadowtls":
 		set("password", &account.Password, str("password"))
 	case model.NAIVE:
 		set("password", &account.Password, str("password"))

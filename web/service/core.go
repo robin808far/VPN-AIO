@@ -239,7 +239,11 @@ func daemonVersion(name string) string {
 	} else {
 		return ""
 	}
-	out, _ := exec.Command(bin, "--version").CombinedOutput()
+	arg := "--version"
+	if name == "sing-box" {
+		arg = "version"
+	}
+	out, _ := exec.Command(bin, arg).CombinedOutput()
 	v := daemonVersionRe.FindString(string(out))
 	if v != "" {
 		daemonVersionMu.Lock()
@@ -773,7 +777,8 @@ func (s *CoreService) singboxStatus() CoreStatus {
 	return cs
 }
 
-func (s *CoreService) radiusStatus() CoreStatus {	cs := CoreStatus{Name: "radius"}
+func (s *CoreService) radiusStatus() CoreStatus {
+	cs := CoreStatus{Name: "radius"}
 	// RADIUS is embedded in the panel binary, so its version is the panel's.
 	cs.Version = config.GetVersion()
 	// The embedded RADIUS server binds 127.0.0.1:1812 (auth). If the port can't

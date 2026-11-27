@@ -370,8 +370,8 @@ func TestCascadeCountsBySettingsNotByStaleMemberships(t *testing.T) {
 func TestRefundWaitsForTheLastMembership(t *testing.T) {
 	f := newMembershipFixture(t, model.ResellerProfile{AllowanceBytes: 100 * gb, SpentBytes: 40 * gb}, 10*gb)
 
-	// Consumption is captured before the first delete, as every delete path does:
-	// the traffic row goes with it.
+	// Capture consumption before the first delete. The row should survive that
+	// membership removal because the away inbound still serves the account.
 	used, known, err := f.rs.UsageOf("sold-one")
 	if err != nil {
 		t.Fatalf("UsageOf: %v", err)
@@ -382,6 +382,9 @@ func TestRefundWaitsForTheLastMembership(t *testing.T) {
 
 	if _, err := f.svc.DelInboundClientByEmail(f.home.Id, "sold-one"); err != nil {
 		t.Fatalf("delete the first membership: %v", err)
+	}
+	if row := trafficRow(t, "sold-one"); row == nil || row.InboundId != f.away.Id {
+		t.Fatalf("traffic row was not preserved on the surviving membership: %+v", row)
 	}
 	if err := f.rs.RefundDeleted("sold-one", used, known); err != nil {
 		t.Fatalf("RefundDeleted after the first membership: %v", err)
@@ -450,6 +453,9 @@ func TestDropInboundRefundsNothingWhileTheAccountLivesElsewhere(t *testing.T) {
 	if rc.InboundId != f.away.Id {
 		t.Errorf("InboundId = %d; want it repointed at the surviving inbound %d rather than left naming a deleted row", rc.InboundId, f.away.Id)
 	}
+	if row := trafficRow(t, "sold-one"); row == nil || row.InboundId != f.away.Id {
+		t.Errorf("client traffic did not survive/re-home with the account: %+v", row)
+	}
 }
 
 // The other half, and the one the old WHERE inbound_id = ? got backwards: deleting
@@ -471,11 +477,14 @@ func TestDropInboundRefundsWhenTheLastMembershipGoes(t *testing.T) {
 	if len(owned) != 1 {
 		t.Fatalf("owned = %v; an account whose HOME is elsewhere is still served here, so it must be listed", owned)
 	}
-	// Its traffic row went with the first delete, so consumption is unknown and the
-	// refund is withheld rather than invented. Prove the ledger row still goes.
+	// The one traffic row follows the surviving membership, so consumption remains
+	// known until the final inbound is deleted.
 	usage, err := f.rs.UsageSnapshot(owned)
 	if err != nil {
 		t.Fatalf("UsageSnapshot: %v", err)
+	}
+	if _, known := usage[emailKey("sold-one")]; !known {
+		t.Fatal("the surviving membership lost its account traffic row")
 	}
 	if _, err := f.svc.DelInbound(f.away.Id); err != nil {
 		t.Fatalf("DelInbound: %v", err)

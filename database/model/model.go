@@ -342,12 +342,18 @@ type Inbound struct {
 	// under either engine, while hysteria2, tuic, anytls and shadowtls are
 	// sing-box-only and always run under sing-box regardless of this field (see
 	// isSingboxProtocol). An empty value keeps every existing row Xray.
-	Core           string   `json:"core" form:"core" gorm:"default:''"`
-	Protocol       Protocol `json:"protocol" form:"protocol"`
-	Settings       string   `json:"settings" form:"settings"`
-	StreamSettings string   `json:"streamSettings" form:"streamSettings"`
-	Tag            string   `json:"tag" form:"tag" gorm:"unique"`
-	Sniffing       string   `json:"sniffing" form:"sniffing"`
+	Core           string `json:"core" form:"core" gorm:"default:''"`
+	SingboxAPIPort int    `json:"-" gorm:"column:singbox_api_port;default:0"`
+	// SingboxDetourInboundID identifies the panel-managed inbound reached after
+	// this inbound's sing-box detour (normally a ShadowTLS front). The rendered
+	// config still contains the target's current tag; the id keeps the relation
+	// stable when the target's listen port or generated tag changes.
+	SingboxDetourInboundID int      `json:"-" form:"-" gorm:"default:0;index"`
+	Protocol               Protocol `json:"protocol" form:"protocol"`
+	Settings               string   `json:"settings" form:"settings"`
+	StreamSettings         string   `json:"streamSettings" form:"streamSettings"`
+	Tag                    string   `json:"tag" form:"tag" gorm:"unique"`
+	Sniffing               string   `json:"sniffing" form:"sniffing"`
 }
 
 // OutboundTraffics tracks traffic statistics for Xray outbound connections.
@@ -449,6 +455,7 @@ type Client struct {
 	SpeedLimitDown    *int `json:"speedLimitDown,omitempty"`
 	SpeedLimitUp      *int `json:"speedLimitUp,omitempty"`
 	UserLimitOverride *int `json:"userLimitOverride,omitempty"`
+	StreamLimit       int  `json:"streamLimit,omitempty"`
 
 	// VpnUsername is the account's VPN login name CARRIED on an entry addressed to
 	// some other protocol. It is not what any inbound authenticates on: the login
@@ -716,6 +723,11 @@ type Account struct {
 	// own policy, so reusing it would both be reverted within seconds and corrupt
 	// the inbound's cap on the way.
 	UserLimitOverride *int `json:"userLimitOverride" gorm:"column:user_limit_override"`
+
+	// StreamLimit caps routed TCP/multiplex streams and UDP associations across
+	// this account's sing-box memberships. 0 is unlimited; it is independent of
+	// UserLimitOverride, which retains its existing VPN device semantics.
+	StreamLimit int `json:"streamLimit" gorm:"column:stream_limit"`
 
 	CreatedAt int64 `json:"createdAt" gorm:"autoCreateTime:milli"`
 	UpdatedAt int64 `json:"updatedAt" gorm:"autoUpdateTime:milli"`

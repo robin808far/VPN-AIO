@@ -68,9 +68,9 @@ type ImportReport struct {
 
 // ImportForeignDB replaces the current database with an uploaded 3x-ui (or vpn-ui)
 // backup, preserving this panel's reachability/identity settings (see
-// preservedSettingKeys). activate regenerates daemon configs and restarts Xray; a
-// fresh CLI install passes false because the panel is not running yet and its own
-// startup will bring services up against the imported data.
+// preservedSettingKeys). activate regenerates daemon configs and restarts both
+// managed cores; a fresh CLI install passes false because the panel is not running
+// yet and its own startup will bring services up against the imported data.
 //
 // The swap is crash-safe: the current DB is moved aside to a .backup and restored
 // if any step through InitDB fails, so a failed import never leaves the panel with
@@ -216,8 +216,8 @@ func (s *ServerService) ImportForeignDB(src dbFile, activate bool) (*ImportRepor
 		}
 		s.l2tpService.InitL2tp()
 		s.pptpService.InitPptp()
-		if err = s.RestartXrayService(); err != nil {
-			return report, common.NewErrorf("Imported DB but failed to start Xray: %v", err)
+		if err = s.RestartImportedServices(); err != nil {
+			return report, common.NewErrorf("Imported DB but failed to restart services: %v", err)
 		}
 	}
 

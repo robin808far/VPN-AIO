@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/mhsanaei/3x-ui/v2/database"
 	"github.com/mhsanaei/3x-ui/v2/database/model"
@@ -11,8 +12,10 @@ import (
 )
 
 // singboxBaseDir is the shared scratch/root directory for sing-box files.
+var singboxConfigRoot = "/etc/vpn-ui-singbox"
+
 func singboxBaseDir() string {
-	return "/etc/vpn-ui-singbox"
+	return singboxConfigRoot
 }
 
 // osWriteFile is a thin alias so the intent at call sites stays clear.
@@ -42,8 +45,9 @@ const DefaultSingboxBaseConfig = `{
   "outbounds": [ { "type": "direct" } ]
 }`
 
-// baseConfigBlocks are the top-level keys an operator may set; everything else
-// in the stored text is ignored so "inbounds" can never be injected here.
+// baseConfigBlocks are the top-level keys an operator may set. New saves reject
+// "inbounds" because listeners are managed per inbound; legacy stored values are
+// ignored during rendering so they cannot add an unmanaged listener.
 var baseConfigBlocks = []string{"log", "dns", "ntp", "route", "experimental", "outbounds", "endpoints"}
 
 // GetBaseConfig returns the stored base-config JSON, or the default when no
@@ -63,6 +67,8 @@ func (s *BaseConfigService) GetBaseConfig() (string, error) {
 // regenerates every singbox inbound so it lands immediately. It reports the
 // validation output on failure.
 func (s *BaseConfigService) SaveBaseConfig(text string) error {
+	singboxRuntimeMu.Lock()
+	defer singboxRuntimeMu.Unlock()
 	merged, err := mergeBaseConfig(text)
 	if err != nil {
 		return err
@@ -70,6 +76,33 @@ func (s *BaseConfigService) SaveBaseConfig(text string) error {
 	svc := &SingboxService{}
 	if err := svc.checkConfigText(merged); err != nil {
 		return err
+	}
+	inbounds, err := svc.GetSingboxInbounds()
+	if err != nil {
+		return err
+	}
+	groups, err := singboxGroupsFromInbounds(inbounds)
+	if err != nil {
+		return err
+	}
+	for _, group := range groups {
+		if !singboxGroupEnabled(group) {
+			continue
+		}
+		if err := svc.ensureAPIPort(group.Root); err != nil {
+			return err
+		}
+		runtimeMembers, err := svc.runtimeGroupMembers(group)
+		if err != nil {
+			return err
+		}
+		content, err := svc.renderConfigWithBase(group.Root, runtimeMembers, text)
+		if err != nil {
+			return err
+		}
+		if err := svc.checkConfigText(content); err != nil {
+			return fmt.Errorf("inbound %d with proposed base: %w", group.Root.Id, err)
+		}
 	}
 	db := database.GetDB()
 	var setting model.Setting
@@ -96,6 +129,12 @@ func mergeBaseConfig(baseText string) ([]byte, error) {
 	var base map[string]json.RawMessage
 	if err := json.Unmarshal([]byte(baseText), &base); err != nil {
 		return nil, fmt.Errorf("base config is not a JSON object: %w", err)
+	}
+	if base == nil {
+		return nil, fmt.Errorf("base config must be a JSON object")
+	}
+	if err := rejectBaseConfigInbounds(base); err != nil {
+		return nil, err
 	}
 	cfg := map[string]any{
 		"log": map[string]any{"level": "info", "timestamp": true},
@@ -124,6 +163,10 @@ func mergeBaseConfig(baseText string) ([]byte, error) {
 // config: the base wins for every block it defines, the inbound object is
 // always the only entry of "inbounds".
 func (s *SingboxService) mergeIntoBase(inboundObj json.RawMessage, baseText string) ([]byte, error) {
+	return s.mergeIntoBaseInbounds([]json.RawMessage{inboundObj}, baseText)
+}
+
+func (s *SingboxService) mergeIntoBaseInbounds(inboundObjects []json.RawMessage, baseText string) ([]byte, error) {
 	var base map[string]json.RawMessage
 	if err := json.Unmarshal([]byte(baseText), &base); err != nil {
 		// An unreadable stored base falls back to the generated default rather
@@ -133,7 +176,7 @@ func (s *SingboxService) mergeIntoBase(inboundObj json.RawMessage, baseText stri
 	}
 	cfg := map[string]any{
 		"log":       map[string]any{"level": "info", "timestamp": true},
-		"inbounds":  []json.RawMessage{inboundObj},
+		"inbounds":  inboundObjects,
 		"outbounds": []map[string]any{{"type": "direct"}},
 	}
 	for _, key := range baseConfigBlocks {
@@ -152,14 +195,30 @@ func (s *SingboxService) mergeIntoBase(inboundObj json.RawMessage, baseText stri
 	return append(out, '\n'), nil
 }
 
-// checkConfigText validates a rendered config body with `sing-box check`
-// without touching a real inbound's file; a no-op pass when the binary is
-// absent.
+func rejectBaseConfigInbounds(base map[string]json.RawMessage) error {
+	if _, exists := base["inbounds"]; exists {
+		return fmt.Errorf(`base config must not contain "inbounds"; listeners are configured per inbound`)
+	}
+	return nil
+}
+
+// checkConfigText uses a unique, private file even on a fresh installation.
 func (s *SingboxService) checkConfigText(content []byte) error {
 	dir := singboxBaseDir()
-	path := dir + "/.base-check.json"
-	if err := osWriteFile(path, content, 0o600); err != nil {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}
-	return s.checkConfig(path)
+	file, err := os.CreateTemp(filepath.Clean(dir), ".check-*.json")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(file.Name())
+	if _, err := file.Write(content); err != nil {
+		file.Close()
+		return err
+	}
+	if err := file.Close(); err != nil {
+		return err
+	}
+	return s.checkConfig(file.Name())
 }

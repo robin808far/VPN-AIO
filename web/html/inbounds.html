@@ -437,7 +437,9 @@
                          the up/down/remaining split, which is the only thing the
                          old tag carried that a bar cannot. -->
                     <template slot="data" slot-scope="text, dbInbound">
-                      <a-popover :overlay-class-name="themeSwitcher.currentTheme">
+                      <a v-if="dbInbound.core === 'singbox' || dbInbound.protocol === 'shadowtls'"
+                        href="{{ .base_path }}panel/clients" class="bo-il-sub">{{ i18n "pages.inbounds.singboxNoStats" }}</a>
+                      <a-popover v-else :overlay-class-name="themeSwitcher.currentTheme">
                         <template slot="content">
                           <table cellpadding="2" width="100%">
                             <tr>
@@ -554,6 +556,9 @@
                               <span class="bo-il-none" v-else>proto 47</span>
                             </div>
                             <div class="bo-il-rule"></div>
+                            <a v-if="dbInbound.core === 'singbox' || dbInbound.protocol === 'shadowtls'"
+                              href="{{ .base_path }}panel/clients" class="bo-il-sub">{{ i18n "pages.inbounds.singboxNoStats" }}</a>
+                            <template v-else>
                             <div class="bo-il-top">
                               <span class="bo-il-used num">[[
                                 SizeFormatter.sizeFormat(dbInbound.up +
@@ -572,6 +577,7 @@
                             <span class="bo-il-sub">[[
                               SizeFormatter.sizeFormat(dbInbound.allTime || 0) ]]
                               {{ i18n "pages.inbounds.allTimeShort" }}</span>
+                            </template>
                             <template v-if="clientCount[dbInbound.id]">
                               <div class="bo-il-rule"></div>
                               <div class="bo-il-top">
@@ -825,6 +831,10 @@
       missingProtocols: [],
     },
     methods: {
+      listenPageWS(event, callback) {
+        window.wsClient.on(event, callback);
+        this._wsSubscriptions.push([event, callback]);
+      },
       loading(spinning = true) {
         this.loadingStates.spinning = spinning;
       },
@@ -1335,12 +1345,11 @@
           port: inbound.port,
           protocol: inbound.protocol,
           core: inbound.core || "",
-          settings: inbound.settings.toString(),
+          settings: inbound.core === 'singbox' ? JSON.stringify(inbound.settings, null, 2) : inbound.settings.toString(),
         };
         // A sing-box core inbound posts the RAW sing-box inbound block from the
         // editor, not the panel's Xray settings shape.
-        if (inbound.core === "singbox" && inModal.singboxDraft) {
-          data.settings = inModal.singboxDraft;
+        if (inbound.core === "singbox") {
           data.streamSettings = "";
         }
         if (inbound.canEnableStream()) {
@@ -1378,11 +1387,10 @@
           port: inbound.port,
           protocol: inbound.protocol,
           core: inbound.core || "",
-          settings: inbound.settings.toString(),
+          settings: inbound.core === 'singbox' ? JSON.stringify(inbound.settings, null, 2) : inbound.settings.toString(),
         };
         // Same as Add: a sing-box core inbound posts the RAW block from the editor.
-        if (inbound.core === "singbox" && inModal.singboxDraft) {
-          data.settings = inModal.singboxDraft;
+        if (inbound.core === "singbox") {
           data.streamSettings = "";
         }
         if (inbound.canEnableStream()) {
@@ -1791,14 +1799,21 @@
         txtModal.show('{{ i18n "pages.inbounds.inboundData" }}', JSON.stringify(dbInbound, null, 2));
       },
       async startDataRefreshLoop() {
-        while (this.isRefreshEnabled) {
+        if (this._refreshLoopRunning || this._isDestroyed) return;
+        this._refreshLoopRunning = true;
+        const tick = async () => {
+          if (!this.isRefreshEnabled || this._isDestroyed) {
+            this._refreshLoopRunning = false;
+            return;
+          }
           try {
             await this.getDBInbounds();
           } catch (e) {
             console.error(e);
           }
-          await PromiseUtil.sleep(this.refreshInterval);
-        }
+          if (!this._isDestroyed) this._refreshTimer = setTimeout(tick, this.refreshInterval);
+        };
+        await tick();
       },
       toggleRefresh() {
         localStorage.setItem("isRefreshEnabled", this.isRefreshEnabled);
@@ -1880,6 +1895,7 @@
       }, 500)
     },
     mounted() {
+      this._wsSubscriptions = [];
       if (window.location.protocol !== "https:" && !SecAlertDismissal.isDismissed()) {
         this.showAlert = true;
       }
@@ -1896,7 +1912,7 @@
         window.wsClient.connect();
         
         // Listen for inbounds updates
-        window.wsClient.on('inbounds', (payload) => {
+        this.listenPageWS('inbounds', (payload) => {
           if (payload && Array.isArray(payload)) {
             // Use setInbounds to properly convert to DBInbound objects with methods
             this.setInbounds(payload);
@@ -1905,20 +1921,19 @@
 
         // Listen for invalidate signals (sent when payload is too large for WebSocket)
         // The server sends a lightweight notification and we re-fetch via REST API
-        let invalidateTimer = null;
-        window.wsClient.on('invalidate', (payload) => {
+        this.listenPageWS('invalidate', (payload) => {
           if (payload && (payload.type === 'inbounds' || payload.type === 'traffic')) {
             // Debounce to avoid flooding the REST API with multiple invalidate signals
-            if (invalidateTimer) clearTimeout(invalidateTimer);
-            invalidateTimer = setTimeout(() => {
-              invalidateTimer = null;
+            if (this._invalidateTimer) clearTimeout(this._invalidateTimer);
+            this._invalidateTimer = setTimeout(() => {
+              this._invalidateTimer = null;
               this.getDBInbounds();
             }, 1000);
           }
         });
 
         // Listen for traffic updates
-        window.wsClient.on('traffic', (payload) => {
+        this.listenPageWS('traffic', (payload) => {
           // Note: Do NOT update total consumed traffic (stats.up, stats.down) from this event
           // because clientTraffics contains delta/incremental values, not total accumulated values.
           // Total traffic is updated via the 'inbounds' WebSocket event (or 'invalidate' fallback for large panels).
@@ -1980,14 +1995,14 @@
         });
 
         // Fallback to polling if WebSocket fails
-        window.wsClient.on('error', () => {
+        this.listenPageWS('error', () => {
           console.warn('WebSocket connection failed, falling back to polling');
           if (this.isRefreshEnabled) {
             this.startDataRefreshLoop();
           }
         });
 
-        window.wsClient.on('disconnected', () => {
+        this.listenPageWS('disconnected', () => {
           if (window.wsClient.reconnectAttempts >= window.wsClient.maxReconnectAttempts) {
             console.warn('WebSocket reconnection failed, falling back to polling');
             if (this.isRefreshEnabled) {
@@ -2001,6 +2016,13 @@
           this.startDataRefreshLoop();
         }
       }
+    },
+    beforeDestroy() {
+      for (const [event, callback] of this._wsSubscriptions || []) window.wsClient.off(event, callback);
+      this._wsSubscriptions = [];
+      clearTimeout(this._invalidateTimer);
+      clearTimeout(this._refreshTimer);
+      this._refreshLoopRunning = false;
     },
     computed: {
       // Whether to offer reordering at all. The order is the PANEL's and shared by

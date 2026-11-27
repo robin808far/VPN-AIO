@@ -25,8 +25,9 @@ const (
 )
 
 var (
-	ErrTokenNotFound = errors.New("api token not found")
-	ErrTokenNoScope  = errors.New("api token lacks the required scope")
+	ErrTokenNotFound     = errors.New("api token not found")
+	ErrTokenNoScope      = errors.New("api token lacks the required scope")
+	ErrInvalidTokenScope = errors.New("invalid API token scope")
 )
 
 // ApiTokenService manages bearer tokens for the machine-to-machine API
@@ -41,8 +42,10 @@ func (s *ApiTokenService) Create(name string, scopes string) (string, *model.Api
 	if strings.TrimSpace(name) == "" {
 		return "", nil, errors.New("token name is required")
 	}
-	if scopes == "" {
-		scopes = ScopeNodeSync
+	name = strings.TrimSpace(name)
+	normalizedScopes, err := normalizeTokenScopes(scopes)
+	if err != nil {
+		return "", nil, err
 	}
 	raw := make([]byte, 32)
 	if _, err := rand.Read(raw); err != nil {
@@ -53,12 +56,33 @@ func (s *ApiTokenService) Create(name string, scopes string) (string, *model.Api
 	token := &model.ApiToken{
 		Name:      name,
 		TokenHash: hex.EncodeToString(sum[:]),
-		Scopes:    scopes,
+		Scopes:    normalizedScopes,
 	}
 	if err := database.GetDB().Create(token).Error; err != nil {
 		return "", nil, err
 	}
 	return plaintext, token, nil
+}
+
+func normalizeTokenScopes(scopes string) (string, error) {
+	trimmed := strings.TrimSpace(scopes)
+	if trimmed == "" {
+		return ScopeNodeSync, nil
+	}
+	seen := make(map[string]bool, 2)
+	var normalized []string
+	for _, scope := range strings.Split(trimmed, ",") {
+		scope = strings.TrimSpace(scope)
+		if scope != ScopeNodeSync && scope != ScopeNodeAdmin {
+			return "", fmt.Errorf("%w: %q", ErrInvalidTokenScope, scope)
+		}
+		if seen[scope] {
+			continue
+		}
+		seen[scope] = true
+		normalized = append(normalized, scope)
+	}
+	return strings.Join(normalized, ","), nil
 }
 
 // Verify resolves a plaintext bearer token to the stored model and records its
@@ -82,6 +106,9 @@ func (s *ApiTokenService) Verify(plaintext string) (*model.ApiToken, error) {
 
 // HasScope reports whether the token carries the given scope.
 func (s *ApiTokenService) HasScope(token *model.ApiToken, scope string) bool {
+	if token == nil {
+		return false
+	}
 	for _, s := range strings.Split(token.Scopes, ",") {
 		if strings.TrimSpace(s) == scope {
 			return true

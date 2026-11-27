@@ -116,9 +116,9 @@ func TestDelInboundClientByEmailRemovesTheLastClient(t *testing.T) {
 	}
 }
 
-// D2: an account on two inbounds has ONE traffic row. The first delete takes it, and
-// the second membership must still be deletable with no row left to read.
-func TestDelInboundClientSecondMembershipHasNoTrafficRow(t *testing.T) {
+// A membership delete must preserve the account's single quota row while any other
+// inbound still serves it, then delete it with the final membership.
+func TestDelInboundClientPreservesTrafficUntilLastMembership(t *testing.T) {
 	svc := newInboundDB(t)
 	shared := testClient("multi@example.com")
 	first := seedTaggedInbound(t, model.VLESS, 47103, []map[string]any{shared})
@@ -128,19 +128,24 @@ func TestDelInboundClientSecondMembershipHasNoTrafficRow(t *testing.T) {
 	if _, err := svc.DelInboundClient(first.Id, shared["id"].(string)); err != nil {
 		t.Fatalf("deleting the first membership: %v", err)
 	}
-	if row := trafficRow(t, "multi@example.com"); row != nil {
-		t.Fatal("the first delete left the traffic row behind, so the rest of this test proves nothing")
+	if row := trafficRow(t, "multi@example.com"); row == nil {
+		t.Fatal("the first delete removed quota while the second inbound still serves the account")
+	} else if row.InboundId != second.Id {
+		t.Fatalf("traffic home = %d, want surviving inbound %d", row.InboundId, second.Id)
 	}
 	if _, err := svc.DelInboundClient(second.Id, shared["id"].(string)); err != nil {
-		t.Fatalf("deleting the second membership with no traffic row: %v", err)
+		t.Fatalf("deleting the final membership: %v", err)
 	}
 	if got := readClients(t, second.Id); len(got) != 0 {
 		t.Errorf("the second inbound still serves %d client(s)", len(got))
 	}
+	if row := trafficRow(t, "multi@example.com"); row != nil {
+		t.Error("the final membership delete left the account's traffic row behind")
+	}
 }
 
-// Same trap, reached through the by-email path.
-func TestDelInboundClientByEmailSecondMembershipHasNoTrafficRow(t *testing.T) {
+// Same lifecycle, reached through the by-email path.
+func TestDelInboundClientByEmailPreservesTrafficUntilLastMembership(t *testing.T) {
 	svc := newInboundDB(t)
 	shared := testClient("multi@example.com")
 	first := seedTaggedInbound(t, model.VLESS, 47105, []map[string]any{shared})
@@ -150,8 +155,89 @@ func TestDelInboundClientByEmailSecondMembershipHasNoTrafficRow(t *testing.T) {
 	if _, err := svc.DelInboundClientByEmail(first.Id, "multi@example.com"); err != nil {
 		t.Fatalf("first membership: %v", err)
 	}
+	if row := trafficRow(t, "multi@example.com"); row == nil || row.InboundId != second.Id {
+		t.Fatalf("traffic row was not carried to the surviving membership: %+v", row)
+	}
 	if _, err := svc.DelInboundClientByEmail(second.Id, "multi@example.com"); err != nil {
-		t.Fatalf("second membership with no traffic row: %v", err)
+		t.Fatalf("final membership: %v", err)
+	}
+	if row := trafficRow(t, "multi@example.com"); row != nil {
+		t.Error("the final membership delete left the account's traffic row behind")
+	}
+}
+
+func TestDelInboundClientPreservesQuotaForSingboxMembership(t *testing.T) {
+	svc := newInboundDB(t)
+	email := "cross-core@example.com"
+	xrayInbound := seedTaggedInbound(t, model.VLESS, 47118, []map[string]any{testClient(email)})
+	singboxInbound := &model.Inbound{
+		Core: "singbox", Protocol: model.VLESS, Enable: false, Port: 47119,
+		Settings: `{"type":"vless","listen":"127.0.0.1","listen_port":47119,"users":[{"name":"cross-core@example.com","uuid":"11111111-1111-4111-8111-111111111111"}]}`,
+	}
+	if err := database.GetDB().Create(singboxInbound).Error; err != nil {
+		t.Fatalf("create sing-box inbound: %v", err)
+	}
+	seedTrafficRow(t, xray.ClientTraffic{InboundId: xrayInbound.Id, Email: email, Up: 3 * gb, Total: 10 * gb, Enable: true})
+	accounts := &AccountService{}
+	for _, inbound := range []*model.Inbound{xrayInbound, singboxInbound} {
+		if err := accounts.SyncInboundAccounts(database.GetDB(), inbound.Id); err != nil {
+			t.Fatalf("sync inbound %d: %v", inbound.Id, err)
+		}
+	}
+
+	if _, err := svc.DelInboundClientByEmail(xrayInbound.Id, email); err != nil {
+		t.Fatalf("delete Xray membership: %v", err)
+	}
+	row := trafficRow(t, email)
+	if row == nil {
+		t.Fatal("deleting the Xray membership removed quota while sing-box still serves the account")
+	}
+	if row.InboundId != singboxInbound.Id || row.Up != 3*gb || row.Total != 10*gb {
+		t.Fatalf("traffic row was not preserved/re-homed: %+v", row)
+	}
+	account, err := accounts.GetAccountByEmail(email)
+	if err != nil || account == nil {
+		t.Fatalf("account did not survive on sing-box: %+v, %v", account, err)
+	}
+	memberships, err := accounts.GetMemberships(account.Id)
+	if err != nil || len(memberships) != 1 || memberships[0].InboundId != singboxInbound.Id {
+		t.Fatalf("memberships = %+v, %v; want the sing-box membership only", memberships, err)
+	}
+}
+
+func TestDelInboundPreservesAndRehomesTrafficForSingboxMembership(t *testing.T) {
+	svc := newInboundDB(t)
+	email := "delete-home@example.com"
+	home := seedTaggedInbound(t, model.VLESS, 47120, []map[string]any{testClient(email)})
+	singboxInbound := &model.Inbound{
+		Core: "singbox", Protocol: model.VLESS, Enable: false, Port: 47121,
+		Settings: `{"type":"vless","listen":"127.0.0.1","listen_port":47121,"users":[{"name":"delete-home@example.com","uuid":"11111111-1111-4111-8111-111111111121"}]}`,
+	}
+	if err := database.GetDB().Create(singboxInbound).Error; err != nil {
+		t.Fatalf("create sing-box inbound: %v", err)
+	}
+	seedTrafficRow(t, xray.ClientTraffic{InboundId: home.Id, Email: email, Up: gb, Total: 5 * gb, Enable: true})
+	accounts := &AccountService{}
+	for _, inbound := range []*model.Inbound{home, singboxInbound} {
+		if err := accounts.SyncInboundAccounts(database.GetDB(), inbound.Id); err != nil {
+			t.Fatalf("sync inbound %d: %v", inbound.Id, err)
+		}
+	}
+
+	if _, err := svc.DelInbound(home.Id); err != nil {
+		t.Fatalf("delete home inbound: %v", err)
+	}
+	row := trafficRow(t, email)
+	if row == nil || row.InboundId != singboxInbound.Id || row.Up != gb || row.Total != 5*gb {
+		t.Fatalf("inbound deletion lost account traffic or left a dead home id: %+v", row)
+	}
+	account, err := accounts.GetAccountByEmail(email)
+	if err != nil || account == nil {
+		t.Fatalf("account did not survive home inbound deletion: %+v, %v", account, err)
+	}
+	memberships, err := accounts.GetMemberships(account.Id)
+	if err != nil || len(memberships) != 1 || memberships[0].InboundId != singboxInbound.Id {
+		t.Fatalf("memberships = %+v, %v; want the surviving sing-box membership", memberships, err)
 	}
 }
 

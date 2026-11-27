@@ -287,6 +287,8 @@
 "getConfigError" = "Произошла ошибка при получении конфигурационного файла"
 
 [pages.inbounds]
+singboxUnmanaged = "Edit native sing-box users here. Manage linked-account traffic, quota, expiry, speed/IP and concurrent-stream limits on:"
+singboxNoStats = "Per-account traffic is tracked on the Clients page."
 "inboundMembership" = "Inbounds"
 "inboundMembershipDesc" = "The inbounds this one account is served on. It keeps the same email, the same traffic allowance and the same expiry on every one of them. Unticking an inbound removes the account from it. The inbound this form was opened from stays ticked."
 "selectAllInbounds" = "Select all"
@@ -488,6 +490,8 @@
 "limitIp" = "Лимит IP"
 "limitIpDesc" = "Одновременные адреса источника. 0 следует подключению."
 "limitDevices" = "Лимит устройств"
+"limitStreams" = "Лимит одновременных потоков"
+"limitStreamsDesc" = "Максимум одновременных TCP/мультиплексированных потоков или UDP-связей для аккаунта в Sing-Box. Пусто или 0 означает без ограничений; физические устройства не подсчитываются."
 "limitDevicesDesc" = "Одновременные устройства этой учетной записи. Пустое поле следует подключению."
 "limitDevicesClamp" = "Лимит устройств может быть только меньше, чем у подключения. Большее число уменьшается до значения подключения, потому что адреса каждой учетной записи выделяются блоком такого размера."
 "telegramId" = "Telegram chat ID"

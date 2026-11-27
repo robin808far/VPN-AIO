@@ -287,6 +287,8 @@
 "customGeoErrUpdateAllIncomplete" = "Falha ao atualizar uma ou mais fontes geo personalizadas"
 
 [pages.inbounds]
+singboxUnmanaged = "Edit native sing-box users here. Manage linked-account traffic, quota, expiry, speed/IP and concurrent-stream limits on:"
+singboxNoStats = "Per-account traffic is tracked on the Clients page."
 "inboundMembership" = "Inbounds"
 "inboundMembershipDesc" = "The inbounds this one account is served on. It keeps the same email, the same traffic allowance and the same expiry on every one of them. Unticking an inbound removes the account from it. The inbound this form was opened from stays ticked."
 "selectAllInbounds" = "Select all"
@@ -487,6 +489,8 @@
 "limitIp" = "Limite de IP"
 "limitIpDesc" = "Endereços de origem simultâneos. 0 segue o inbound."
 "limitDevices" = "Limite de dispositivos"
+"limitStreams" = "Limite de streams simultâneos"
+"limitStreamsDesc" = "Máximo de streams TCP/multiplexados ou associações UDP simultâneas para esta conta no Sing-Box. Vazio ou 0 significa ilimitado; isso não conta dispositivos físicos."
 "limitDevicesDesc" = "Dispositivos simultâneos desta conta. Vazio segue o inbound."
 "limitDevicesClamp" = "O limite de dispositivos só pode ser menor que o do inbound. Um número maior é reduzido ao valor do inbound, porque os endereços de cada conta são reservados em um bloco desse tamanho."
 "telegramId" = "Telegram chat ID"

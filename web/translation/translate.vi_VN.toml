@@ -287,6 +287,8 @@
 "customGeoErrUpdateAllIncomplete" = "Một hoặc nhiều nguồn geo tùy chỉnh không cập nhật được"
 
 [pages.inbounds]
+singboxUnmanaged = "Edit native sing-box users here. Manage linked-account traffic, quota, expiry, speed/IP and concurrent-stream limits on:"
+singboxNoStats = "Per-account traffic is tracked on the Clients page."
 "inboundMembership" = "Inbounds"
 "inboundMembershipDesc" = "The inbounds this one account is served on. It keeps the same email, the same traffic allowance and the same expiry on every one of them. Unticking an inbound removes the account from it. The inbound this form was opened from stays ticked."
 "selectAllInbounds" = "Select all"
@@ -488,6 +490,8 @@
 "limitIp" = "Giới hạn IP"
 "limitIpDesc" = "Số địa chỉ nguồn đồng thời. 0 là theo đầu vào."
 "limitDevices" = "Giới hạn thiết bị"
+"limitStreams" = "Giới hạn luồng đồng thời"
+"limitStreamsDesc" = "Số luồng TCP/đa kênh hoặc liên kết UDP đồng thời tối đa cho tài khoản này trên Sing-Box. Để trống hoặc 0 là không giới hạn; không đếm thiết bị vật lý."
 "limitDevicesDesc" = "Số thiết bị dùng đồng thời cho tài khoản này. Để trống là theo đầu vào."
 "limitDevicesClamp" = "Giới hạn thiết bị chỉ có thể nhỏ hơn giới hạn của đầu vào. Số lớn hơn sẽ bị hạ về giá trị của đầu vào, vì địa chỉ của mỗi tài khoản được cấp thành một khối có kích thước đó."
 "telegramId" = "Telegram chat ID"

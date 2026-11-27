@@ -426,6 +426,8 @@
 "getConfigError" = "An error occurred while retrieving the config file."
 
 [pages.inbounds]
+singboxUnmanaged = "Edit native sing-box users here. Manage linked-account traffic, quota, expiry, speed/IP and concurrent-stream limits on:"
+singboxNoStats = "Per-account traffic is tracked on the Clients page."
 "inboundMembership" = "Inbounds"
 "inboundMembershipDesc" = "The inbounds this one account is served on. It keeps the same email, the same traffic allowance and the same expiry on every one of them. Unticking an inbound removes the account from it. The inbound this form was opened from stays ticked."
 "selectAllInbounds" = "Select all"
@@ -640,6 +642,8 @@
 "limitIp" = "IP limit"
 "limitIpDesc" = "Concurrent source addresses. 0 follows the inbound."
 "limitDevices" = "Device limit"
+"limitStreams" = "Concurrent streams"
+"limitStreamsDesc" = "Maximum routed TCP/multiplex streams or UDP associations for this account on Sing-Box. Empty or 0 means unlimited; this does not count physical devices."
 "limitDevicesDesc" = "Simultaneous devices for this account. Empty follows the inbound."
 "limitDevicesClamp" = "The device limit can only go lower than the inbound sets. A larger number is capped at the inbound value, because the addresses for each account are laid out in a block of that size."
 "telegramId" = "Telegram chat ID"

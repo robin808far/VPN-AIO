@@ -4,6 +4,13 @@
      Two views over the SAME draft: the graphical form (s-ui style, edits the
      parsed object field by field) and the raw JSON editor. Each edit of one
      view re-serializes into singboxDraft, so the other view follows. -->
+<a-alert type="info" show-icon style="margin-bottom:12px">
+    <template slot="message">
+        {{ i18n "pages.inbounds.singboxUnmanaged" }}
+        <a :href="basePath + 'panel/clients'">{{ i18n "pages.clients.title" }}</a>
+    </template>
+</a-alert>
+<a-button v-if="singboxHasLimits()" style="margin-bottom:12px" @click="singboxClearLimits()">Clear unsupported inbound-level limits</a-button>
 <a-tabs default-active-key="gui" size="small">
     <a-tab-pane key="gui" tab="Graphical">
         <a-form layout="vertical">
@@ -34,6 +41,45 @@
             </a-row>
 
             <!-- ===== per-protocol settings ===== -->
+            <a-row v-if="singboxGet(['type']) === 'shadowtls'" :gutter="12">
+                <a-col :xs="16" :md="16">
+                    <a-form-item label="Handshake server">
+                        <a-input :value="singboxGet(['handshake', 'server'])"
+                            @change="e => singboxSet(['handshake', 'server'], e.target.value)"></a-input>
+                    </a-form-item>
+                </a-col>
+                <a-col :xs="8" :md="8">
+                    <a-form-item label="Handshake port">
+                        <a-input-number :value="singboxGet(['handshake', 'server_port'], 443)" :min="1" :max="65535"
+                            @change="v => singboxSet(['handshake', 'server_port'], v)"></a-input-number>
+                    </a-form-item>
+                </a-col>
+            </a-row>
+            <a-row v-if="singboxGet(['type']) === 'shadowtls'" :gutter="12">
+                <a-col :span="24">
+                    <a-form-item label="Detour target (optional)">
+                        <a-select allow-clear :value="singboxDetourTarget()"
+                            placeholder="None — handshake only"
+                            @change="singboxSetDetourTarget">
+                            <a-select-option v-for="target in singboxDetourTargets()"
+                                :key="target.id" :value="target.tag">
+                                [[ target.remark || target.tag ]] — [[ target.protocol ]]:[[ target.port ]]
+                            </a-select-option>
+                        </a-select>
+                    </a-form-item>
+                </a-col>
+            </a-row>
+            <a-row v-if="singboxGet(['type']) === 'shadowtls'" :gutter="12">
+                <a-col :xs="16" :md="8">
+                    <a-form-item label="Managed-user version">
+                        <a-select :value="singboxGet(['version'])" @change="v => singboxSet(['version'], v)">
+                            <a-select-option :value="1" disabled>1 (unsupported)</a-select-option>
+                            <a-select-option :value="2" disabled>2 (unsupported)</a-select-option>
+                            <a-select-option :value="3">3</a-select-option>
+                        </a-select>
+                    </a-form-item>
+                </a-col>
+            </a-row>
             <template v-if="singboxGet(['type']) === 'vless' || singboxGet(['type']) === 'vmess'">
                 <a-row :gutter="12">
                     <a-col :xs="12" :md="8">
@@ -43,17 +89,9 @@
                         </a-form-item>
                     </a-col>
                     <a-col :xs="12" :md="8" v-if="singboxGet(['multiplex', 'enabled'], false)">
-                        <a-form-item label="Max connections">
-                            <a-input-number :value="singboxGet(['multiplex', 'max_connections'])" :min="0"
-                                style="width: 100%"
-                                @change="v => singboxSet(['multiplex', 'max_connections'], v)"></a-input-number>
-                        </a-form-item>
-                    </a-col>
-                    <a-col :xs="12" :md="8" v-if="singboxGet(['multiplex', 'enabled'], false)">
-                        <a-form-item label="Min streams">
-                            <a-input-number :value="singboxGet(['multiplex', 'min_streams'])" :min="0"
-                                style="width: 100%"
-                                @change="v => singboxSet(['multiplex', 'min_streams'], v)"></a-input-number>
+                        <a-form-item label="Padding">
+                            <a-switch :checked="singboxGet(['multiplex', 'padding'], false)"
+                                @change="v => singboxSet(['multiplex', 'padding'], v)"></a-switch>
                         </a-form-item>
                     </a-col>
                 </a-row>
@@ -132,12 +170,9 @@
                         </a-form-item>
                     </a-col>
                     <a-col :xs="12" :md="8">
-                        <a-form-item label="UDP relay mode">
-                            <a-select :value="singboxGet(['udp_relay_mode'], 'native')"
-                                @change="v => singboxSet(['udp_relay_mode'], v)">
-                                <a-select-option value="native">native</a-select-option>
-                                <a-select-option value="quic">quic</a-select-option>
-                            </a-select>
+                        <a-form-item label="Zero RTT handshake">
+                            <a-switch :checked="singboxGet(['zero_rtt_handshake'], false)"
+                                @change="v => singboxSet(['zero_rtt_handshake'], v)"></a-switch>
                         </a-form-item>
                     </a-col>
                 </a-row>
@@ -151,7 +186,7 @@
                         <a-input :value="singboxUserGet(i, 'name')" placeholder="name"
                             @change="e => singboxUserSet(i, 'name', e.target.value)"></a-input>
                     </a-col>
-                    <a-col :xs="16" :md="8" v-if="singboxGet(['type']) === 'vless' || singboxGet(['type']) === 'vmess'">
+                    <a-col :xs="16" :md="8" v-if="['vless', 'vmess', 'tuic'].includes(singboxGet(['type']))">
                         <a-input :value="singboxUserGet(i, 'uuid')" placeholder="uuid"
                             @change="e => singboxUserSet(i, 'uuid', e.target.value)"></a-input>
                     </a-col>
@@ -177,7 +212,7 @@
             </div>
 
             <!-- ===== transport ===== -->
-            <div style="margin-top: 12px;">
+            <div v-if="['vless', 'vmess', 'trojan'].includes(singboxGet(['type']))" style="margin-top: 12px;">
                 <a-form-item label="Transport">
                     <a-switch :checked="singboxHas(['transport'])"
                         @change="v => singboxToggleBlock(['transport'], v, { type: 'ws', path: '/' })"></a-switch>
@@ -187,7 +222,7 @@
                         <a-col :xs="12" :md="6">
                             <a-form-item label="Network">
                                 <a-select :value="singboxGet(['transport', 'type'], 'ws')"
-                                    @change="v => singboxSet(['transport', 'type'], v)">
+                                    @change="v => singboxSet(['transport'], v === 'grpc' ? { type: v, service_name: '' } : { type: v, path: '/' })">
                                     <a-select-option value="ws">ws</a-select-option>
                                     <a-select-option value="http">http</a-select-option>
                                     <a-select-option value="httpupgrade">httpupgrade</a-select-option>
@@ -207,7 +242,7 @@
                                     @change="e => singboxSet(['transport', 'service_name'], e.target.value)"></a-input>
                             </a-form-item>
                         </a-col>
-                        <a-col :xs="12" :md="6">
+                        <a-col :xs="12" :md="6" v-if="singboxGet(['transport', 'type']) !== 'grpc'">
                             <a-form-item label="Host header">
                                 <a-input :value="singboxHostHeader()"
                                     @change="e => singboxSetHostHeader(e.target.value)"></a-input>
@@ -218,7 +253,7 @@
             </div>
 
             <!-- ===== tls ===== -->
-            <div style="margin-top: 12px;">
+            <div v-if="['vless', 'vmess', 'trojan', 'hysteria2', 'tuic', 'anytls'].includes(singboxGet(['type']))" style="margin-top: 12px;">
                 <a-form-item label="TLS">
                     <a-switch :checked="singboxHas(['tls'])"
                         @change="v => singboxToggleBlock(['tls'], v, { enabled: true })"></a-switch>
@@ -260,14 +295,8 @@
                                     @change="e => singboxSet(['tls', 'key_path'], e.target.value)"></a-input>
                             </a-form-item>
                         </a-col>
-                        <a-col :xs="12" :md="6">
-                            <a-form-item label="Insecure">
-                                <a-switch :checked="singboxGet(['tls', 'insecure'], false)"
-                                    @change="v => singboxSet(['tls', 'insecure'], v)"></a-switch>
-                            </a-form-item>
-                        </a-col>
                     </a-row>
-                    <a-form-item label="REALITY">
+                    <a-form-item v-if="singboxGet(['type']) === 'vless'" label="REALITY">
                         <a-switch :checked="singboxHas(['tls', 'reality'])"
                             @change="v => singboxToggleBlock(['tls', 'reality'], v, { enabled: true, handshake: { server: '', server_port: 443 } })"></a-switch>
                     </a-form-item>

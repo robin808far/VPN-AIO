@@ -164,6 +164,7 @@ var DBInbound = class DBInbound {
         }
 
         const config = {
+            core: this.core,
             port: this.port,
             listen: this.listen,
             protocol: this.protocol,
@@ -175,6 +176,25 @@ var DBInbound = class DBInbound {
         };
 
         this._cachedInbound = Inbound.fromJson(config);
+		if (this.core === 'singbox' || this.protocol === 'shadowtls') {
+			const clients = (settings.users || []).map(user => {
+				const stats = this.getClientStats(user.name) || {};
+				const entry = {
+					email: user.name, id: user.uuid || '', password: user.password || '',
+					auth: this.protocol === 'hysteria2' ? (user.password || '') : '',
+					flow: user.flow || '', enable: stats.enable !== false,
+					totalGB: stats.total || 0, expiryTime: stats.expiryTime || 0,
+					subId: stats.subId || '', reset: stats.reset || 0,
+				};
+				const protocol = this.protocol === 'shadowtls' ? 'trojan'
+					: this.protocol === 'hysteria2' ? 'hysteria' : this.protocol;
+				const view = Inbound.fromJson({ protocol,
+					settings: { clients: [entry], method: settings.method || '' } });
+				return view.clients && view.clients[0] || entry;
+			});
+			// A read view only: native settings still round-trip without metadata.
+			Object.defineProperty(this._cachedInbound, 'clients', { get: () => clients });
+		}
 		this._cachedInbound._managedHostRows = this.hosts;
 		this._cachedInbound._managedHostRules = this.hostRules;
 		this._cachedInbound._managedInboundId = this.id;
@@ -194,6 +214,7 @@ var DBInbound = class DBInbound {
     }
 
     isMultiUser() {
+        if (this.core === 'singbox' || this.protocol === 'shadowtls') return true;
         switch (this.protocol) {
             case Protocols.VMESS:
             case Protocols.VLESS:

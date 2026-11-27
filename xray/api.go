@@ -34,6 +34,7 @@ type XrayAPI struct {
 	HandlerServiceClient *command.HandlerServiceClient
 	StatsServiceClient   *statsService.StatsServiceClient
 	grpcClient           *grpc.ClientConn
+	statsServiceName     string
 	isConnected          bool
 }
 
@@ -67,8 +68,19 @@ func getOptionalUserString(user map[string]any, key string) (string, error) {
 
 // Init connects to the Xray API server and initializes handler and stats service clients.
 func (x *XrayAPI) Init(apiPort int) error {
+	return x.init(apiPort, "xray.app.stats.command.StatsService")
+}
+
+// InitStats connects to a V2Ray-compatible stats service under a custom gRPC
+// service name. sing-box exposes the same wire-compatible QueryStats messages
+// under v2ray.core.app.stats.command.StatsService.
+func (x *XrayAPI) InitStats(apiPort int) error {
+	return x.init(apiPort, "v2ray.core.app.stats.command.StatsService")
+}
+
+func (x *XrayAPI) init(apiPort int, statsServiceName string) error {
 	if apiPort <= 0 || apiPort > math.MaxUint16 {
-		return fmt.Errorf("invalid Xray API port: %d", apiPort)
+		return fmt.Errorf("invalid stats API port: %d", apiPort)
 	}
 
 	addr := fmt.Sprintf("127.0.0.1:%d", apiPort)
@@ -85,6 +97,7 @@ func (x *XrayAPI) Init(apiPort int) error {
 
 	x.HandlerServiceClient = &hsClient
 	x.StatsServiceClient = &ssClient
+	x.statsServiceName = statsServiceName
 
 	return nil
 }
@@ -96,6 +109,7 @@ func (x *XrayAPI) Close() {
 	}
 	x.HandlerServiceClient = nil
 	x.StatsServiceClient = nil
+	x.statsServiceName = ""
 	x.isConnected = false
 }
 
@@ -432,7 +446,16 @@ func (x *XrayAPI) GetTraffic(reset bool) ([]*Traffic, []*ClientTraffic, error) {
 		return nil, nil, common.NewError("xray StatusServiceClient is not initialized")
 	}
 
-	resp, err := (*x.StatsServiceClient).QueryStats(ctx, &statsService.QueryStatsRequest{Reset_: reset})
+	var resp *statsService.QueryStatsResponse
+	var err error
+	if x.statsServiceName == "" || x.statsServiceName == "xray.app.stats.command.StatsService" {
+		resp, err = (*x.StatsServiceClient).QueryStats(ctx, &statsService.QueryStatsRequest{Reset_: reset})
+	} else {
+		resp = new(statsService.QueryStatsResponse)
+		err = x.grpcClient.Invoke(ctx,
+			"/"+x.statsServiceName+"/QueryStats",
+			&statsService.QueryStatsRequest{Reset_: reset}, resp)
+	}
 	if err != nil {
 		logger.Debug("Failed to query Xray stats:", err)
 		return nil, nil, err

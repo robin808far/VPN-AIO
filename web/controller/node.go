@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -20,6 +21,26 @@ type NodeController struct {
 	BaseController
 	nodeService     service.NodeService
 	apiTokenService service.ApiTokenService
+}
+
+type nodeForm struct {
+	Id       int    `json:"id" form:"id"`
+	Name     string `json:"name" form:"name"`
+	Scheme   string `json:"scheme" form:"scheme"`
+	Address  string `json:"address" form:"address"`
+	Port     int    `json:"port" form:"port"`
+	BasePath string `json:"basePath" form:"basePath"`
+	Token    string `json:"token" form:"token"`
+	SyncMode string `json:"syncMode" form:"syncMode"`
+	Enabled  bool   `json:"enabled" form:"enabled"`
+}
+
+func (f nodeForm) model() *model.Node {
+	return &model.Node{
+		Id: f.Id, Name: f.Name, Scheme: f.Scheme, Address: f.Address,
+		Port: f.Port, BasePath: f.BasePath, Token: f.Token,
+		SyncMode: f.SyncMode, Enabled: f.Enabled,
+	}
 }
 
 // NewNodeController registers the routes on the top-level base-path group.
@@ -72,24 +93,33 @@ func (a *NodeController) list(c *gin.Context) {
 
 // add registers a new remote panel.
 func (a *NodeController) add(c *gin.Context) {
-	node := &model.Node{}
-	if err := c.ShouldBind(node); err != nil {
+	form := &nodeForm{}
+	if err := c.ShouldBind(form); err != nil {
 		pureJsonMsg(c, http.StatusBadRequest, false, "Invalid node payload")
 		return
 	}
+	if strings.TrimSpace(form.Token) == "" {
+		pureJsonMsg(c, http.StatusBadRequest, false, service.ErrNodeTokenRequired.Error())
+		return
+	}
+	node := form.model()
 	node.Id = 0
 	created, err := a.nodeService.Add(node)
+	if errors.Is(err, service.ErrNodeTokenRequired) {
+		pureJsonMsg(c, http.StatusBadRequest, false, err.Error())
+		return
+	}
 	jsonMsgObj(c, "Node added", created, err)
 }
 
 // update edits an existing remote panel.
 func (a *NodeController) update(c *gin.Context) {
-	form := &model.Node{}
+	form := &nodeForm{}
 	if err := c.ShouldBind(form); err != nil {
 		pureJsonMsg(c, http.StatusBadRequest, false, "Invalid node payload")
 		return
 	}
-	updated, err := a.nodeService.Update(form.Id, form)
+	updated, err := a.nodeService.Update(form.Id, form.model())
 	jsonMsgObj(c, "Node updated", updated, err)
 }
 
@@ -142,14 +172,22 @@ func (a *NodeController) listTokens(c *gin.Context) {
 // createToken mints a token and returns the plaintext exactly once.
 func (a *NodeController) createToken(c *gin.Context) {
 	form := struct {
-		Name   string `json:"name"`
-		Scopes string `json:"scopes"`
+		Name   string `json:"name" form:"name"`
+		Scopes string `json:"scopes" form:"scopes"`
 	}{}
 	if err := c.ShouldBind(&form); err != nil {
 		pureJsonMsg(c, http.StatusBadRequest, false, "Invalid token payload")
 		return
 	}
+	if strings.TrimSpace(form.Name) == "" {
+		pureJsonMsg(c, http.StatusBadRequest, false, "token name is required")
+		return
+	}
 	plaintext, token, err := a.apiTokenService.Create(form.Name, form.Scopes)
+	if errors.Is(err, service.ErrInvalidTokenScope) {
+		pureJsonMsg(c, http.StatusBadRequest, false, err.Error())
+		return
+	}
 	jsonMsgObj(c, plaintext, token, err)
 }
 

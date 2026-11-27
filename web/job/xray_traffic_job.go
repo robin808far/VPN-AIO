@@ -30,6 +30,7 @@ type XrayTrafficJob struct {
 	awgService      service.AwgService
 	greService      service.GreService
 	mtprotoService  service.MtprotoService
+	singboxService  service.SingboxService
 	sshService      service.SshService
 	nftService      service.NftService
 	radiusService   *service.RadiusService
@@ -117,6 +118,13 @@ func (j *XrayTrafficJob) Run() {
 			clientTraffics = nil
 		}
 	}
+	singboxUp, singboxClients, singboxErr := j.singboxService.GetTraffic()
+	if singboxErr != nil {
+		logger.Debug("sing-box traffic collection failed:", singboxErr)
+	}
+	// A failed endpoint must not discard counters already read from another one.
+	traffics = append(traffics, singboxUp...)
+	clientTraffics = append(clientTraffics, singboxClients...)
 
 	// Collect L2TP, PPTP, and OpenVPN per-client traffic from nftables counters (atomic read+reset)
 	// Session maps (IP→email) come from the embedded RADIUS server
@@ -269,6 +277,9 @@ func (j *XrayTrafficJob) Run() {
 
 	// Skip DB update if no traffic to process
 	if len(traffics) == 0 && len(clientTraffics) == 0 {
+		if err := j.singboxService.RefreshServices(); err != nil {
+			logger.Debug("sing-box quota reconcile failed:", err)
+		}
 		return
 	}
 
@@ -305,6 +316,9 @@ func (j *XrayTrafficJob) Run() {
 	// Enforce limits on OpenVPN clients
 	if len(ovpnDisabledEmails) > 0 {
 		j.openvpnService.DisableClients(ovpnDisabledEmails)
+	}
+	if err := j.singboxService.RefreshServices(); err != nil {
+		logger.Debug("sing-box quota reconcile failed:", err)
 	}
 	err, needRestart1 := j.outboundService.AddTraffic(traffics, clientTraffics)
 	if err != nil {

@@ -6,7 +6,6 @@ import (
 
 	"github.com/mhsanaei/3x-ui/v2/database/model"
 	"github.com/mhsanaei/3x-ui/v2/util/crypto"
-	"github.com/mhsanaei/3x-ui/v2/web/entity"
 	"github.com/mhsanaei/3x-ui/v2/web/service"
 	"github.com/mhsanaei/3x-ui/v2/web/session"
 
@@ -154,8 +153,12 @@ func (a *SettingController) getDefaultSettings(c *gin.Context) {
 
 // updateSetting updates all settings with the provided data.
 func (a *SettingController) updateSetting(c *gin.Context) {
-	allSetting := &entity.AllSetting{}
-	err := c.ShouldBind(allSetting)
+	allSetting, err := a.settingService.GetAllSetting()
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), err)
+		return
+	}
+	err = c.ShouldBind(allSetting)
 	if err != nil {
 		jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), err)
 		return

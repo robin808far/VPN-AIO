@@ -50,6 +50,8 @@ def main():
     parser.add_argument('--binary', required=True, type=Path)
     parser.add_argument('--only', default=','.join(DISTROS))
     parser.add_argument('--output', type=Path)
+    parser.add_argument('--expected-version', default=None,
+                        help='candidate version; defaults to config/version in the checkout')
     args = parser.parse_args()
     binary = args.binary.resolve(strict=True)
     selected = args.only.split(',')
@@ -58,6 +60,12 @@ def main():
     root = Path(__file__).resolve().parent
     for script in SCRIPTS:
         (root / script).resolve(strict=True)
+    expected_version = args.expected_version
+    if expected_version is None:
+        version_file = root.parent / 'config' / 'version'
+        expected_version = version_file.read_text(encoding='utf-8').strip()
+    if not expected_version:
+        parser.error('expected candidate version is empty')
     output = args.output or root / 'results' / ('containers-' + datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S'))
     output.mkdir(parents=True, exist_ok=False)
     with binary.open('rb') as source:
@@ -82,7 +90,9 @@ def main():
                     ('copy binary', ('cp', binary, name + ':/opt/VPN-AIO/VPN-AIO-amd64'), 90),
                 ]
                 stages += [('copy ' + script, ('cp', root / script, name + ':/checks/' + script), 30) for script in SCRIPTS]
-                stages += [('lifecycle', ('exec', '-e', 'VPN_AIO_CONTAINER_LIFECYCLE_ACK=yes', name, 'python3', '/checks/container-lifecycle.py'), 600)]
+                stages += [('lifecycle', ('exec', '-e', 'VPN_AIO_CONTAINER_LIFECYCLE_ACK=yes',
+                                          '-e', 'VPN_AIO_EXPECTED_VERSION=' + expected_version,
+                                          name, 'python3', '/checks/container-lifecycle.py'), 600)]
                 for stage, command, timeout in stages:
                     proc = docker(*command, timeout=timeout)
                     logs.append(f'--- {stage} (exit {proc.returncode}) ---\n{proc.stdout}\n{proc.stderr}')

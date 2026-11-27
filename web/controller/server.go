@@ -699,7 +699,7 @@ func isValidFilename(filename string) bool {
 	return filenameRegex.MatchString(filename)
 }
 
-// importDB imports a database file and restarts the Xray service.
+// importDB imports a database file and reactivates the managed cores.
 func (a *ServerController) importDB(c *gin.Context) {
 	// Get the file from the request body
 	file, _, err := c.Request.FormFile("db")
@@ -708,12 +708,15 @@ func (a *ServerController) importDB(c *gin.Context) {
 		return
 	}
 	defer file.Close()
-	// Always restart Xray before return
-	defer a.serverService.RestartXrayService()
 	// lastGetStatusTime removed; no longer needed
 	// Import it
 	err = a.serverService.ImportDB(file)
 	if err != nil {
+		// ImportDB can fail after stopping a core or after replacing the database.
+		// Retry both cores against whichever database is now active before returning.
+		if restartErr := a.serverService.RestartImportedServices(); restartErr != nil {
+			err = errors.Join(err, fmt.Errorf("restarting after import failure: %w", restartErr))
+		}
 		jsonMsg(c, I18nWeb(c, "pages.index.importDatabaseError"), err)
 		return
 	}
@@ -725,7 +728,7 @@ func (a *ServerController) importDB(c *gin.Context) {
 // importDB (a like-for-like restore of this panel's own backup) it is meant for
 // migrating in from another panel: it reports what landed, and because the admin
 // accounts come from the backup, the operator signs in afterwards with the
-// imported panel's login. activate=true regenerates daemon configs + restarts Xray.
+// imported panel's login. activate=true regenerates daemon configs + restarts both cores.
 func (a *ServerController) importForeignDB(c *gin.Context) {
 	file, _, err := c.Request.FormFile("db")
 	if err != nil {

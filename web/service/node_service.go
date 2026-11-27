@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -19,15 +20,18 @@ import (
 	"gorm.io/gorm"
 )
 
-var ErrNodeNotFound = errors.New("node not found")
+var (
+	ErrNodeNotFound      = errors.New("node not found")
+	ErrNodeTokenRequired = errors.New("node API token is required")
+)
 
 // NodeStatus is what a remote panel answers on its /nodeapi/status endpoint.
 type NodeStatus struct {
-	Version   string `json:"version"`
-	XrayRunning bool `json:"xrayRunning"`
-	Inbounds  int64  `json:"inbounds"`
-	Clients   int64  `json:"clients"`
-	Traffic   int64  `json:"trafficTotal"`
+	Version     string `json:"version"`
+	XrayRunning bool   `json:"xrayRunning"`
+	Inbounds    int64  `json:"inbounds"`
+	Clients     int64  `json:"clients"`
+	Traffic     int64  `json:"trafficTotal"`
 }
 
 // NodeService manages the remote panels registered on this master: CRUD,
@@ -57,6 +61,9 @@ func (s *NodeService) List() ([]*model.Node, error) {
 // reachable/unreachable verdict right away instead of waiting for the heartbeat.
 func (s *NodeService) Add(node *model.Node) (*model.Node, error) {
 	s.normalize(node)
+	if strings.TrimSpace(node.Token) == "" {
+		return nil, ErrNodeTokenRequired
+	}
 	if node.Address == "" {
 		return nil, errors.New("node address is required")
 	}
@@ -75,6 +82,10 @@ func (s *NodeService) Update(id int, form *model.Node) (*model.Node, error) {
 		return nil, err
 	}
 	s.normalize(form)
+	if form.Address == "" {
+		return nil, errors.New("node address is required")
+	}
+	node.Name = form.Name
 	node.Scheme = form.Scheme
 	node.Address = form.Address
 	node.Port = form.Port
@@ -197,9 +208,11 @@ func (s *NodeService) url(node *model.Node, path string) string {
 	if scheme == "" {
 		scheme = "http"
 	}
-	host := node.Address
+	host := strings.Trim(strings.TrimSpace(node.Address), "[]")
 	if node.Port > 0 {
-		host = host + ":" + strconv.Itoa(node.Port)
+		host = net.JoinHostPort(host, strconv.Itoa(node.Port))
+	} else if strings.Contains(host, ":") {
+		host = "[" + host + "]"
 	}
 	base := strings.TrimSuffix(node.BasePath, "/")
 	return (&url.URL{Scheme: scheme, Host: host, Path: base + "/nodeapi/" + path}).String()

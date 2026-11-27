@@ -38,7 +38,7 @@
     // arguments fails at EXECUTION time, which truncates the page from that byte
     // on and leaves the panel blank behind v-cloak. The template-parse test still
     // passes, so nothing catches it before a browser does.
-    const VPN_OUT_LABELS = {
+    var VPN_OUT_LABELS = {
         vpnOutServer: '{{ i18n "pages.xray.outbound.vpnOutServer" }}',
         vpnOutEndpoint: '{{ i18n "pages.xray.outbound.vpnOutEndpoint" }}',
         vpnOutTunAddress: '{{ i18n "pages.xray.outbound.vpnOutTunAddress" }}',
@@ -100,7 +100,7 @@
     // What the operator is told after handing the panel a config file. Composed
     // in JS (a key list, a line number) rather than written as whole sentences in
     // the template, so the same pieces serve every kind that can import.
-    const VPN_OUT_IMPORT_MSG = {
+    var VPN_OUT_IMPORT_MSG = {
         done: '{{ i18n "pages.xray.outbound.vpnOutImportDone" }}',
         empty: '{{ i18n "pages.xray.outbound.vpnOutImportEmpty" }}',
         unreadable: '{{ i18n "pages.xray.outbound.vpnOutImportUnreadable" }}',
@@ -110,7 +110,7 @@
         kept: '{{ i18n "pages.xray.outbound.vpnOutImportKept" }}',
     };
 
-    const outModal = {
+    var outModal = {
         title: '',
         visible: false,
         confirmLoading: false,

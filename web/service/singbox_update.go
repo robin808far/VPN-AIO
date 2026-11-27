@@ -2,12 +2,14 @@ package service
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -39,6 +41,12 @@ func (s *SingboxService) UpdateSingbox() (string, error) {
 	if err := os.WriteFile(tmp, bin, 0o755); err != nil {
 		return "", fmt.Errorf("write sing-box binary: %w", err)
 	}
+	defer os.Remove(tmp)
+	// Replacing the managed build with an official archive without stats would
+	// silently remove accounting. Verify support before replacing or stopping it.
+	if err := requireSingboxStatsBuild(tmp); err != nil {
+		return "", err
+	}
 	// Atomic replace so a crash mid-update can never leave a truncated binary.
 	if err := os.Rename(tmp, dest); err != nil {
 		_ = os.Remove(tmp)
@@ -53,6 +61,29 @@ func (s *SingboxService) UpdateSingbox() (string, error) {
 		return version, fmt.Errorf("installed %s but restart failed: %w", version, err)
 	}
 	return version, nil
+}
+
+func requireSingboxStatsBuild(path string) error {
+	cmd := exec.Command(path, "version")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("cannot inspect sing-box build: %w", err)
+	}
+	data, readErr := os.ReadFile(path)
+	if readErr != nil || !bytes.Contains(data, []byte("vpn-aio-limits")) {
+		return fmt.Errorf("this sing-box build lacks VPN-AIO speed/IP/stream enforcement; install a VPN-AIO managed build")
+	}
+	for _, line := range strings.Split(string(output), "\n") {
+		if !strings.HasPrefix(strings.TrimSpace(line), "Tags:") {
+			continue
+		}
+		for _, tag := range strings.Split(strings.TrimSpace(strings.SplitN(line, ":", 2)[1]), ",") {
+			if strings.TrimSpace(tag) == "with_v2ray_api" {
+				return nil
+			}
+		}
+	}
+	return fmt.Errorf("this sing-box build lacks with_v2ray_api, which managed accounts require for traffic accounting; update using a VPN-AIO bundle with stats support")
 }
 
 func singboxArch() string {

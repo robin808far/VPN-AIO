@@ -46,6 +46,7 @@ type coreCandidate struct {
 	Id       int
 	Tag      string
 	Protocol model.Protocol
+	Core     string
 	Email    string
 }
 
@@ -97,7 +98,7 @@ func attributeCoreRecords(tx *gorm.DB, inboundTraffics []*xray.Traffic, records 
 	// indexed lookups where the scan is the whole table.
 	var rows []coreCandidate
 	err := tx.Table("account_inbounds").
-		Select("inbounds.id AS id, inbounds.tag AS tag, inbounds.protocol AS protocol, "+
+		Select("inbounds.id AS id, inbounds.tag AS tag, inbounds.protocol AS protocol, inbounds.core AS core, "+
 			"LOWER(TRIM(accounts.email)) AS email").
 		Joins("JOIN accounts ON accounts.id = account_inbounds.account_id").
 		Joins("JOIN inbounds ON inbounds.id = account_inbounds.inbound_id").
@@ -112,7 +113,7 @@ func attributeCoreRecords(tx *gorm.DB, inboundTraffics []*xray.Traffic, records 
 	for _, row := range rows {
 		// Rule 1: a pool VPN inbound cannot have produced a user stat, so it is not a
 		// candidate no matter what its own counters say.
-		if isVpnProtocol(row.Protocol) {
+		if isVpnProtocol(row.Protocol) || row.Core == "singbox" || isSingboxProtocol(row.Protocol) {
 			continue
 		}
 		candidates[row.Email] = append(candidates[row.Email], row)

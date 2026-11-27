@@ -367,6 +367,17 @@
           </a-col>
         </a-row>
 
+        <a-row v-if="clientMembershipModal.hasSingboxSelection()" :gutter="12" :style="{ marginTop: '14px' }">
+          <a-col :span="12">
+            <div class="bo-cf-field">
+              <label>{{ i18n "pages.clients.limitStreams" }}</label>
+              <a-input v-model.trim="clientMembershipModal.limitStreams"
+                placeholder='{{ i18n "pages.clients.limitInherit" }}'></a-input>
+              <div class="bo-cf-hint">{{ i18n "pages.clients.limitStreamsDesc" }}</div>
+            </div>
+          </a-col>
+        </a-row>
+
         <div class="bo-cf-field" v-if="PERMS.accessHosts" :style="{marginTop:'14px'}">
           <label>{{i18n "pages.hosts.clientSelection"}}</label>
           <a-select v-model="clientMembershipModal.client.hostRuleIds" mode="multiple" :style="{width:'100%'}"
@@ -415,6 +426,7 @@
     limitDown: '',
     limitUp: '',
     limitDevices: '',
+    limitStreams: '',
     // A negative expiryTime means "N days from first use" and the clock has not
     // started, which is what this switch writes.
     delayedStart: false,
@@ -554,6 +566,7 @@
         this.limitDown = this.storedLimit(row.speedLimitDown);
         this.limitUp = this.storedLimit(row.speedLimitUp);
         this.limitDevices = this.storedLimit(row.userLimitOverride);
+        this.limitStreams = row.streamLimit > 0 ? String(row.streamLimit) : '';
       } else {
         this.client = Object.assign(this.blankClient(), {
           email: this.mint('email'), enable: true,
@@ -567,6 +580,7 @@
         this.limitDown = '';
         this.limitUp = '';
         this.limitDevices = '';
+        this.limitStreams = '';
       }
       this.visible = true;
 	  if (typeof PERMS !== 'undefined' && PERMS.accessHosts) this.loadHostOptions();
@@ -593,6 +607,10 @@
       if (s === '') return null;
       const n = Number(s);
       return Number.isFinite(n) ? Math.trunc(n) : null;
+    },
+    postedStreamLimit() {
+      const n = this.postedLimit(this.limitStreams);
+      return n === null ? 0 : n;
     },
 
     // --- the summary rail -------------------------------------------------
@@ -719,9 +737,9 @@
         protocols: ['vmess', 'vless', 'tuic'], identity: ['vmess', 'vless', 'tuic'] },
       { key: 'password', label: '{{ i18n "password" }}',
         protocols: ['trojan', 'shadowsocks', 'anytls', 'naive', 'tuic', 'l2tp', 'pptp',
-                    'openvpn', 'openconnect', 'sstp', 'ikev2', 'ssh'],
+                    'openvpn', 'openconnect', 'sstp', 'ikev2', 'ssh', 'shadowtls'],
         identity: ['trojan', 'anytls', 'naive', 'l2tp', 'pptp', 'openvpn',
-                   'openconnect', 'sstp', 'ikev2'] },
+                    'openconnect', 'sstp', 'ikev2', 'shadowtls'] },
       { key: 'vpnUsername', label: '{{ i18n "pages.clients.vpnUsername" }}',
         protocols: ['l2tp', 'pptp', 'openvpn', 'openconnect', 'sstp', 'ikev2', 'ssh'],
         identity: ['ssh'] },
@@ -756,6 +774,12 @@
         if (ib) seen[ib.protocol] = true;
       });
       return Object.keys(seen);
+    },
+    hasSingboxSelection() {
+      return this.selected.some(id => {
+        const ib = this.assignable.find(x => x.inboundId === id);
+        return ib && (ib.core === 'singbox' || ['anytls', 'tuic', 'naive', 'masque', 'hysteria', 'hysteria2', 'shadowtls'].includes(ib.protocol));
+      });
     },
     usersOf(field) {
       return this.selectedProtocols.filter(p => field.protocols.includes(p));
@@ -1046,6 +1070,7 @@
         speedLimitDown: this.postedLimit(this.limitDown),
         speedLimitUp: this.postedLimit(this.limitUp),
         userLimitOverride: this.postedLimit(this.limitDevices),
+        streamLimit: this.postedStreamLimit(),
 		hostRuleIds: (c.hostRuleIds || []).slice(),
         comment: c.comment || '',
         subId: c.subId || '',
@@ -1080,7 +1105,7 @@
           return Object.assign(base, { id: c.id });
         case 'tuic':
           return Object.assign(base, { id: c.id, password: c.password });
-        case 'trojan': case 'shadowsocks': case 'anytls':
+        case 'trojan': case 'shadowsocks': case 'anytls': case 'shadowtls':
           return Object.assign(base, { password: c.password });
         case 'naive':
           return Object.assign(base, { password: c.password, username: c.naiveUsername || '' });

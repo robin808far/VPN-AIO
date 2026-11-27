@@ -319,6 +319,7 @@
       <h4 class="bo-if-h">Settings</h4>
       <p class="bo-if-d">Options that exist only on [[ ProtocolLabels[inbound.protocol] || inbound.protocol ]].</p>
 
+      <template v-if="inbound.core !== 'singbox'">
       <template v-if="inbound.protocol === Protocols.VMESS">{{template "form/vmess"}}</template>
       <template v-if="inbound.protocol === Protocols.VLESS">{{template "form/vless"}}</template>
       <template v-if="inbound.protocol === Protocols.TROJAN">{{template "form/trojan"}}</template>
@@ -338,13 +339,14 @@
       <template v-if="inbound.protocol === Protocols.AWG">{{template "form/awg"}}</template>
       <template v-if="inbound.protocol === Protocols.GRE">{{template "form/gre"}}</template>
       <template v-if="inbound.protocol === Protocols.MTPROTO">{{template "form/mtproto"}}</template>
-      <template v-if="inbound.core === 'singbox'">{{template "form/singbox"}}</template>
       <template v-if="inbound.protocol === Protocols.SSH">{{template "form/ssh"}}</template>
       <template v-if="inbound.protocol === Protocols.HYSTERIA">{{template "form/hysteria"}}</template>
       <template v-if="inbound.protocol === Protocols.ANYTLS">{{template "form/anytls"}}</template>
       <template v-if="inbound.protocol === Protocols.TUIC">{{template "form/tuic"}}</template>
       <template v-if="inbound.protocol === Protocols.NAIVE">{{template "form/naive"}}</template>
       <template v-if="inbound.protocol === Protocols.MASQUE">{{template "form/masque"}}</template>
+      </template>
+      <template v-else>{{template "form/singbox"}}</template>
     </div>
 
     <!-- =========================== Transport ============================ -->
@@ -365,7 +367,7 @@
     </div>
 
     <!-- ============================ Security ============================ -->
-    <div class="bo-if-sec" data-sec="security" v-show="inModal.section === 'security'">
+    <div v-if="inbound.core !== 'singbox'" class="bo-if-sec" data-sec="security" v-show="inModal.section === 'security'">
       <h4 class="bo-if-h">Security</h4>
       <p class="bo-if-d">
         <template v-if="inbound.canEnableTls()">TLS, REALITY and the certificate this inbound presents.</template>
@@ -404,7 +406,7 @@
     </div>
 
     <!-- ========================= Access limits ========================== -->
-    <div class="bo-if-sec" data-sec="access" v-show="inModal.section === 'access'">
+    <div v-if="inbound.core !== 'singbox'" class="bo-if-sec" data-sec="access" v-show="inModal.section === 'access'">
       <h4 class="bo-if-h">Access limits</h4>
       <p class="bo-if-d">How many devices or addresses one account may hold here, and what happens at the cap.</p>
 
@@ -501,7 +503,7 @@
     </div>
 
     <!-- ============================= Quota ============================== -->
-    <div class="bo-if-sec" data-sec="quota" v-show="inModal.section === 'quota'">
+    <div v-if="inbound.core !== 'singbox'" class="bo-if-sec" data-sec="quota" v-show="inModal.section === 'quota'">
       <h4 class="bo-if-h">Quota and billing</h4>
       <p class="bo-if-d">Stored on the inbound row, and the same on every protocol.</p>
       <a-form
@@ -786,7 +788,7 @@
     </div>
 
     <!-- ============================ Sniffing ============================ -->
-    <div class="bo-if-sec" data-sec="sniff" v-show="inModal.section === 'sniff'">
+    <div v-if="inbound.core !== 'singbox'" class="bo-if-sec" data-sec="sniff" v-show="inModal.section === 'sniff'">
       <h4 class="bo-if-h">Sniffing</h4>
       <p class="bo-if-d">What the core reads out of a connection to route it.</p>
       {{template "form/sniffing"}}

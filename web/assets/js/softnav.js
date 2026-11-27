@@ -43,46 +43,20 @@
     if (loader) loader.classList.remove('is-visible');
   }
 
-  // Vendor and shell-level scripts (Vue, antd, axios, websocket, sysbar,
-  // softnav itself) attach to window or register listeners — running them
-  // again would pile up listeners, so they execute only once per document,
-  // deduped by absolute URL. Every page-level script (models, utils, mixins,
-  // the page's own inline code) declares its top-level bindings with `var`
-  // (window properties, freely redeclarable), so it is re-run FRESH on each
-  // navigation — Vue's runtime-compiled templates resolve page identifiers
-  // in the real global scope, which window properties satisfy.
-  const VENDOR_RE = /\/assets\/(vue\/|ant-design-vue\/|axios\/|js\/(axios-init|nodes-sysbar|websocket|softnav)\.js)/;
+  // Vendor libraries run once, including OTPAuth and CodeMirror. Page models
+  // run on every visit: inbound/outbound models share global class names and
+  // must restore the owning page's classes after visiting the other editor.
+  // Their global declarations are var in the sources, including on initial load;
+  // rewriting a later script cannot undo an existing global lexical binding.
+  const loadedScripts = new Set();
+  const SHARED_ASSET_RE = /\/assets\/(?!js\/)|\/assets\/js\/(axios-init|nodes-sysbar|websocket|softnav)\.js/;
 
-  let vendorLoaded = null;
-
-  // Run one inline script in the shared global scope. Top-level const/let
-  // in a script lands in the GLOBAL LEXICAL scope, which survives across
-  // soft navigations; a page whose script redeclares one of those names on
-  // a later visit would throw "already been declared" and — worse — skip
-  // the whole script (component registrations included). So before running,
-  // top-level `const X =` / `let X =` are rewritten to `var X =` (a window
-  // property, freely redeclarable). The regex only touches declarations at
-  // statement level; block-scoped consts inside functions keep their
-  // keyword (they are re-parsed fresh on each eval and cannot collide).
-  function declVar(code) {
-    // Top-level const/let: a line opening with at most 4 spaces of indent
-    // followed directly by the keyword. Block-scoped consts inside functions
-    // are always indented deeper, so they keep their keyword and semantics.
-    return code.replace(/^ {0,4}(?:const|let)\s+([A-Za-z_$][\w$]*)\s*=/gm,
-      (m, name) => 'var ' + name + ' =');
-  }
-
-  // Run one inline script in the shared global scope. Errors are logged
-  // but never allowed to abort the remaining scripts — one bad script
-  // must not leave the page without Vue.
   function runInline(code, where) {
     try {
-      // Indirect eval: runs in the global scope (unlike appendChild of a
-      // script node, whose SyntaxError fires async and cannot be caught
-      // here, aborting every later script).
-      (0, eval)(declVar(code));
+      (0, eval)(code);
     } catch (e) {
       console.error('softnav: script error in', where, e);
+      throw e; // navigate falls back to a complete, working document.
     }
   }
 
@@ -94,29 +68,20 @@
   async function runScripts(doc) {
     let n = 0;
     for (const old of doc.querySelectorAll('script')) {
+      const type = old.getAttribute('type');
+      if (type && !/^(text|application)\/javascript$/i.test(type)) continue;
       const src = old.getAttribute('src');
       if (src) {
         const abs = new URL(src, location.href).href;
-        if (VENDOR_RE.test(abs)) {
-          if (!vendorLoaded) {
-            vendorLoaded = new Set(Array.from(document.querySelectorAll('script[src]'), (s) => s.src));
-          }
-          if (vendorLoaded.has(abs)) continue;
-          vendorLoaded.add(abs);
-        }
-        try {
-          const res = await fetch(abs, { credentials: 'same-origin' });
-          const code = await res.text();
-          if (res.ok) {
-            runInline(code, abs);
-          } else {
-            console.warn('softnav: HTTP', res.status, 'for', abs);
-          }
-        } catch (e) { console.warn('softnav: failed to load', abs, e); }
+        if (SHARED_ASSET_RE.test(abs) && loadedScripts.has(abs)) continue;
+        const res = await fetch(abs, { credentials: 'same-origin' });
+        if (!res.ok) throw new Error('HTTP ' + res.status + ' loading ' + abs);
+        runInline(await res.text(), abs);
+        loadedScripts.add(abs);
         continue;
       }
       const code = old.textContent || '';
-      if (!code.trim() || code.includes('const basePath')) continue;
+      if (!code.trim()) continue;
       n += 1;
       runInline(code, 'inline#' + n);
     }
@@ -136,8 +101,10 @@
         location.href = url;
         return;
       }
-      // Destroy the current Vue instance before its DOM is thrown away.
-      try { if (typeof app !== 'undefined' && app && app.$destroy) app.$destroy(); } catch (e) { /* noop */ }
+      // Remember the initial document's assets before the body swap. Destroy
+      // every page root, including separately mounted/portaled modal instances.
+      for (const script of document.querySelectorAll('script[src]')) loadedScripts.add(script.src);
+      for (const root of Array.from(window.BO_PAGE_ROOTS || [])) root.$destroy();
 
       // Freeze the current shell chrome (side rail + top bar) as fixed clones
       // BEFORE the body swap. The new page's chrome only comes back when its

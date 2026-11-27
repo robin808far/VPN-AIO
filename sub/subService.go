@@ -2428,10 +2428,9 @@ func getHostFromXFH(s string) (string, error) {
 }
 
 // genSingboxLink emits a share link for a singbox inbound by reading the RAW
-// sing-box inbound object the panel stored: the type picks the scheme, the first
-// user picks the credential and the tls block picks the security params. Types
-// without a widely-imported URI (shadowtls, socks, http, mixed, custom JSON)
-// get a connection card instead of a bogus link, mirroring the mtproto/ssh split.
+// sing-box inbound object. A user's name must match the requested identity;
+// unrepresentable configurations or missing users produce no link. This helper
+// does not enable raw users in managed account subscriptions.
 func (s *SubService) genSingboxLink(inbound *model.Inbound, email string) string {
 	if inbound.Core != "singbox" {
 		return ""
@@ -2450,12 +2449,20 @@ func (s *SubService) genSingboxLink(inbound *model.Inbound, email string) string
 		port = int(p)
 	}
 	remark := s.genRemark(inbound, email, "")
-	_ = email
-
-	firstUser, _ := block["users"].([]any)
+	users, _ := block["users"].([]any)
 	var u map[string]any
-	if len(firstUser) > 0 {
-		u, _ = firstUser[0].(map[string]any)
+	for _, raw := range users {
+		candidate, _ := raw.(map[string]any)
+		name, _ := candidate["name"].(string)
+		if strings.TrimSpace(email) != "" && strings.EqualFold(strings.TrimSpace(name), strings.TrimSpace(email)) {
+			if u != nil {
+				return "" // Ambiguous names must not select another credential.
+			}
+			u = candidate
+		}
+	}
+	if u == nil && !(typ == "shadowsocks" && email == "" && len(users) == 0) {
+		return ""
 	}
 	getStr := func(key string) string {
 		if u == nil {
@@ -2466,21 +2473,12 @@ func (s *SubService) genSingboxLink(inbound *model.Inbound, email string) string
 	}
 
 	tls, _ := block["tls"].(map[string]any)
-	tlsEnabled := tls != nil
-	params := map[string]string{}
-	if !tlsEnabled {
-		params["security"] = "none"
-	} else {
-		params["security"] = "tls"
-		if sn, _ := tls["server_name"].(string); sn != "" {
-			params["sni"] = sn
-		}
+	tlsEnabled, _ := tls["enabled"].(bool)
+	params, valid := singboxShareParams(block)
+	if !valid {
+		return ""
 	}
 	transport, _ := block["transport"].(map[string]any)
-	if transport != nil {
-		nt, _ := transport["type"].(string)
-		params["type"] = nt
-	}
 
 	switch typ {
 	case "hysteria2":
@@ -2490,11 +2488,13 @@ func (s *SubService) genSingboxLink(inbound *model.Inbound, email string) string
 			break
 		}
 		if !tlsEnabled {
-			params["security"] = "tls" // hysteria2 is always TLS/QUIC; an operator who
-			// left the tls block out still gets an importable link.
+			return ""
 		}
-		params["obfs-password"], _ = block["obfs"].(map[string]any)["password"].(string)
-		link := fmt.Sprintf("hy2://%s@%s", url.UserPassword("", pass).String(), net.JoinHostPort(address, strconv.Itoa(port)))
+		if obfs, ok := block["obfs"].(map[string]any); ok {
+			params["obfs"], _ = obfs["type"].(string)
+			params["obfs-password"], _ = obfs["password"].(string)
+		}
+		link := fmt.Sprintf("hy2://%s@%s", url.User(pass).String(), net.JoinHostPort(address, strconv.Itoa(port)))
 		return buildLinkWithParams(link, params, remark)
 	case "tuic":
 		uuid := getStr("uuid")
@@ -2502,9 +2502,10 @@ func (s *SubService) genSingboxLink(inbound *model.Inbound, email string) string
 		if uuid == "" {
 			break
 		}
-		params["congestion_control"] = "cubic"
-		params["alpn"] = "h3"
-		params["udp_relay_mode"] = "native"
+		if !tlsEnabled {
+			return ""
+		}
+		params["congestion_control"], _ = block["congestion_control"].(string)
 		link := fmt.Sprintf("tuic://%s@%s", url.UserPassword(uuid, pass).String(), net.JoinHostPort(address, strconv.Itoa(port)))
 		return buildLinkWithParams(link, params, remark)
 	case "anytls":
@@ -2512,7 +2513,10 @@ func (s *SubService) genSingboxLink(inbound *model.Inbound, email string) string
 		if pass == "" {
 			break
 		}
-		link := fmt.Sprintf("anytls://%s@%s", url.UserPassword("", pass).String(), net.JoinHostPort(address, strconv.Itoa(port)))
+		if !tlsEnabled {
+			return ""
+		}
+		link := fmt.Sprintf("anytls://%s@%s", url.User(pass).String(), net.JoinHostPort(address, strconv.Itoa(port)))
 		return buildLinkWithParams(link, params, remark)
 	case "vless":
 		uuid := getStr("uuid")
@@ -2529,9 +2533,27 @@ func (s *SubService) genSingboxLink(inbound *model.Inbound, email string) string
 		if uuid == "" {
 			break
 		}
+		if params["security"] == "reality" {
+			return ""
+		}
+		network := params["type"]
+		if network == "http" {
+			network = "h2"
+		}
+		security := ""
+		if tlsEnabled {
+			security = "tls"
+		}
 		obj := map[string]any{
 			"v": "2", "ps": remark, "add": address, "port": port, "id": uuid,
-			"aid": 0, "scy": "auto", "net": params["type"], "tls": params["security"],
+			"aid": 0, "scy": "auto", "net": network, "tls": security,
+			"host": params["host"], "path": params["path"],
+		}
+		if params["type"] == "grpc" {
+			obj["path"], _ = transport["service_name"].(string)
+		}
+		if params["alpn"] != "" {
+			obj["alpn"] = params["alpn"]
 		}
 		if tlsEnabled {
 			if sn, _ := tls["server_name"].(string); sn != "" {
@@ -2548,19 +2570,28 @@ func (s *SubService) genSingboxLink(inbound *model.Inbound, email string) string
 		if pass == "" {
 			break
 		}
-		link := fmt.Sprintf("trojan://%s@%s", url.UserPassword("", pass).String(), net.JoinHostPort(address, strconv.Itoa(port)))
+		link := fmt.Sprintf("trojan://%s@%s", url.User(pass).String(), net.JoinHostPort(address, strconv.Itoa(port)))
 		return buildLinkWithParams(link, params, remark)
 	case "shadowsocks":
 		method, _ := block["method"].(string)
 		pass, _ := block["password"].(string)
+		if u != nil {
+			userPass := getStr("password")
+			if userPass == "" {
+				return ""
+			}
+			if strings.HasPrefix(method, "2022-") {
+				pass += ":" + userPass
+			} else {
+				pass = userPass
+			}
+		}
 		if method == "" || pass == "" {
 			break
 		}
-		userinfo := url.UserPassword(method, pass).String()
+		userinfo := base64.RawURLEncoding.EncodeToString([]byte(method + ":" + pass))
 		link := fmt.Sprintf("ss://%s@%s", userinfo, net.JoinHostPort(address, strconv.Itoa(port)))
 		return buildLinkWithParams(link, params, remark)
 	}
-	// No importable URI for this type: the connection card still surfaces the
-	// inbound, its usage and the raw block, so the account is not invisible.
-	return s.genConnectionCard(inbound, email)
+	return ""
 }
