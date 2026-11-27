@@ -287,3 +287,7 @@ Request: add a 3x-ui-style "Nodes" tab to VPN-AIO so one panel can manage other 
 - Recommended phases: (1) API tokens with scopes (`node-sync`, `node-admin`); (2) node-side API; (3) master-side Nodes tab (list/add/probe/heartbeat/status); (4) inbound/client management on remote nodes + traffic sync; (5) mTLS and sub-node tree (optional parity extras).
 
 Sources: https://github.com/MHSanaei/3x-ui (tree + raw files, fetched 2026-11-23), https://www.zoio.net/2026/08/3x-ui-multi-node.html, https://library.tf/providers/batonogov/threexui/latest/docs/resources/node. Upstream reference commit locally: `5297fd3` (read-only) predates the Nodes feature; upstream `main` was used instead.
+
+## 2026-11-27 release v6.5.0
+- Picker fix 359ee7f4 pushed to main. Candidate 6bdbeb42 passed installer contract 8/8, live UI harness 60/60, disposable detour runtime check 18/18 (select/clear/reselect/delete-target/self-detour). config/version bumped to 6.5.0 and tagged v6.5.0; CI release workflow builds amd64+arm64. VM/systemd/kernel and physical mobile checks were not run. Live listener 12301 untouched.
+

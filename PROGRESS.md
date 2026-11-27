@@ -1,6 +1,36 @@
 # Project Progress & State
 
-Last updated: 2026-11-27 (pushed 122e8866 to origin/main; picker-fix rebuilt candidate 6bdbeb42 passed 13/13 disposable container userland lifecycle matrix; no release/deployment)
+Last updated: 2026-11-27 (picker fix committed+pushed as 359ee7f4; 6bdbeb42 passed installer contract 8/8, live UI harness 60/60, detour runtime check 18/18; version bumped to 6.5.0 locally; tag/release NOT pushed — awaiting final confirmation)
+
+## Latest session (2026-11-27, fresh observations)
+
+1. Commit `359ee7f4` "fix: expose ShadowTLS in inbound protocol picker"
+   (inbound.js, singbox.test.js, PROGRESS.md, HANDOFF.md); local Node
+   regression passed before commit. Committer identity is the auto-configured
+   `mef <mef@safagroup.safait>` (same as 122e8866).
+2. Pushed `HEAD:main`; `origin/main` = `359ee7f4` (verified by fetch).
+3. Remaining checks on candidate `6bdbeb42...` (sha verified on sweden):
+   - Installer contract `test_unit/install-sh-check.py`: 8/8 PASS on an LF copy
+     in `/tmp/inst-check`. Running it in the sweden workspace failed only
+     because that copy of `install.sh` has CRLF endings (`set: pipefail`);
+     repo/curl-served file line endings were not changed.
+   - Live UI harness `test_unit/live/uitest.js`: 60/60 PASS against disposable
+     container `vpn-aio-ui-harness-20261127` (image
+     `vpn-aio-lifecycle-test:latest`, published 127.0.0.1:22346), local headless
+     Chrome over SSH tunnel.
+   - Detour runtime check (ad-hoc disposable script, API-driven, not committed):
+     18/18 PASS — select detour merges two processes into one, clear splits back
+     to two, re-select merges, deleting target clears the front's detour and the
+     front keeps running, self-detour rejected, cleanup leaves no stray process.
+     This is API/process level, not a click-through of the selector.
+   - Container, tunnel, headless Chrome, and temp files removed. Live listener
+     12301 still present and untouched.
+4. Release prep: `config/version` changed 6.1.0 -> 6.5.0 (uncommitted at time
+   of writing). Release workflow `.github/workflows/vpn-aio-release.yml` runs on
+   `v*` tag push and builds amd64+arm64 in CI (installs gcc-aarch64 and qemu
+   binfmt there), so the local ARM64 toolchain gap does not block CI.
+   Not yet done: commit of the bump, tag `v6.5.0`, push of tag (= public
+   release). VM/systemd/kernel and physical mobile checks were NOT run.
 Path: `C:\Users\mef\Documents\Default Project\VPN-AIO-review-6.1.0`
 
 ## Goal
