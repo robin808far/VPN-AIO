@@ -1,14 +1,14 @@
 # Project Progress & State
 
-Last updated: 2026-11-27 (v6.5.0 publication verified; release and Ubuntu CI succeeded; both downloaded assets match checksums and report 6.5.0; bundled patched sing-box verified; no production deployment)
+Last updated: 2026-11-27 (v6.6.0 tag pushed, release CI in progress at save time; v6.5.1 published and verified; installer no-tty defect fixed; sing-box core locked in UI; sweden disk cleaned to 63%; sing-box 1.14.5 upgrade not started — patch does not apply)
 
 > Current truth supersedes earlier candidate/release-preparation notes below.
-> Peeled tag `v6.5.0` = `a52abcd71639f74c6d3b3f57102ea435125ae4eb`
-> (annotated tag object `81be9cb954743edafd993d03a6c5f088d993af21`).
-> `main` = `origin/main` = `f129f173` (docs-only commit after v6.5.0) plus
-> the relocation-note docs commit below. No source change since v6.5.0.
-> The user reports having updated the live host to v6.5.0 themselves
-> (2026-11-27); verification of that is recorded below when done.
+> `main` = `origin/main` = tag `v6.6.0` peeled = `1fb52746` (verified with
+> `git ls-remote`). Earlier tags: `v6.5.1` peeled `4a752bc0`, `v6.5.0` peeled
+> `a52abcd71639f74c6d3b3f57102ea435125ae4eb` (tag object `81be9cb9`).
+> Only `PROGRESS.md`/`HANDOFF.md` are uncommitted at save time.
+> Live host (sweden) runs v6.5.0 (installed by the user) and was NOT touched by
+> this session except read-only checks and disk cleanup of temp/build files.
 
 ## Project relocation (2026-11-27)
 
@@ -81,6 +81,26 @@ Last updated: 2026-11-27 (v6.5.0 publication verified; release and Ubuntu CI suc
   `go test ./web/controller` + `-run Core|Status|Singbox ./web/service` OK.
   NOT done: browser visual check of the dashboard/Core page.
 - Pending: release 6.6.0 for these UI items (user approved order).
+- 6.6.0 (user-authorized 2026-11-27): Persian labels added to
+  `[pages.core]` in fa_IR (version/stop/restart/logs/state*) + Persian
+  `singboxCoreLocked`; dashboard `coreStateText` now uses i18n. TOML parsed
+  OK. Commit/tag `v6.6.0` -> `1fb52746`, pushed. Release CI 46055354122 +
+  Ubuntu validation 46055349392 started; asset verification pending.
+  Earlier temp UI check (dashboard, 1000px): sbox tile under Xray, Manage
+  under it — OK; Core settings page and >=1180px not visually checked by
+  assistant (user will check on live host after deploying 6.6.0).
+  Pre-existing console 404 `/ui/ui/panel/nodes/list` (doubled base path)
+  noted, not investigated.
+- sweden disk cleanup (user-requested 2026-11-27): 87% -> 63% (22G free).
+  Removed: go build cache (4.7G), old release/verification/build dirs
+  (vpn-aio-build-70af, vpn-aio-release-{21bc50d,bd467e0,1785614,272ab016},
+  public-{2.1.0,3.0.0}-verification, amd64-pre-ui, hosts-v3-lifecycle-context,
+  ci-lifecycle-context), temp sing-box build dirs and go.tar.gz in /tmp,
+  apt cache, journal >7d, exited container vpn-aio-hosts-v3-ui-20261120, UI
+  check container/workdir/tunnel. Kept: running review/audit containers,
+  their images, vpn-aio-managed-accounts-20261125 (build cache for core),
+  patched sing-box `/tmp/vpn-aio-managed-accounts-singbox-limits-20261126`,
+  live /opt/VPN-AIO (service active).
 - Then item 1: sing-box 1.14.5. `singbox-limits.patch` fails on 1.14.5
   (`experimental/v2rayapi/stats.go:98`); needs rewrite + full runtime tests.
 - Next: 4) new feature — awaiting user specification.
