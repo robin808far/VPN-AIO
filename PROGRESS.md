@@ -66,6 +66,23 @@ Last updated: 2026-11-27 (v6.5.0 publication verified; release and Ubuntu CI suc
   `d04a9309...`; `sha256sum -c` OK for both; amd64 `-v` = 6.5.1; both
   contain `vpn-aio-limits` marker. Temp dir removed. arm64 `-v` not executed.
   Live host not updated by assistant (user deploys).
+- (Done, pushed `00f79955`, not released) UI items from user 2026-11-27:
+  4) sing-box "Update from source" button removed from Core settings; lock tag
+     + `singboxCoreLocked` i18n (13 locales, English text); `/singbox/update`
+     route now returns a locked error. (Upstream archives lack vpn-aio-limits,
+     so the old update always failed its own guard; patch was never at risk.)
+  3) `GetCoresStatus` order: singbox right after xray.
+  2) Dashboard: new `bo-t-sbox` tile (state, version, uptime; Log/Stop/Restart
+     via `/panel/core/{logs,stop,restart}/singbox`) under Xray; manage tile
+     moved one row down (half of the left column; grid areas updated for 760px
+     and 1180px). Uptime from new `ProcManager.OldestStartWithPrefix` +
+     `started` field, exposed as `extra.uptime` (seconds).
+  Checks on sweden: `go build ./...` OK, `go vet ./web/...` clean,
+  `go test ./web/controller` + `-run Core|Status|Singbox ./web/service` OK.
+  NOT done: browser visual check of the dashboard/Core page.
+- Pending: release 6.6.0 for these UI items (user approved order).
+- Then item 1: sing-box 1.14.5. `singbox-limits.patch` fails on 1.14.5
+  (`experimental/v2rayapi/stats.go:98`); needs rewrite + full runtime tests.
 - Next: 4) new feature — awaiting user specification.
 
 ## systemd/kernel install test on WSL2 (2026-11-27, fresh observation)
