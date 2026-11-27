@@ -889,10 +889,25 @@
         const portMatch = ctrl.match(/:(\d+)\s*$/);
         this.baseForm.clashApiPort = portMatch ? parseInt(portMatch[1], 10) : 9090;
         const rules = (cfg.route && Array.isArray(cfg.route.rules)) ? cfg.route.rules : [];
+        // sing-box 1.13 removed the special block/dns outbounds and 1.12 removed
+        // geosite. Rules are read back from the current action-based form
+        // (reject / hijack-dns / rule_set "geosite-<name>") and from the legacy
+        // shape, so an old saved config opens and is rewritten correctly on save.
+        const target = (r) => {
+          if (r.action === 'reject') return 'block';
+          if (r.action === 'hijack-dns') return 'dns-out';
+          if (r.outbound === 'dns-out') return 'dns-out';
+          return r.outbound || 'direct';
+        };
+        const list = (v) => (Array.isArray(v) ? v : [v]).map(String);
         this.baseForm.routeRules = rules.map((r) => {
-          if (r.domain && !r.geosite && !r.ip_cidr) return { kind: 'domain', value: Array.isArray(r.domain) ? r.domain.join(',') : String(r.domain), outbound: r.outbound || 'direct' };
-          if (r.geosite) return { kind: 'geosite', value: Array.isArray(r.geosite) ? r.geosite.join(',') : String(r.geosite), outbound: r.outbound || 'direct' };
-          if (r.ip_cidr) return { kind: 'ip_cidr', value: Array.isArray(r.ip_cidr) ? r.ip_cidr.join(',') : String(r.ip_cidr), outbound: r.outbound || 'direct' };
+          if (r.geosite) return { kind: 'geosite', value: list(r.geosite).join(','), outbound: target(r) };
+          if (r.rule_set) {
+            const names = list(r.rule_set).filter((t) => t.startsWith('geosite-')).map((t) => t.slice(8));
+            if (names.length) return { kind: 'geosite', value: names.join(','), outbound: target(r) };
+          }
+          if (r.domain) return { kind: 'domain', value: list(r.domain).join(','), outbound: target(r) };
+          if (r.ip_cidr) return { kind: 'ip_cidr', value: list(r.ip_cidr).join(','), outbound: target(r) };
           return null;
         }).filter(Boolean);
       },
@@ -912,14 +927,35 @@
         if (this.baseForm.clashApi) exp.clash_api = { external_controller: `127.0.0.1:${this.baseForm.clashApiPort}` };
         if (Object.keys(exp).length) cfg.experimental = exp;
         if (this.baseForm.routeRules.length) {
-          cfg.route = { rules: this.baseForm.routeRules.map((r) => {
-            const rule = { outbound: r.outbound || 'direct' };
+          // Rules are emitted in the action form current sing-box requires: the
+          // special block/dns outbounds are gone (1.13), so "block" becomes a
+          // reject action and "dns-out" a hijack-dns action; geosite (removed in
+          // 1.12) becomes a remote rule_set from SagerNet/sing-geosite.
+          const geosites = new Set();
+          const rulesOut = this.baseForm.routeRules.map((r) => {
             const vals = String(r.value || '').split(',').map((v) => v.trim()).filter(Boolean);
+            const rule = {};
             if (r.kind === 'domain') rule.domain = vals;
-            else if (r.kind === 'geosite') rule.geosite = vals;
-            else rule.ip_cidr = vals;
+            else if (r.kind === 'geosite') {
+              rule.rule_set = vals.map((v) => 'geosite-' + v);
+              vals.forEach((v) => geosites.add(v));
+            } else rule.ip_cidr = vals;
+            if (r.outbound === 'block') rule.action = 'reject';
+            else if (r.outbound === 'dns-out') rule.action = 'hijack-dns';
+            else { rule.action = 'route'; rule.outbound = r.outbound || 'direct'; }
             return rule;
-          }) };
+          });
+          cfg.route = { rules: rulesOut };
+          if (geosites.size) {
+            cfg.route.rule_set = [...geosites].map((name) => ({
+              type: 'remote', tag: 'geosite-' + name, format: 'binary',
+              url: `https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-${name}.srs`,
+            }));
+            // An explicit HTTP client for rule-set downloads: the implicit one is
+            // deprecated in 1.14 and removed in 1.16.
+            cfg.http_clients = [{ tag: 'rule-set-download' }];
+            cfg.route.default_http_client = 'rule-set-download';
+          }
         }
         // outbounds/endpoints the operator set before are preserved verbatim.
         for (const key of ['outbounds', 'endpoints', 'ntp']) {
