@@ -30,7 +30,7 @@ func newAccountsDB(t *testing.T) *AccountService {
 	t.Helper()
 	emailTestLoggerOnce.Do(func() { logger.InitLogger(logging.ERROR) })
 	dir := t.TempDir()
-	t.Setenv("VPNUI_DB_FOLDER", dir)
+	t.Setenv("VPNAIO_DB_FOLDER", dir)
 	if err := database.InitDB(config.GetDBPath()); err != nil {
 		t.Fatalf("InitDB: %v", err)
 	}

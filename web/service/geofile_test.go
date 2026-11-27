@@ -16,7 +16,7 @@ import (
 func binDirForTest(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
-	t.Setenv("VPNUI_BIN_FOLDER", dir)
+	t.Setenv("VPNAIO_BIN_FOLDER", dir)
 	return dir
 }
 

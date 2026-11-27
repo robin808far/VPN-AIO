@@ -4,7 +4,7 @@
   <img src="web/assets/img/vpn-aio.svg" alt="VPN-AIO" width="260">
 </p>
 
-**VPN-AIO نسخهٔ 4.1.2** بر پایهٔ [Sir-MmD/vpn-ui](https://github.com/Sir-MmD/vpn-ui) و [3X-UI](https://github.com/MHSanaei/3x-ui) ساخته شده است. مجوزها و حقوق سازندگان اصلی حفظ شده‌اند.
+**VPN-AIO نسخهٔ 4.1.2** بر پایهٔ [robin808far/VPN-AIO](https://github.com/robin808far/VPN-AIO) و [3X-UI](https://github.com/MHSanaei/3x-ui) ساخته شده است. مجوزها و حقوق سازندگان اصلی حفظ شده‌اند.
 
 هدف این نسخه **Ubuntu 24.04 amd64** است. هستهٔ Xray **26.11.9**، پروتکل‌های بومی AnyTLS، TUIC، NaiveProxy و MASQUE، انتقال XDRIVE و AmneziaWG **3.1.20261113-02** با کنترل‌ها و خروجی‌های ۳.۱ در دسترس‌اند. نسخهٔ ۴.۰.۰ مدیریت چند-پنلی **Nodes** را اضافه می‌کند؛ نسخهٔ ۳.۱.۰ تنظیمات بومی اشتراک Happ را اضافه می‌کند؛ نسخهٔ ۳.۰.۰ [مدیریت Hosts](docs/guides/HOSTS.md) را به پنل افزود. پیش از ارتقا، [یادداشت انتشار ۴.۰.۰](https://github.com/robin808far/VPN-AIO/releases/tag/v4.0.0) و [گزارش بررسی](docs/releases/validation/VPN-AIO-3.1.0.md) را بخوانید؛ ماتریس VM/کرنل بین‌توزیعی طبق توافق اجرا نشده است. برای فهرست و دسته‌بندی مستندات پروژه، [راهنمای مستندات](docs/README.md) را ببینید.
 
@@ -107,7 +107,7 @@ flowchart TB
   SSHC["SSH Client<br/>(ssh -D dynamic SOCKS · badvpn-udpgw for UDP)"]
   GREC["Customer Router<br/>(GRE · IP protocol 47 · optional IPsec / FOU)"]
 
-  subgraph PANEL["vpn-ui panel — root process"]
+  subgraph PANEL["vpn-aio panel — root process"]
     PROC["procmgr<br/>supervises the daemons"]
     RAD["in-binary RADIUS<br/>127.0.0.1:1812 auth · :1813 acct"]
     HOOK["OpenVPN hooks<br/>auth / connect / disconnect / evict"]
@@ -221,7 +221,7 @@ git clone https://github.com/robin808far/VPN-AIO.git && cd VPN-AIO
 
 ## تست E2E
 
-![تست E2E](https://raw.githubusercontent.com/Sir-MmD/vpn-ui/refs/heads/main/media/test_unit.png)
+![تست E2E](https://raw.githubusercontent.com/robin808far/VPN-AIO/refs/heads/main/media/test_unit.png)
 
 یک تست **E2E** کامل با Python داخل فولدر `test_unit` برای این پروژه طراحی شده که می‌تونید ازش استفاده کنید. مراحلش این‌طوریه:
 

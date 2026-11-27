@@ -754,7 +754,7 @@ func (s *GreService) ensureGretun(name string, want *netlink.Gretun, mtu int) er
 		// before us is the operator's, however improbable the collision. Refuse rather
 		// than recreate it: the recreate path below is a LinkDel.
 		if ownForbidsDelete(ownIface, name) {
-			return fmt.Errorf("%s already exists and was not created by vpn-ui; not touching it", name)
+			return fmt.Errorf("%s already exists and was not created by vpn-aio; not touching it", name)
 		}
 		// Recreate only when an addressing-relevant attribute actually changed, so an
 		// unrelated edit never drops a live tunnel.
@@ -1422,7 +1422,7 @@ func greOuterRouteNote(c GrePeerConfig, closing string) string {
 // block that used to carry it, and GRE never negotiates it.
 func greMikrotikCommands(c GrePeerConfig) string {
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("/interface gre add name=gre-vpnui remote-address=%s", c.ServerIp))
+	b.WriteString(fmt.Sprintf("/interface gre add name=gre-vpnaio remote-address=%s", c.ServerIp))
 	if !c.Dynamic {
 		b.WriteString(fmt.Sprintf(" local-address=%s", c.PeerIp))
 	}
@@ -1430,7 +1430,7 @@ func greMikrotikCommands(c GrePeerConfig) string {
 		b.WriteString(fmt.Sprintf(" mtu=%d", c.Mtu))
 	}
 	b.WriteString(" clamp-tcp-mss=yes keepalive=10s,10\n")
-	b.WriteString(fmt.Sprintf("/ip address add address=%s/32 interface=gre-vpnui\n", c.InnerIp))
+	b.WriteString(fmt.Sprintf("/ip address add address=%s/32 interface=gre-vpnaio\n", c.InnerIp))
 	b.WriteString(fmt.Sprintf("# Keep the tunnel's own traffic on the physical link (replace ISP-GATEWAY\n"+
 		"# with the gateway from /ip route print, the one you use today for 0.0.0.0/0):\n"+
 		"/ip route add dst-address=%s/32 gateway=ISP-GATEWAY comment=\"gre outer, do not tunnel\"\n",
@@ -1455,7 +1455,7 @@ func greMikrotikCommands(c GrePeerConfig) string {
 // explicit MTU.
 func greLinuxCommands(c GrePeerConfig) string {
 	var b strings.Builder
-	dev := "gre-vpnui"
+	dev := "gre-vpnaio"
 	if c.FouPort > 0 {
 		b.WriteString(fmt.Sprintf("ip fou add port %d ipproto 47\n", c.FouPort))
 		b.WriteString(fmt.Sprintf("ip link add %s type gre remote %s ttl 64 encap fou encap-sport auto encap-dport %d\n",

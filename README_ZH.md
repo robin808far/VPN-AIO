@@ -1,7 +1,7 @@
 [English](/README.md) | [فارسی](/README_FA.md) | [العربية](/README_AR.md) | [中文](/README_ZH.md) | [Español](/README_ES.md) | [Русский](/README_RU.md) | [Türkçe](/README_TR.md)
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Sir-MmD/vpn-ui/refs/heads/main/media/logo.png" alt="VPN-UI Logo" width="260">
+  <img src="https://raw.githubusercontent.com/robin808far/VPN-AIO/refs/heads/main/media/logo.png" alt="VPN-AIO Logo" width="260">
 </p>
 
 本项目是 **[3X-UI](https://github.com/MHSanaei/3x-ui)** 面板（2.9.3 版本）的增强版。本项目旨在添加多种协议，并将其打造成一个支持 **Xray-core** 各项功能的综合性面板。
@@ -100,7 +100,7 @@ flowchart TB
   SSHC["SSH Client<br/>(ssh -D dynamic SOCKS · badvpn-udpgw for UDP)"]
   GREC["Customer Router<br/>(GRE · IP protocol 47 · optional IPsec / FOU)"]
 
-  subgraph PANEL["vpn-ui panel — root process"]
+  subgraph PANEL["vpn-aio panel — root process"]
     PROC["procmgr<br/>supervises the daemons"]
     RAD["in-binary RADIUS<br/>127.0.0.1:1812 auth · :1813 acct"]
     HOOK["OpenVPN hooks<br/>auth / connect / disconnect / evict"]
@@ -216,7 +216,7 @@ git clone https://github.com/robin808far/VPN-AIO.git && cd VPN-AIO
 
 ## E2E 测试
 
-![E2E 测试](https://raw.githubusercontent.com/Sir-MmD/vpn-ui/refs/heads/main/media/test_unit.png)
+![E2E 测试](https://raw.githubusercontent.com/robin808far/VPN-AIO/refs/heads/main/media/test_unit.png)
 
 本项目在 `test_unit` 文件夹中设计了一套完整的、使用 Python 编写的 **E2E** 测试，您可以直接使用它。步骤如下：
 

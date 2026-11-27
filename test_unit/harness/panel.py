@@ -1,7 +1,7 @@
-"""HTTP client for the vpn-ui panel.
+"""HTTP client for the vpn-aio panel.
 
 Grounded in the actual controllers:
-  - Auth: POST /login (form), server-side session, cookie "vpn-ui". Reuse jar.
+  - Auth: POST /login (form), server-side session, cookie "vpn-aio". Reuse jar.
   - All POST handlers bind via c.ShouldBind / c.PostForm -> send
     application/x-www-form-urlencoded, NOT JSON.
   - Response envelope: {"success":bool,"msg":str,"obj":any}. Data in "obj".

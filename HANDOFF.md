@@ -1,8 +1,48 @@
 # HANDOFF
 
-Last updated: 2026-11-27 (v6.5.0 publication verified; release/Ubuntu CI succeeded; both public assets pass checksums and -v; no production deployment)
+Last updated: 2026-11-28 (v7.0.0 published and verified; status docs re-saved)
 
-## Current status — v6.5.0 release verification complete
+## Current status — v7.0.0 released and verified (2026-11-28)
+
+- Remote `main`, local HEAD and peeled tag `v7.0.0` all resolve to
+  `6f2ef77deee873f6f2551c14c0fd17e103ef0ce1`; `config/version` is `7.0.0`.
+  Only `PROGRESS.md` and `HANDOFF.md` are modified (state-save, not committed).
+- v7.0.0 content: bundled sing-box upgraded to **1.14.5** (limits patch
+  re-ported, builder `golang:1.25.5-alpine`, release CI cache key now hashes
+  `build.sh` + patch); removed features migrated (`block`/`dns-out` -> action
+  rules, `geosite` -> remote `rule_set`, explicit `http_clients`); UI for the
+  1.12–1.14 TLS/Hysteria2/ShadowTLS/DNS options; sing-box base-config editor,
+  "Set Cert from Panel", two-line VPN Services chips; dashboard/core UI; and
+  the Hysteria picker -> sing-box `hysteria2` fix.
+- Release CI **46069263983** and Ubuntu validation **46069258533** succeeded.
+  Public assets downloaded on `sweden`: `sha256sum -c SHA256SUMS` OK for amd64
+  (409,505,056 B, `84da4e5f...`) and arm64 (403,888,912 B, `d0035344...`);
+  `VPN-AIO-amd64 -v` = `7.0.0`; latest-release API = `v7.0.0`.
+- Verification: `go build ./...` OK, `go vet` clean, `./web/... ./sub/...`
+  tests pass except `TestCustomGeoValidateURL` (isolated-netns DNS only);
+  `node test_unit/export_test/singbox.test.js` PASS; the docker-built 1.14.5
+  core ran `TestSingboxAudit` with 26 PASS / 1 SKIP (by design) / 0 FAIL.
+  A disposable-container browser check confirmed core-card order, lock tag,
+  base-config editor, dashboard tile and two-line chips, and created a
+  Hysteria2 sing-box inbound through the UI; its generated config ran and
+  carried real traffic (wrong obfs password timed out as a negative control).
+  The container and temp files were removed.
+- Not verified: the embedded sing-box inside the released 7.0.0 binaries was
+  not extracted/executed; the full runtime suite was not run against the
+  released build; ARM64 runtime, 13-distro matrix, installer contract,
+  VM/systemd/kernel and physical mobile were not run. Snell, listen
+  keep-alive, cloudflared, sing-box OpenVPN server and Hysteria2 Realm are
+  not implemented yet.
+- Live host: last observed running **6.6.0** (user-deployed, verified
+  2026-11-27); not re-checked today and untouched by the 7.0.0 work. The
+  upgrade is the user's action with explicit authorization; the assistant
+  only verifies. Stray old panel PID 510411 and its sing-box PID 531113 were
+  not touched.
+- Next: run the full sing-box feature runtime suite against the released 7.0.0
+  artifacts, then implement the remaining approved options. See
+  [PROGRESS.md](PROGRESS.md) for the detailed state.
+
+## Historical status — v6.5.0 release verification (2026-11-27; superseded by v7.0.0 above)
 
 - Remote main, local detached HEAD and peeled `v6.5.0` tag all resolve to
   `a52abcd71639f74c6d3b3f57102ea435125ae4eb`. Source and picker fixes are
@@ -288,7 +328,7 @@ Master–worker like 3X-UI's Nodes tab: this panel (master) registers other VPN-
 - Cleanup: removed only the device-test Docker container/network and stopped its dedicated SSH tunnel. Logs remain in `build/out/happ-device-check.log` and `happ-device-panel.log` on `sweden`; window captures remain in the approved local temp directory. The imported test profile remains in Happ for the user to inspect; its temporary URL is now offline and it is not a real VPN service.
 - Feature commit `272ab016f8a30fe8b590ecf18560df6525275faf` and documentation commit `07d75f88f02f1e4005865c77a2ffd454c20ca209` have been pushed. Annotated tag `v3.1.0` points to the documentation commit; its diff from the build source contains only three Markdown files.
 
-## Next step
+## Historical next step (v3.1.0 era; superseded by the v7.0.0 status above)
 
 Release finalization is complete. Await the next user-requested change or separately authorized server upgrade. Do not upgrade the live `sweden` panel or alter global Happ options without approval. Real Windows Happ import, quota/expiry/banner display and refresh are verified; broader global/platform-specific controls remain untested. The retained test profile's temporary URL is offline. Update this file after each significant milestone.
 

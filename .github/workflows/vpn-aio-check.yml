@@ -22,7 +22,7 @@ jobs:
           go-version: '1.27.x'
       - name: Check shell syntax
         run: |
-          for file in deploy.sh vpn-ui.sh build.sh install.sh build/core/build.sh; do
+          for file in deploy.sh vpn-aio.sh build.sh install.sh build/core/build.sh; do
             bash -n "$file"
           done
           python3 -c 'import ast,pathlib; [ast.parse(pathlib.Path(p).read_text()) for p in ("test_unit/finalmask-config-check.py", "test_unit/native-core-smoke.py", "test_unit/transport-settings-config-check.py", "test_unit/happ-subscription-check.py", "test_unit/install-sh-check.py")]'
@@ -40,7 +40,7 @@ jobs:
         env:
           CGO_ENABLED: '1'
           XRAY_LOCATION_ASSET: ${{ github.workspace }}/corebundle/core
-          VPNUI_LOG_FOLDER: ${{ runner.temp }}/vpn-aio-logs
+          VPNAIO_LOG_FOLDER: ${{ runner.temp }}/vpn-aio-logs
         run: go test -timeout 10m ./...
       - name: Native Xray protocol integration
         run: python3 test_unit/native-core-smoke.py corebundle/core/amd64/xray

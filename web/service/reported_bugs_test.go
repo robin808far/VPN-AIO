@@ -105,7 +105,7 @@ func TestRestartImportedCoreServicesAttemptsBothCores(t *testing.T) {
 
 func TestImportDBBackfillsAndStartsSingboxUsers(t *testing.T) {
 	root := t.TempDir()
-	t.Setenv("VPNUI_DB_FOLDER", root)
+	t.Setenv("VPNAIO_DB_FOLDER", root)
 	previousRoot := singboxConfigRoot
 	singboxConfigRoot = filepath.Join(root, "singbox")
 	t.Cleanup(func() {

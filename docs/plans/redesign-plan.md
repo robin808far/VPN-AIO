@@ -366,7 +366,7 @@ it. Pick one.
 
 No E2E. Per project convention, stop at build plus browser check.
 
-  - `VPNUI_DEBUG=true` serves **both** templates and assets from disk
+  - `VPNAIO_DEBUG=true` serves **both** templates and assets from disk
     (`web/web.go:260-268`), so the loop is edit, refresh, look. No `./build.sh` needed for
     template or CSS work.
   - `./build.sh` (repo root, no flags) only when Go changes.

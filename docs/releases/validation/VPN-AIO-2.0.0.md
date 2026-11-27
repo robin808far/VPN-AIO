@@ -48,5 +48,5 @@ These targeted runtime tests do not claim coverage of every bundled protocol.
 The Windows cross-compile with CGO disabled is a compile check only: it is not a
 deployable release (sqlite requires CGO). Real kernel testing requires Linux.
 
-VPN-AIO derives from Sir-MmD/vpn-ui and 3x-ui. The existing GPL-3.0 license and
+VPN-AIO derives from robin808far/VPN-AIO and 3x-ui. The existing GPL-3.0 license and
 third-party copyright/license notices remain applicable.

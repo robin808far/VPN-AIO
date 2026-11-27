@@ -20,7 +20,7 @@ import (
 )
 
 // SingboxService manages the sing-box core: one process per singbox inbound,
-// each with its own config.json under /etc/vpn-ui-singbox/server-<id>.
+// each with its own config.json under /etc/vpn-aio-singbox/server-<id>.
 //
 // A singbox inbound stores the STANDARD sing-box inbound object (type, listen,
 // listen_port, users, tls, transport, ...) directly as its Settings JSON — the

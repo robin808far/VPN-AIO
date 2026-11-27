@@ -232,7 +232,7 @@
 "exportDatabase" = "Backup"
 "exportDatabaseDesc" = "Clique para baixar um arquivo .db contendo um backup do seu banco de dados atual para o seu dispositivo."
 "backupNameTitle" = "Nome do arquivo de backup"
-"backupNameDesc" = "Escolha do que o nome do arquivo baixado é formado. Sem nada marcado ele é salvo como vpn-ui.db."
+"backupNameDesc" = "Escolha do que o nome do arquivo baixado é formado. Sem nada marcado ele é salvo como vpn-aio.db."
 "backupNamePanel" = "Nome do painel"
 "backupNameDomain" = "Domínio"
 "backupNameDate" = "Data"

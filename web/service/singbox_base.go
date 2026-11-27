@@ -12,7 +12,7 @@ import (
 )
 
 // singboxBaseDir is the shared scratch/root directory for sing-box files.
-var singboxConfigRoot = "/etc/vpn-ui-singbox"
+var singboxConfigRoot = "/etc/vpn-aio-singbox"
 
 func singboxBaseDir() string {
 	return singboxConfigRoot

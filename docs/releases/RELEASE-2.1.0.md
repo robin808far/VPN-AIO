@@ -66,4 +66,4 @@ chooses a binary; it does **not** downgrade a newer SQLite schema. To roll back,
 restore the binary together with its matching pre-upgrade database/configuration.
 Manage with `sudo VPN-AIO`; service `VPN-AIO`; install path `/opt/VPN-AIO`.
 
-Based on Sir-MmD/vpn-ui and 3x-ui. GPL-3.0 and original third-party notices remain.
+Based on robin808far/VPN-AIO and 3x-ui. GPL-3.0 and original third-party notices remain.

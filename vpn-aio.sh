@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # MmD
 #
-# vpn-ui management menu: the `vpn-ui` command.
+# vpn-aio management menu: the `vpn-aio` command.
 #
-# Installed to /usr/bin/vpn-ui by `vpn-ui-amd64 install-menu`, which deploy.sh runs
+# Installed to /usr/bin/vpn-aio by `vpn-aio-amd64 install-menu`, which deploy.sh runs
 # on every fresh install and update. The script is EMBEDDED in the binary it
 # drives, so the two are always the same release: upstream installs its menu by
 # curling raw.githubusercontent at `main`, which pins the default branch's tip even
@@ -13,7 +13,7 @@
 # The script never scrapes the binary's human output (upstream's
 # `x-ui setting -show true | grep -Eo 'port: .+' | awk '{print $2}'` breaks the day
 # someone rewords a line). Anything it only displays, the binary prints; anything
-# it branches on comes from `vpn-ui-amd64 info --get <field>`, whose field names
+# it branches on comes from `vpn-aio-amd64 info --get <field>`, whose field names
 # are a stable contract (see panelInfo in main.go). No jq required.
 #
 # It is also SOURCEABLE: deploy.sh sources this file purely to reuse
@@ -40,9 +40,9 @@ warn() { printf '%swarning:%s %s\n' "$B$YELLOW" "$R" "$*" >&2; }
 die()  { printf '%serror:%s %s\n'   "$B$RED" "$R" "$*" >&2; exit 1; }
 hr()   { printf '%s%s%s\n' "$D" "$(printf '%.0s-' {1..60})" "$R"; }
 
-# The panel binary this menu drives. VPNUI_BIN overrides it for a non-default
+# The panel binary this menu drives. VPNAIO_BIN overrides it for a non-default
 # install; deploy.sh exports it so the menu follows deploy.sh's own DEST.
-BIN="${VPNUI_BIN:-/opt/VPN-AIO/VPN-AIO-amd64}"
+BIN="${VPNAIO_BIN:-/opt/VPN-AIO/VPN-AIO-amd64}"
 # Every value below is preserved when already set, because deploy.sh sources this
 # file with its own: sourcing must add the shared function, never quietly redefine
 # the caller's configuration.
@@ -72,11 +72,11 @@ SSL_IPV6="${SSL_IPV6:-}"
 #  Panel facts (never parsed out of prose)
 # --------------------------------------------------------------------------- #
 
-# Read one field of `vpn-ui-amd64 info --json` by name; prints the raw value.
+# Read one field of `vpn-aio-amd64 info --json` by name; prints the raw value.
 # Tolerant of failure (empty output) so a caller under `set -e` can branch on it.
 info_get() { "$BIN" info --get "$1" 2>/dev/null || true; }
 
-# The panel's systemd unit. NEVER hardcode "vpn-ui": the name is operator
+# The panel's systemd unit. NEVER hardcode "vpn-aio": the name is operator
 # configurable (settings key systemdServiceName, SystemdService.GetServiceName),
 # and acting on the wrong unit is worse than not acting at all.
 # Prints the unit name, or warns and returns non-zero. It deliberately does NOT
@@ -95,7 +95,7 @@ panel_unit() {
 # True when a panel is alive but NOT under systemd.
 #
 # This is the production box's actual state: the panel is started by hand
-# (setsid ./vpn-ui-amd64 &) with the unit inactive-but-enabled. systemd then
+# (setsid ./vpn-aio-amd64 &) with the unit inactive-but-enabled. systemd then
 # reports the unit inactive while the panel is up and serving, so `systemctl stop`
 # would exit 0 having stopped nothing, and `systemctl start` would launch a SECOND
 # panel that collides on the web port and every inbound. The control socket is the
@@ -107,7 +107,7 @@ panel_runs_unmanaged() {
 # Explain the unmanaged-panel state once, in the operator's words.
 say_unmanaged() {
     warn "the unit '$1' is NOT active, yet a panel IS running (its control socket answers)."
-    act  "it was started outside systemd (e.g. ${TEAL}setsid ./vpn-ui-amd64 &${R}), so systemd cannot manage it."
+    act  "it was started outside systemd (e.g. ${TEAL}setsid ./vpn-aio-amd64 &${R}), so systemd cannot manage it."
 }
 
 # --------------------------------------------------------------------------- #
@@ -400,7 +400,7 @@ ssl_ip_target() {
 # DNS API hook" and asks the operator to add the TXT record by hand, which is no
 # automation at all. A fresh --install copies the bundled hook in from the scratch
 # directory; this covers the other case, an acme.sh that was already on the box
-# before vpn-ui.
+# before vpn-aio.
 ssl_ensure_dns_cf_hook() {
     # $HOME/.acme.sh is acme.sh's LE_WORKING_DIR, which its _findHook searches;
     # prefer it over the script's own directory, which for a distro-packaged client
@@ -728,7 +728,7 @@ obtain_letsencrypt_cert() {
 #    restart), including refreshing THIS script from the release it installs.
 item_update() { "$BIN" update || warn "update did not complete."; }
 
-# 2) Un-Install. The binary prompts for confirmation and removes /usr/bin/vpn-ui
+# 2) Un-Install. The binary prompts for confirmation and removes /usr/bin/vpn-aio
 #    (this file) among everything else, so there is no menu to return to.
 item_uninstall() {
     "$BIN" --uninstall || { warn "uninstall did not complete."; return 0; }
@@ -953,7 +953,7 @@ usage: ${0##*/}            open the management menu
        ${0##*/} --help     this message
 
 environment:
-  VPNUI_BIN         path to the panel binary (default: /opt/VPN-AIO/VPN-AIO-amd64)
+  VPNAIO_BIN         path to the panel binary (default: /opt/VPN-AIO/VPN-AIO-amd64)
   SSL_METHOD        how to answer the ACME challenge, skipping the question:
                     'cloudflare' (DNS-01, needs a token, allows a wildcard),
                     'manual' (standalone HTTP-01, needs :80 and a live A record) or
@@ -972,7 +972,7 @@ environment:
 EOF
 }
 
-# Acquire root: re-exec through sudo when not already root, so `vpn-ui` just works
+# Acquire root: re-exec through sudo when not already root, so `vpn-aio` just works
 # for an operator with sudo. Everything this menu does (settings in the root-owned
 # DB, systemctl, the root-only control socket) needs it. Mirrors deploy.sh.
 require_root() {
@@ -984,7 +984,7 @@ require_root() {
 }
 
 require_bin() {
-    [[ -x "$BIN" ]] || die "panel binary not found at ${BIN}. Set VPNUI_BIN=/path/to/VPN-AIO-amd64 if it lives elsewhere."
+    [[ -x "$BIN" ]] || die "panel binary not found at ${BIN}. Set VPNAIO_BIN=/path/to/VPN-AIO-amd64 if it lives elsewhere."
 }
 
 main() {

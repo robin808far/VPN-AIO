@@ -1,4 +1,4 @@
-// Package config provides configuration management utilities for the vpn-ui panel,
+// Package config provides configuration management utilities for the vpn-aio panel,
 // including version information, logging levels, database paths, and environment variable handling.
 package config
 
@@ -28,12 +28,12 @@ const (
 	Error   LogLevel = "error"
 )
 
-// GetVersion returns the version string of the vpn-ui application.
+// GetVersion returns the version string of the vpn-aio application.
 func GetVersion() string {
 	return strings.TrimSpace(version)
 }
 
-// GetName returns the name of the vpn-ui application.
+// GetName returns the name of the vpn-aio application.
 func GetName() string {
 	return strings.TrimSpace(name)
 }
@@ -71,21 +71,21 @@ func GetLogLevel() LogLevel {
 	if IsDebug() {
 		return Debug
 	}
-	logLevel := os.Getenv("VPNUI_LOG_LEVEL")
+	logLevel := getenv("VPNAIO_LOG_LEVEL")
 	if logLevel == "" {
 		return Info
 	}
 	return LogLevel(logLevel)
 }
 
-// IsDebug returns true if debug mode is enabled via the VPNUI_DEBUG environment variable.
+// IsDebug returns true if debug mode is enabled via the VPNAIO_DEBUG environment variable.
 func IsDebug() bool {
-	return os.Getenv("VPNUI_DEBUG") == "true"
+	return getenv("VPNAIO_DEBUG") == "true"
 }
 
-// GetBinFolderPath returns the path to the binary folder, defaulting to "bin" if not set via VPNUI_BIN_FOLDER.
+// GetBinFolderPath returns the path to the binary folder, defaulting to "bin" if not set via VPNAIO_BIN_FOLDER.
 func GetBinFolderPath() string {
-	binFolderPath := os.Getenv("VPNUI_BIN_FOLDER")
+	binFolderPath := getenv("VPNAIO_BIN_FOLDER")
 	if binFolderPath == "" {
 		binFolderPath = "bin"
 	}
@@ -110,11 +110,11 @@ func getBaseDir() string {
 }
 
 // GetDBFolderPath returns the folder that holds the database file. It defaults to
-// the directory of the binary (overridable with VPNUI_DB_FOLDER) so a copied or
+// the directory of the binary (overridable with VPNAIO_DB_FOLDER) so a copied or
 // moved install carries its data with it, rather than silently sharing a fixed
-// /etc/vpn-ui. Legacy installs are migrated from LegacyDBPath on first init.
+// /etc/vpn-aio. Legacy installs are migrated from LegacyDBPath on first init.
 func GetDBFolderPath() string {
-	dbFolderPath := os.Getenv("VPNUI_DB_FOLDER")
+	dbFolderPath := getenv("VPNAIO_DB_FOLDER")
 	if dbFolderPath != "" {
 		return dbFolderPath
 	}
@@ -132,12 +132,12 @@ func GetDBPath() string {
 
 // LegacyDBPaths lists previous database names next to the binary to migrate from
 // on first init when the current DB doesn't exist yet:
-//   - <bindir>/x-ui.db — the prior next-to-binary name (before the vpn-ui rename)
+//   - <bindir>/x-ui.db — the prior next-to-binary name (before the vpn-aio rename)
 //
-// It deliberately does NOT reach into /etc/vpn-ui — a DB left there is not adopted.
-// The current GetDBPath is never included. Empty on a custom VPNUI_DB_FOLDER.
+// It deliberately does NOT reach into /etc/vpn-aio — a DB left there is not adopted.
+// The current GetDBPath is never included. Empty on a custom VPNAIO_DB_FOLDER.
 func LegacyDBPaths() []string {
-	if os.Getenv("VPNUI_DB_FOLDER") != "" {
+	if getenv("VPNAIO_DB_FOLDER") != "" {
 		return nil
 	}
 	current := GetDBPath()
@@ -154,7 +154,7 @@ func LegacyDBPaths() []string {
 
 // GetLogFolder returns the path to the log folder based on environment variables or platform defaults.
 func GetLogFolder() string {
-	logFolderPath := os.Getenv("VPNUI_LOG_FOLDER")
+	logFolderPath := getenv("VPNAIO_LOG_FOLDER")
 	if logFolderPath != "" {
 		return logFolderPath
 	}

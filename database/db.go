@@ -1,5 +1,5 @@
 // Package database provides database initialization, migration, and management utilities
-// for the vpn-ui panel using GORM with SQLite.
+// for the vpn-aio panel using GORM with SQLite.
 package database
 
 import (
@@ -332,7 +332,7 @@ func isTableEmpty(tableName string) (bool, error) {
 //
 // The file format is unchanged, so DB export/import, the SQLite magic sniff, and
 // stock 3x-ui imports all keep working. Caveat: WAL does not work on network
-// filesystems, which matters only if VPNUI_DB_FOLDER points at an NFS/CIFS mount.
+// filesystems, which matters only if VPNAIO_DB_FOLDER points at an NFS/CIFS mount.
 const sqliteDSNParams = "?_journal_mode=WAL&_synchronous=NORMAL&_busy_timeout=10000"
 
 // InitDB sets up the database connection, migrates models, and runs seeders.
@@ -439,7 +439,7 @@ func InitDB(dbPath string) error {
 
 // GetSettingValue opens the DB and returns a single `settings` value via a plain
 // read-only SELECT — NO AutoMigrate and NO seeders (unlike InitDB). This lets a
-// short-lived hook process (e.g. `vpn-ui openvpn-auth`, which runs on every login
+// short-lived hook process (e.g. `vpn-aio openvpn-auth`, which runs on every login
 // alongside the live panel) read a setting without migrating/seeding/locking the DB
 // the panel owns. A busy timeout tolerates the panel writing concurrently; a missing
 // key yields ("", nil).

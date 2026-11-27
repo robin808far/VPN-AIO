@@ -54,7 +54,7 @@ const (
 
 // coreConfigBanner marks where the panel's render stops and the operator's text
 // starts. Every format the panel writes here takes `#` as a line comment.
-const coreConfigBanner = "# ---- vpn-ui: operator override (Core Settings -> Edit config) ----"
+const coreConfigBanner = "# ---- vpn-aio: operator override (Core Settings -> Edit config) ----"
 
 // CoreConfigOverride is one stored edit.
 type CoreConfigOverride struct {
@@ -628,7 +628,7 @@ func validateWithDaemon(bin, name, content string, args func(tmp string) []strin
 			return nil
 		}
 	}
-	dir, err := os.MkdirTemp("", "vpnui-cfgcheck-")
+	dir, err := os.MkdirTemp("", "vpnaio-cfgcheck-")
 	if err != nil {
 		return err
 	}

@@ -27,7 +27,7 @@ import time
 
 from .base import Client
 
-IFACE = "gre-vpnui"
+IFACE = "gre-vpnaio"
 FOU_IFACE = "gre-fou"
 SWAN_CONF = "/etc/swanctl/conf.d/gre-client.conf"
 

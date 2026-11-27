@@ -259,6 +259,19 @@ else
             fi
         done
     fi
+    # Presence is not enough for sing-box either: a cache restored from an older
+    # key (actions/cache restore-keys) carries the previous pinned release, and
+    # the release would silently ship it. Compare the pinned version and the
+    # VPN-AIO limiter marker against the bundled bytes (works for any arch).
+    sb_pin="$(sed -n 's/^SINGBOX_VERSION="\([^"]*\)".*/\1/p' build/backend/build.sh | head -1)"
+    sb_bin="backend/bin/$ARCH/sing-box"
+    if [[ -n "$sb_pin" && -f "$sb_bin" ]]; then
+        if ! LC_ALL=C grep -aq "vpn-aio-limits" "$sb_bin" || \
+           [[ "$(LC_ALL=C grep -ao -E '(^|[^0-9.])1\.[0-9]+\.[0-9]+' "$sb_bin" | grep -c -F "$sb_pin")" == "0" ]]; then
+            bundle_stale=1
+            info "bundled sing-box is not the pinned $sb_pin with vpn-aio-limits"
+        fi
+    fi
 fi
 if (( SKIP_BUNDLE )); then
     # Worth a warning, not a quiet skip: the bundle is what carries whole protocols,

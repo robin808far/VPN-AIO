@@ -110,8 +110,8 @@ def main():
             for directory in ('cert', 'backups'):
                 (ROOT / directory).mkdir(exist_ok=True)
                 (ROOT / directory / 'fixture-secret').write_text('disposable fixture')
-            Path('/usr/libexec/vpn-ui').mkdir(parents=True, exist_ok=True)
-            Path('/usr/libexec/vpn-ui/uninstall-fixture').write_text('disposable bundle fixture')
+            Path('/usr/libexec/vpn-aio').mkdir(parents=True, exist_ok=True)
+            Path('/usr/libexec/vpn-aio/uninstall-fixture').write_text('disposable bundle fixture')
             marker = ROOT / 'operator-notes.txt'
             marker.write_text('retain unrelated operator files\n')
             unit = Path('/etc/systemd/system/VPN-AIO.service')
@@ -133,7 +133,7 @@ def main():
             check('panel process stopped', panel.poll() is not None)
             for path in (BINARY, ROOT / 'VPN-AIO.db', ROOT / 'VPN-AIO.db-wal', ROOT / 'VPN-AIO.db-shm',
                          ROOT / 'VPN-AIO.db-journal', ROOT / 'bin', ROOT / 'cert', ROOT / 'backups',
-                         ROOT / 'vpn-ui.sock', Path('/usr/libexec/vpn-ui'), unit, menu):
+                         ROOT / 'vpn-aio.sock', Path('/usr/libexec/vpn-aio'), unit, menu):
                 check('removed ' + str(path), not path.exists())
             check('operator notes retained', marker.read_text() == 'retain unrelated operator files\n')
             check('unowned host config retained', host_file.read_text() == '# operator-owned sentinel\n')

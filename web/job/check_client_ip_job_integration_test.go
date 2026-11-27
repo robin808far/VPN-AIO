@@ -15,7 +15,7 @@ import (
 	"github.com/op/go-logging"
 )
 
-// vpn-ui logger must be initialised once before any code path that can
+// vpn-aio logger must be initialised once before any code path that can
 // log a warning. otherwise log.Warningf panics on a nil logger.
 var loggerInitOnce sync.Once
 
@@ -33,10 +33,10 @@ func setupIntegrationDB(t *testing.T) {
 	dbDir := t.TempDir()
 	logDir := t.TempDir()
 
-	t.Setenv("VPNUI_DB_FOLDER", dbDir)
-	t.Setenv("VPNUI_LOG_FOLDER", logDir)
+	t.Setenv("VPNAIO_DB_FOLDER", dbDir)
+	t.Setenv("VPNAIO_LOG_FOLDER", logDir)
 
-	if err := database.InitDB(filepath.Join(dbDir, "vpn-ui.db")); err != nil {
+	if err := database.InitDB(filepath.Join(dbDir, "vpn-aio.db")); err != nil {
 		t.Fatalf("database.InitDB failed: %v", err)
 	}
 	// LIFO cleanup order: this runs before t.TempDir's own cleanup.
@@ -237,7 +237,7 @@ func assertNoBanLog(t *testing.T) {
 // but without importing xray here just for the path helper (which would pull a lot more
 // deps into the test binary). The env-derived log folder is deterministic.
 func readIpLimitLogPath() string {
-	folder := os.Getenv("VPNUI_LOG_FOLDER")
+	folder := os.Getenv("VPNAIO_LOG_FOLDER")
 	if folder == "" {
 		folder = filepath.Join(".", "log")
 	}

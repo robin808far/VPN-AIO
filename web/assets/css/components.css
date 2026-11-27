@@ -275,7 +275,7 @@ body.dark .bo-theme-toggle .bo-i-moon { display:block; }
 .bo-bento {
   display:grid; grid-template-columns:1fr; gap:var(--gap-sm);
   grid-template-areas:
-    "ident" "flow" "xray" "sbox" "users" "manage" "vpnui" "vit" "svc";
+    "ident" "flow" "xray" "sbox" "users" "manage" "vpnaio" "vit" "svc";
 }
 @media (min-width:760px) {
   .bo-bento {
@@ -284,8 +284,8 @@ body.dark .bo-theme-toggle .bo-i-moon { display:block; }
       "ident ident ident ident"
       "flow flow flow flow"
       "xray xray users users"
-      "sbox sbox vpnui vpnui"
-      "manage manage vpnui vpnui"
+      "sbox sbox vpnaio vpnaio"
+      "manage manage vpnaio vpnaio"
       "vit vit vit vit"
       "svc svc svc svc";
   }
@@ -294,13 +294,13 @@ body.dark .bo-theme-toggle .bo-i-moon { display:block; }
   .bo-bento {
     grid-template-columns:repeat(12,1fr); gap:var(--gap-lg);
     /* The sing-box tile sits under Xray and the Manage tile takes the half row
-       below it, so the left column reads Xray / sing-box / Manage while vpnui
+       below it, so the left column reads Xray / sing-box / Manage while vpnaio
        spans both lower rows on the right. */
     grid-template-areas:
       "ident ident ident ident flow flow flow flow vit vit vit vit"
       "xray xray xray xray users users users users vit vit vit vit"
-      "sbox sbox sbox sbox vpnui vpnui vpnui vpnui vit vit vit vit"
-      "manage manage manage manage vpnui vpnui vpnui vpnui vit vit vit vit"
+      "sbox sbox sbox sbox vpnaio vpnaio vpnaio vpnaio vit vit vit vit"
+      "manage manage manage manage vpnaio vpnaio vpnaio vpnaio vit vit vit vit"
       "svc svc svc svc svc svc svc svc svc svc svc svc";
     /* Tiles STRETCH to fill their row (grid's default) rather than sizing to
        content. align-items:start was tried and is worse: it removes the dead
@@ -318,7 +318,7 @@ body.dark .bo-theme-toggle .bo-i-moon { display:block; }
 .bo-t-svc { grid-area:svc; }
 .bo-t-xray { grid-area:xray; }
 .bo-t-sbox { grid-area:sbox; }
-.bo-t-vpnui { grid-area:vpnui; }
+.bo-t-vpnaio { grid-area:vpnaio; }
 .bo-t-users { grid-area:users; }
 .bo-t-manage { grid-area:manage; }
 
@@ -643,10 +643,10 @@ body.dark .bo-theme-toggle .bo-i-moon { display:block; }
 .bo-btn--ghost:hover { color:var(--accent); border-color:var(--accent); transform:translateY(-1px); }
 .bo-btn[disabled] { opacity:.5; cursor:not-allowed; transform:none; filter:none; }
 
-.bo-vpnui-body { display:flex; flex-direction:column; justify-content:space-between; gap:18px; flex:1; }
-.bo-vpnui-version { font-size:34px; font-weight:var(--fw-bold); color:var(--text); letter-spacing:.02em; }
+.bo-vpnaio-body { display:flex; flex-direction:column; justify-content:space-between; gap:18px; flex:1; }
+.bo-vpnaio-version { font-size:34px; font-weight:var(--fw-bold); color:var(--text); letter-spacing:.02em; }
 /* the VPN-AIO wordmark on the dashboard tile: small caps title was unreadable */
-.bo-t-vpnui .bo-tile-title { font-size:var(--fs-lg); letter-spacing:.06em; color:var(--text); }
+.bo-t-vpnaio .bo-tile-title { font-size:var(--fs-lg); letter-spacing:.06em; color:var(--text); }
 .bo-status-line { display:flex; align-items:center; gap:6px; font-size:13px; font-weight:var(--fw-semibold); margin-top:var(--sp-2); }
 .bo-status-line--ok { color:var(--ok); }
 .bo-status-line--warn { color:var(--warn); }

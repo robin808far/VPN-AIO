@@ -26,7 +26,7 @@ import (
 func newLimiterSidecar(t *testing.T) string {
 	t.Helper()
 	bin := t.TempDir()
-	t.Setenv("VPNUI_BIN_FOLDER", bin)
+	t.Setenv("VPNAIO_BIN_FOLDER", bin)
 	if err := database.InitDB(filepath.Join(t.TempDir(), "test.db")); err != nil {
 		t.Fatalf("InitDB: %v", err)
 	}

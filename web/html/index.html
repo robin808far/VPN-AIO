@@ -471,8 +471,8 @@
     </article>
     {{ end }}
 
-    <!-- ===== VPN-UI panel + updater ===== -->
-    <article class="bo-tile bo-t-vpnui" aria-label="VPN-AIO">
+    <!-- ===== VPN-AIO panel + updater ===== -->
+    <article class="bo-tile bo-t-vpnaio" aria-label="VPN-AIO">
       <div class="bo-tile-head">
         <h3 class="bo-tile-title">VPN-AIO</h3>
         <button type="button" class="bo-icon-btn bo-icon-btn--accent"
@@ -481,11 +481,11 @@
           {{ i18n "pages.index.checkUpdate" }}
         </button>
       </div>
-      <div class="bo-vpnui-body">
+      <div class="bo-vpnaio-body">
         <div>
           <a rel="noopener" href="https://github.com/robin808far/VPN-AIO" target="_blank"
             :style="{ color: 'inherit', textDecoration: 'none' }">
-            <div class="bo-vpnui-version num">v{{ .cur_ver }}</div>
+            <div class="bo-vpnaio-version num">v{{ .cur_ver }}</div>
           </a>
           <p v-if="panelUpdate.checked && !panelUpdate.available && !panelUpdate.checking"
             class="bo-status-line bo-status-line--ok">
@@ -939,7 +939,7 @@
       </a-form-item>
 
       <a-form-item style="float: right;">
-        <a-button type="primary" icon="download" @click="FileManager.downloadTextFile(logModal.plain, 'vpn-ui.log')"></a-button>
+        <a-button type="primary" icon="download" @click="FileManager.downloadTextFile(logModal.plain, 'vpn-aio.log')"></a-button>
       </a-form-item>
     </a-form>
     <!-- Core filter. Client-side over the already-fetched lines, so ticking a
@@ -1030,7 +1030,7 @@
        ticks have to reach the server as query params.
 
        The preview is the point of the dialog, not decoration: unticking every box
-       is a legitimate choice and it produces a bare vpn-ui.db, which reads as a
+       is a legitimate choice and it produces a bare vpn-aio.db, which reads as a
        bug unless the resulting name is on screen while you tick. -->
   <a-modal id="backup-name-modal" v-model="backupNameModal.visible"
     title='{{ i18n "pages.index.backupNameTitle" }}' :closable="true"
@@ -1576,7 +1576,7 @@
       this.visible = true;
       this.mode = 'panel';
       this.logs = logs;
-      this.render([{ source: 'vpn-ui', text: (logs || []).join('\n') }]);
+      this.render([{ source: 'vpn-aio', text: (logs || []).join('\n') }]);
     },
     // Every log the panel shows goes through LogFormatter, so the panel's own
     // lines, Xray's and each daemon's are coloured and laid out identically.
@@ -1927,7 +1927,7 @@
       // and time are the browser's clock while the file carries the server's, so
       // those digits can differ by a timezone. That is fine for what this is for:
       // showing WHICH parts appear, and above all that unticking every box is a
-      // real choice that really does yield a bare vpn-ui.db.
+      // real choice that really does yield a bare vpn-aio.db.
       backupFilename() {
         const now = new Date();
         const pad = n => String(n).padStart(2, '0');
@@ -1941,7 +1941,7 @@
           .filter(part => this.backupNameModal.parts.includes(part))
           .map(part => values[part])
           .filter(Boolean);
-        return 'vpn-ui' + (picked.length ? '_' + picked.join('_') : '') + '.db';
+        return 'vpn-aio' + (picked.length ? '_' + picked.join('_') : '') + '.db';
       },
       // "Ubuntu 24.04 - kernel 6.8.0-31-generic", degrading gracefully when the
       // backend has not supplied a field.
@@ -2441,7 +2441,7 @@
           this.updatedModal.visible = true;
         } catch (e) { /* nothing to announce */ }
       },
-      // --- Panel self-update (VPN-UI card) ------------------------------
+      // --- Panel self-update (VPN-AIO card) ------------------------------
       // Runs automatically on every overview load (manual=false, silent) and on
       // the "Check for Update" button (manual=true, surfaces errors in the card).
       async checkForUpdate(manual) {
@@ -2907,7 +2907,7 @@
           if (msg.obj.supported) return;
           // "don't show again" is keyed by the distro name, so moving to a
           // different unsupported distro warns again.
-          if (localStorage.getItem('vpnui.distroWarnDismissed') === msg.obj.pretty) return;
+          if (localStorage.getItem('vpnaio.distroWarnDismissed') === msg.obj.pretty) return;
           this.distroModal.pretty = msg.obj.pretty || 'This system';
           this.distroModal.tested = msg.obj.tested || '';
           this.distroModal.visible = true;
@@ -2915,7 +2915,7 @@
       },
       dismissDistroWarning(forever) {
         if (forever) {
-          try { localStorage.setItem('vpnui.distroWarnDismissed', this.distroModal.pretty); } catch (e) { /* ignore */ }
+          try { localStorage.setItem('vpnaio.distroWarnDismissed', this.distroModal.pretty); } catch (e) { /* ignore */ }
         }
         this.distroModal.visible = false;
       },
@@ -3363,7 +3363,7 @@
       },
       downloadXrayLogs() {
         if (!Array.isArray(this.xraylogModal.logs) || this.xraylogModal.logs.length === 0) {
-          FileManager.downloadTextFile('', 'vpn-ui.log');
+          FileManager.downloadTextFile('', 'vpn-aio.log');
           return;
         }
         const lines = this.xraylogModal.logs.map(l => {
@@ -3378,7 +3378,7 @@
             return JSON.stringify(l);
           }
         }).join('\n');
-        FileManager.downloadTextFile(lines, 'vpn-ui.log');
+        FileManager.downloadTextFile(lines, 'vpn-aio.log');
       },
       async openConfig() {
         this.loading(true);
@@ -3441,7 +3441,7 @@
         });
         fileInput.click();
       },
-      // Import a stock 3x-ui (or vpn-ui) backup over the current data, keeping this
+      // Import a stock 3x-ui (or vpn-aio) backup over the current data, keeping this
       // panel's own address/cert/secret. Distinct from importDatabase (a like-for-like
       // restore): the admin accounts come from the backup, so the operator re-logs-in
       // with the imported panel's credentials afterwards.

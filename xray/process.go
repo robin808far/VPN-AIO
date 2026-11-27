@@ -328,7 +328,7 @@ func (p *process) Start() (err error) {
 	//
 	// Resolve to an absolute path: cmd.Dir is never set, so Xray inherits whatever cwd
 	// the panel was started with, and GetBinFolderPath is RELATIVE ("bin") unless
-	// VPNUI_BIN_FOLDER overrides it. Resolving here pins the path to the cwd the panel
+	// VPNAIO_BIN_FOLDER overrides it. Resolving here pins the path to the cwd the panel
 	// itself resolves "bin" against, instead of trusting Xray to resolve it the same way.
 	speedLimitPath := GetSpeedLimitPath()
 	if abs, absErr := filepath.Abs(speedLimitPath); absErr == nil {

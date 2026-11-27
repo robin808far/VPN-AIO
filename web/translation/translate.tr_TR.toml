@@ -232,7 +232,7 @@
 "exportDatabase" = "Yedekle"
 "exportDatabaseDesc" = "Mevcut veritabanınızın yedeğini içeren bir .db dosyasını cihazınıza indirmek için tıklayın."
 "backupNameTitle" = "Yedek dosya adı"
-"backupNameDesc" = "İndirilen dosyanın adının nelerden oluşacağını seçin. Hiçbiri işaretli değilse dosya vpn-ui.db olarak kaydedilir."
+"backupNameDesc" = "İndirilen dosyanın adının nelerden oluşacağını seçin. Hiçbiri işaretli değilse dosya vpn-aio.db olarak kaydedilir."
 "backupNamePanel" = "Panel adı"
 "backupNameDomain" = "Alan adı"
 "backupNameDate" = "Tarih"

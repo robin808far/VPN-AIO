@@ -11,7 +11,7 @@ draft that made "singbox" a protocol was wrong and has been removed.
 - `model.Inbound.Core` (string, default ""): "" = Xray, "singbox" = sing-box.
 - `isSingboxInbound`: sing-box-only protocols always; the Xray family by Core.
 - One sing-box process per inbound: `singbox-server-<id>` under
-  `/etc/vpn-ui-singbox/server-<id>`, config rendered from the RAW sing-box
+  `/etc/vpn-aio-singbox/server-<id>`, config rendered from the RAW sing-box
   inbound object stored in the inbound's Settings, validated with
   `sing-box check` before every start.
 - CRUD restarts/stops only that inbound's process; subscription links dispatch

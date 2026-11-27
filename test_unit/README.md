@@ -1,6 +1,6 @@
-# vpn-ui test unit
+# vpn-aio test unit
 
-Automated end-to-end test harness for the vpn-ui panel across a matrix of Linux
+Automated end-to-end test harness for the vpn-aio panel across a matrix of Linux
 distros, driven over the panel's real HTTP API and exercised with live VPN
 clients. Backend: **incus VMs**, **Python**, **bash**.
 
@@ -111,7 +111,7 @@ python3 + pip and the python deps, starts the incus daemon, and runs
 ## Usage
 
 ```bash
-# place the prebuilt amd64 binary named `vpn-ui` (+ its bin/ dir) in test_subject/
+# place the prebuilt amd64 binary named `vpn-aio` (+ its bin/ dir) in test_subject/
 sudo ./run.sh                          # full 13-distro matrix (auto-setup if needed)
 sudo ./run.sh --only ubuntu-24,arch    # subset
 sudo ./run.sh -c /path/to/other.toml
@@ -176,7 +176,7 @@ or test prerequisites are recorded as infrastructure errors, never passing tests
 
 | key | meaning |
 |-----|---------|
-| `binary` | path to prebuilt vpn-ui panel binary (amd64, static, embedded daemons); default `test_subject/vpn-ui`, pushed with its sibling `bin/` dir |
+| `binary` | path to prebuilt vpn-aio panel binary (amd64, static, embedded daemons); default `test_subject/vpn-aio`, pushed with its sibling `bin/` dir |
 | `concurrency` | how many distros to test at once (each = 3 VMs on its own bridge) |
 | `panel.*` | port / creds / base_path / scheme (defaults match the binary) |
 | `vless_outbound.link` | external outbound as an Xray share link (vless/vmess/ss/trojan); `OUTBOUND_LINK` in run.sh overrides it |
@@ -197,8 +197,8 @@ none/tls/reality. Parsed by `harness/xraylink.py`.
 run.sh                     root entrypoint (auto-bootstraps backend, then runs)
 setup.sh                   host backend installer (apt/dnf/yum/pacman + incus init)
 config.toml                everything tunable
-test_subject/              the vpn-ui binary under test + its bin/ (xray + geo)
-  vpn-ui                   prebuilt panel binary (amd64, static, embedded daemons)
+test_subject/              the vpn-aio binary under test + its bin/ (xray + geo)
+  vpn-aio                   prebuilt panel binary (amd64, static, embedded daemons)
   bin/                     xray core + geo*.dat + config.json (pushed with binary)
 harness/
   orchestrator.py          parallel job pool; per-job VM lifecycle + phase-tagged logger

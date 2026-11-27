@@ -696,10 +696,10 @@ var CookieManager = class CookieManager {    static getCookie(cname) {
 // Xray.
 //
 // Storage follows the convention already set by the unsupported-distro warning
-// on the dashboard: a `vpnui.`-namespaced localStorage key, written inside a
+// on the dashboard: a `vpnaio.`-namespaced localStorage key, written inside a
 // try/catch because a browser with storage denied (private mode, blocked
 // third-party context) throws on setItem and must not take the page with it.
-var SecAlertDismissal = class SecAlertDismissal {    static KEY = 'vpnui.secAlertDismissed';
+var SecAlertDismissal = class SecAlertDismissal {    static KEY = 'vpnaio.secAlertDismissed';
 
     static isDismissed() {
         try {

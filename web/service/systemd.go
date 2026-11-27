@@ -29,7 +29,7 @@ type SystemdState struct {
 var serviceNameRe = regexp.MustCompile(`[^a-zA-Z0-9._@-]`)
 
 // sanitizeServiceName strips anything that isn't a safe systemd unit-name
-// character so the name can't escape /etc/systemd/system. Falls back to "vpn-ui".
+// character so the name can't escape /etc/systemd/system. Falls back to "vpn-aio".
 func sanitizeServiceName(name string) string {
 	name = strings.TrimSpace(name)
 	name = strings.TrimSuffix(name, ".service")
@@ -49,7 +49,7 @@ func systemctl(args ...string) (string, error) {
 	return strings.TrimSpace(string(out)), err
 }
 
-// GetServiceName returns the configured panel service name (default "vpn-ui").
+// GetServiceName returns the configured panel service name (default "vpn-aio").
 func (s *SystemdService) GetServiceName() string {
 	var ss SettingService
 	name, err := ss.GetSystemdServiceName()

@@ -23,11 +23,11 @@ import (
 
 // The panel's logger is a package global that stays nil until InitLogger runs,
 // and a reload logs. Point the file backend at a temporary directory so the run
-// does not need /var/log/vpn-ui.
+// does not need /var/log/vpn-aio.
 func TestMain(m *testing.M) {
-	logDir, err := os.MkdirTemp("", "vpn-ui-cert-reload")
+	logDir, err := os.MkdirTemp("", "vpn-aio-cert-reload")
 	if err == nil {
-		os.Setenv("VPNUI_LOG_FOLDER", logDir)
+		os.Setenv("VPNAIO_LOG_FOLDER", logDir)
 	}
 	logger.InitLogger(logging.WARNING)
 	code := m.Run()
@@ -66,7 +66,7 @@ func generateSelfSigned(t *testing.T, serial int64) certPair {
 	}
 	tmpl := &x509.Certificate{
 		SerialNumber:          big.NewInt(serial),
-		Subject:               pkix.Name{CommonName: "vpn-ui cert reload test"},
+		Subject:               pkix.Name{CommonName: "vpn-aio cert reload test"},
 		NotBefore:             time.Now().Add(-time.Hour),
 		NotAfter:              time.Now().Add(24 * time.Hour),
 		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,

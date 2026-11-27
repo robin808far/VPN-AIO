@@ -232,7 +232,7 @@
 "exportDatabase" = "備份"
 "exportDatabaseDesc" = "點擊下載包含當前資料庫備份的 .db 文件到您的設備。"
 "backupNameTitle" = "備份檔案名稱"
-"backupNameDesc" = "選擇下載檔案的名稱由哪些部分組成。全部不勾選時儲存為 vpn-ui.db。"
+"backupNameDesc" = "選擇下載檔案的名稱由哪些部分組成。全部不勾選時儲存為 vpn-aio.db。"
 "backupNamePanel" = "面板名稱"
 "backupNameDomain" = "網域"
 "backupNameDate" = "日期"

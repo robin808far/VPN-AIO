@@ -42,10 +42,10 @@ var (
 )
 
 // Panel self-update. The panel binary ships as a single GitHub release asset
-// (Sir-MmD/vpn-ui, "vpn-ui-amd64") — the same source deploy.sh installs from — so
+// (robin808far/VPN-AIO, "vpn-aio-amd64") — the same source deploy.sh installs from — so
 // the overview can both check for and apply updates in place.
 //
-// PanelAsset and PanelDownloadURL are exported because `vpn-ui-amd64 update` (the
+// PanelAsset and PanelDownloadURL are exported because `vpn-aio-amd64 update` (the
 // CLI/menu updater in main.go) installs from the very same release asset. It
 // reuses these plus DownloadPanelBinary/IsCompatibleBinary rather than reaching
 // for UpdatePanel: that path ends in restartPanel, whose no-systemd branch
@@ -94,7 +94,7 @@ func (s *ServerService) CheckPanelUpdate() (*PanelUpdateInfo, error) {
 	if err != nil {
 		return info, err
 	}
-	req.Header.Set("User-Agent", "vpn-ui") // GitHub API rejects requests without a UA
+	req.Header.Set("User-Agent", "vpn-aio") // GitHub API rejects requests without a UA
 	req.Header.Set("Accept", "application/vnd.github+json")
 
 	resp, err := client.Do(req)
@@ -404,7 +404,7 @@ func installPanelBinary(staged, exe string) error {
 	backupPath, _ := backupPanelDB()
 
 	// Keep a copy of the current binary next to it so a bad update can be rolled
-	// back manually (mv vpn-ui.bak vpn-ui): once renamed, the old inode is gone.
+	// back manually (mv vpn-aio.bak vpn-aio): once renamed, the old inode is gone.
 	if err := CopyFile(exe, exe+".bak"); err == nil {
 		_ = os.Chmod(exe+".bak", 0o755)
 	} else {
@@ -471,7 +471,7 @@ func DownloadPanelBinary(ctx context.Context, dst, url string) error {
 	if err != nil {
 		return err
 	}
-	req.Header.Set("User-Agent", "vpn-ui")
+	req.Header.Set("User-Agent", "vpn-aio")
 	resp, err := client.Do(req)
 	if err != nil {
 		return err

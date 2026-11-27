@@ -3313,7 +3313,7 @@ var VPN_OUT_KINDS = {
             // wrong to guess on exactly the multi-homed one whose operator knows it.
             { name: 'local', type: 'text', def: '', label: 'vpnOutLocalAddress' },
             // /32, not /30. The classic point-to-point pair is what a router
-            // manual teaches, but a vpn-ui GRE inbound hands each account a single
+            // manual teaches, but a vpn-aio GRE inbound hands each account a single
             // address out of the inbound's block: a /30 pasted here claims three
             // more addresses, and on a busy inbound those belong to other accounts.
             // The inbound's own config modal now states the mask alongside the
@@ -3336,8 +3336,8 @@ var VPN_OUT_KINDS = {
             { name: 'fouPort', type: 'number', def: 15547, min: 1, max: 65535, label: 'vpnOutFouPort', showIf: p => p.fouEnable },
             { name: 'ipsecEnable', type: 'switch', def: false, label: 'vpnOutIpsec' },
             { name: 'ipsecPsk', type: 'password', def: '', label: 'vpnOutIpsecPsk', secret: true, showIf: p => p.ipsecEnable },
-            // The far side's IKE identity. Exposed because a vpn-ui GRE inbound
-            // presents "gre-<id>.vpn-ui" and its recipe tells the peer to pin it:
+            // The far side's IKE identity. Exposed because a vpn-aio GRE inbound
+            // presents "gre-<id>.vpn-aio" and its recipe tells the peer to pin it:
             // a shared charon holding several PSKs cannot otherwise tell which key
             // this tunnel is meant to use.
             { name: 'ipsecRemoteId', type: 'text', def: '', label: 'vpnOutIpsecRemoteId', showIf: p => p.ipsecEnable },

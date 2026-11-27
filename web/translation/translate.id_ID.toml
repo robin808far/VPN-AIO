@@ -232,7 +232,7 @@
 "exportDatabase" = "Cadangkan"
 "exportDatabaseDesc" = "Klik untuk mengunduh file .db yang berisi cadangan dari database Anda saat ini ke perangkat Anda."
 "backupNameTitle" = "Nama Berkas Cadangan"
-"backupNameDesc" = "Pilih dari apa nama berkas yang diunduh dibentuk. Tanpa satu pun dicentang, berkas disimpan sebagai vpn-ui.db."
+"backupNameDesc" = "Pilih dari apa nama berkas yang diunduh dibentuk. Tanpa satu pun dicentang, berkas disimpan sebagai vpn-aio.db."
 "backupNamePanel" = "Nama panel"
 "backupNameDomain" = "Domain"
 "backupNameDate" = "Tanggal"

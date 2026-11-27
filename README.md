@@ -4,7 +4,7 @@
   <img src="web/assets/img/vpn-aio.svg" alt="VPN-AIO" width="260">
 </p>
 
-**VPN-AIO 6.0.0** is based on [Sir-MmD/vpn-ui](https://github.com/Sir-MmD/vpn-ui) and **[3X-UI](https://github.com/MHSanaei/3x-ui)**. Original licenses and credits are preserved.
+**VPN-AIO 6.0.0** is based on [robin808far/VPN-AIO](https://github.com/robin808far/VPN-AIO) and **[3X-UI](https://github.com/MHSanaei/3x-ui)**. Original licenses and credits are preserved.
 
 This version targets **Ubuntu 24.04 amd64** installations. It integrates Xray **26.11.9**, native AnyTLS/TUIC/NaiveProxy and MASQUE, XDRIVE, and AmneziaWG **3.1.20261113-02** with the 3.1 controls and exports. Version 4.0.0 adds multi-panel **Nodes** management; version 3.1.0 added native Happ subscription settings; version 3.0.0 added [managed Hosts](docs/guides/HOSTS.md). Read the [4.0.0 release notes](https://github.com/robin808far/VPN-AIO/releases/tag/v4.0.0) and [validation record](docs/releases/validation/VPN-AIO-3.1.0.md) before upgrading; the cross-distribution VM/kernel matrix remains explicitly waived.
 
@@ -117,7 +117,7 @@ flowchart TB
   SSHC["SSH Client<br/>(ssh -D dynamic SOCKS · badvpn-udpgw for UDP)"]
   GREC["Customer Router<br/>(GRE · IP protocol 47 · optional IPsec / FOU)"]
 
-  subgraph PANEL["vpn-ui panel — root process"]
+  subgraph PANEL["vpn-aio panel — root process"]
     PROC["procmgr<br/>supervises the daemons"]
     RAD["in-binary RADIUS<br/>127.0.0.1:1812 auth · :1813 acct"]
     HOOK["OpenVPN hooks<br/>auth / connect / disconnect / evict"]
@@ -233,7 +233,7 @@ git clone https://github.com/robin808far/VPN-AIO.git && cd VPN-AIO
 
 ## E2E Testing
 
-![E2E Test](https://raw.githubusercontent.com/Sir-MmD/vpn-ui/refs/heads/main/media/test_unit.png)
+![E2E Test](https://raw.githubusercontent.com/robin808far/VPN-AIO/refs/heads/main/media/test_unit.png)
 
 A complete **E2E** test written in Python has been designed for this project inside the `test_unit` folder, which you are welcome to use. The steps are as follows:
 

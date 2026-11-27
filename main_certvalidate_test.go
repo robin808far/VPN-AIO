@@ -122,10 +122,10 @@ func TestUpdateCertRefusesUnusablePairs(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			// A DB folder that must stay untouched: reaching InitDB would create
-			// vpn-ui.db here, so an empty directory afterwards proves the refusal
+			// vpn-aio.db here, so an empty directory afterwards proves the refusal
 			// happened before anything was opened or written.
 			dbDir := t.TempDir()
-			t.Setenv("VPNUI_DB_FOLDER", dbDir)
+			t.Setenv("VPNAIO_DB_FOLDER", dbDir)
 
 			out := captureStdout(t, func() { updateCert(tc.cert, tc.key) })
 
@@ -161,7 +161,7 @@ func TestUpdateCertRefusalCoversSubscriptionListenerToo(t *testing.T) {
 	dir := t.TempDir()
 	goodCert, _ := writeCertPair(t, dir, "good", false)
 	_, foreignKey := writeCertPair(t, dir, "foreign", true)
-	t.Setenv("VPNUI_DB_FOLDER", t.TempDir())
+	t.Setenv("VPNAIO_DB_FOLDER", t.TempDir())
 
 	out := captureStdout(t, func() { updateCert(goodCert, foreignKey) })
 	for _, phrase := range []string{
@@ -177,7 +177,7 @@ func TestUpdateCertRefusalCoversSubscriptionListenerToo(t *testing.T) {
 // Clearing is a legitimate request to stop serving TLS, so it must not be caught
 // by a check whose whole subject is a pair that does not exist.
 func TestUpdateCertStillAcceptsClearing(t *testing.T) {
-	t.Setenv("VPNUI_DB_FOLDER", t.TempDir())
+	t.Setenv("VPNAIO_DB_FOLDER", t.TempDir())
 	out := captureStdout(t, func() { updateCert("", "") })
 	if strings.Contains(out, "refusing to store this certificate") {
 		t.Errorf("clearing the certificate must not be refused, got:\n%s", out)
@@ -188,7 +188,7 @@ func TestUpdateCertStillAcceptsClearing(t *testing.T) {
 func TestUpdateCertAcceptsAValidPair(t *testing.T) {
 	dir := t.TempDir()
 	goodCert, goodKey := writeCertPair(t, dir, "good", false)
-	t.Setenv("VPNUI_DB_FOLDER", t.TempDir())
+	t.Setenv("VPNAIO_DB_FOLDER", t.TempDir())
 
 	out := captureStdout(t, func() { updateCert(goodCert, goodKey) })
 	if strings.Contains(out, "refusing to store this certificate") {
@@ -209,7 +209,7 @@ func TestUpdateCertAcceptsAValidPair(t *testing.T) {
 func TestCertCommandsRefuseHalfAPair(t *testing.T) {
 	dir := t.TempDir()
 	goodCert, goodKey := writeCertPair(t, dir, "good", false)
-	t.Setenv("VPNUI_DB_FOLDER", t.TempDir())
+	t.Setenv("VPNAIO_DB_FOLDER", t.TempDir())
 
 	for name, fn := range map[string]func(string, string){
 		"panel":        updateCert,
@@ -231,14 +231,14 @@ func TestCertCommandsRefuseHalfAPair(t *testing.T) {
 //
 // subCertFile is "" on a fresh install, and an empty subCertFile used to count as
 // "the subscription server follows the panel". Both installers run this command as
-// part of one (vpn-ui.sh with -webCert after acme.sh, deploy.sh with -selfsign), so
+// part of one (vpn-aio.sh with -webCert after acme.sh, deploy.sh with -selfsign), so
 // every install put the panel's certificate on a subscription listener nobody had
 // asked to serve TLS. Empty means never configured, and this command has to leave it
 // that way.
 func TestUpdateCertLeavesAnUnconfiguredSubscriptionListenerAlone(t *testing.T) {
 	dir := t.TempDir()
 	goodCert, goodKey := writeCertPair(t, dir, "good", false)
-	t.Setenv("VPNUI_DB_FOLDER", t.TempDir())
+	t.Setenv("VPNAIO_DB_FOLDER", t.TempDir())
 
 	out := captureStdout(t, func() { updateCert(goodCert, goodKey) })
 	for _, phrase := range []string{
@@ -274,7 +274,7 @@ func TestUpdateCertMovesASubscriptionListenerThatFollowedThePanel(t *testing.T) 
 	dir := t.TempDir()
 	certA, keyA := writeCertPair(t, dir, "a", false)
 	certB, keyB := writeCertPair(t, dir, "b", false)
-	t.Setenv("VPNUI_DB_FOLDER", t.TempDir())
+	t.Setenv("VPNAIO_DB_FOLDER", t.TempDir())
 
 	// The state an operator reaches by switching both listeners on in the SSL
 	// manager. updateCert runs first only because it is what opens the database.
@@ -302,7 +302,7 @@ func TestUpdateCertLeavesASplitSubscriptionListenerAlone(t *testing.T) {
 	certA, keyA := writeCertPair(t, dir, "a", false)
 	certB, keyB := writeCertPair(t, dir, "b", false)
 	certC, keyC := writeCertPair(t, dir, "c", false)
-	t.Setenv("VPNUI_DB_FOLDER", t.TempDir())
+	t.Setenv("VPNAIO_DB_FOLDER", t.TempDir())
 
 	captureStdout(t, func() { updateCert(certA, keyA) })
 	var ss service.SettingService
@@ -328,7 +328,7 @@ func TestUpdateSubCertMovesOnlyTheSubscriptionListener(t *testing.T) {
 	dir := t.TempDir()
 	panelCert, panelKey := writeCertPair(t, dir, "panel", false)
 	subCert, subKey := writeCertPair(t, dir, "sub", false)
-	t.Setenv("VPNUI_DB_FOLDER", t.TempDir())
+	t.Setenv("VPNAIO_DB_FOLDER", t.TempDir())
 
 	captureStdout(t, func() { updateCert(panelCert, panelKey) })
 	out := captureStdout(t, func() { updateSubCert(subCert, subKey) })
@@ -360,7 +360,7 @@ func TestUpdateSubCertRefusesAnUnusablePair(t *testing.T) {
 	goodCert, _ := writeCertPair(t, dir, "good", false)
 	_, foreignKey := writeCertPair(t, dir, "foreign", true)
 	dbDir := t.TempDir()
-	t.Setenv("VPNUI_DB_FOLDER", dbDir)
+	t.Setenv("VPNAIO_DB_FOLDER", dbDir)
 
 	out := captureStdout(t, func() { updateSubCert(goodCert, foreignKey) })
 	if !strings.Contains(out, "refusing to store this certificate") {
@@ -389,7 +389,7 @@ func TestCertCommandTargets(t *testing.T) {
 		panel bool
 		sub   bool
 	}{
-		{"a bare `vpn-ui cert` still clears the panel", nil, true, false},
+		{"a bare `vpn-aio cert` still clears the panel", nil, true, false},
 		{"-webCert moves the panel only", []string{"webCert", "webCertKey"}, true, false},
 		{"-subCert moves the subscription server only", []string{"subCert", "subCertKey"}, false, true},
 		{"both pairs move both listeners", []string{"webCert", "webCertKey", "subCert", "subCertKey"}, true, true},

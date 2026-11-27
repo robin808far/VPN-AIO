@@ -24,7 +24,7 @@ func TestSingboxAuditBundledRuntimeEnforcesSidecarSpeedIPAndStreams(t *testing.T
 	if exact == "" {
 		t.Skip("requires the VPN-AIO patched sing-box build")
 	}
-	t.Setenv("VPNUI_BIN_FOLDER", t.TempDir())
+	t.Setenv("VPNAIO_BIN_FOLDER", t.TempDir())
 	singboxAuditSetup(t)
 	RegisterSpeedLimitInvalidation()
 

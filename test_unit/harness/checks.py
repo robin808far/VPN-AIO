@@ -13,7 +13,7 @@ from .model import SubTest, Status
 
 
 def tunnel_egress(client: Client,
-                  ifaces=("tun0", "ppp0", "wgc", "awg", "gre-vpnui", "gre-fou")) -> SubTest:
+                  ifaces=("tun0", "ppp0", "wgc", "awg", "gre-vpnaio", "gre-fou")) -> SubTest:
     """Confirm external traffic egresses via the tunnel. NOTE: openvpn pushes
     `redirect-gateway def1`, which adds 0.0.0.0/1 + 128.0.0.0/1 via tun and
     deliberately LEAVES the `default` route intact — so we must ask the kernel

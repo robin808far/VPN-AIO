@@ -80,11 +80,11 @@ func TestGreConfigFilesSplitByPlatform(t *testing.T) {
 		{"gre-7-0-mikrotik", "GRE MikroTik office (home)", "home-gre-peer1-mikrotik.txt",
 			"/interface gre add", "ip link add"},
 		{"gre-7-0-linux", "GRE Linux office (home)", "home-gre-peer1-linux.txt",
-			"ip link add gre-vpnui", "/interface gre add"},
+			"ip link add gre-vpnaio", "/interface gre add"},
 		{"gre-7-1-mikrotik", "GRE MikroTik Peer 2 (home)", "home-gre-peer2-mikrotik.txt",
 			"/interface gre add", "ip link add"},
 		{"gre-7-1-linux", "GRE Linux Peer 2 (home)", "home-gre-peer2-linux.txt",
-			"ip link add gre-vpnui", "/interface gre add"},
+			"ip link add gre-vpnaio", "/interface gre add"},
 	} {
 		t.Run(want.key, func(t *testing.T) {
 			var got *SubConfigFile

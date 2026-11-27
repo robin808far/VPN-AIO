@@ -6,7 +6,7 @@ import "testing"
 
 func TestSanitizeServiceName(t *testing.T) {
 	cases := map[string]string{
-		"vpn-ui":              "vpn-ui",
+		"vpn-aio":              "vpn-aio",
 		"  my-panel  ":        "my-panel",
 		"my-panel.service":    "my-panel", // .service suffix stripped
 		"x_ui@1":              "x_ui@1",
@@ -15,7 +15,7 @@ func TestSanitizeServiceName(t *testing.T) {
 		"a/b/c":               "abc",
 		"na me/../evil":       "name..evil",
 		"foo;rm -rf /":        "foorm-rf",
-		"vpn-ui.service.conf": "vpn-ui.service.conf", // only a TRAILING .service is stripped
+		"vpn-aio.service.conf": "vpn-aio.service.conf", // only a TRAILING .service is stripped
 	}
 	for in, want := range cases {
 		if got := sanitizeServiceName(in); got != want {
@@ -30,8 +30,8 @@ func TestSanitizeServiceName(t *testing.T) {
 }
 
 func TestDefaultUnitShape(t *testing.T) {
-	u := DefaultUnit("vpn-ui")
-	for _, must := range []string{"[Unit]", "[Service]", "ExecStart=", "WantedBy=multi-user.target", "Description=vpn-ui"} {
+	u := DefaultUnit("vpn-aio")
+	for _, must := range []string{"[Unit]", "[Service]", "ExecStart=", "WantedBy=multi-user.target", "Description=vpn-aio"} {
 		if !strings.Contains(u, must) {
 			t.Errorf("DefaultUnit missing %q", must)
 		}

@@ -232,7 +232,7 @@
 "exportDatabase" = "اخزن نسخة"
 "exportDatabaseDesc" = "اضغط عشان تحمل ملف .db يحتوي على نسخة احتياطية لقاعدة البيانات الحالية على جهازك."
 "backupNameTitle" = "اسم ملف النسخة الاحتياطية"
-"backupNameDesc" = "اختر ما يتكوّن منه اسم الملف المُنزَّل. إن لم تحدد شيئًا فسيُحفظ باسم vpn-ui.db."
+"backupNameDesc" = "اختر ما يتكوّن منه اسم الملف المُنزَّل. إن لم تحدد شيئًا فسيُحفظ باسم vpn-aio.db."
 "backupNamePanel" = "اسم اللوحة"
 "backupNameDomain" = "النطاق"
 "backupNameDate" = "التاريخ"

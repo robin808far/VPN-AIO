@@ -409,7 +409,7 @@
 "exportDatabase" = "Back Up"
 "exportDatabaseDesc" = "Click to download a .db file containing a backup of your current database to your device."
 "backupNameTitle" = "Backup File Name"
-"backupNameDesc" = "Pick what the downloaded file is named after. With nothing ticked it is saved as vpn-ui.db."
+"backupNameDesc" = "Pick what the downloaded file is named after. With nothing ticked it is saved as vpn-aio.db."
 "backupNamePanel" = "Panel name"
 "backupNameDomain" = "Domain"
 "backupNameDate" = "Date"

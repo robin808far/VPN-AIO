@@ -68,7 +68,7 @@ from .ssh import _BADVPN_LOCAL, _BADVPN_REMOTE
 # Where the client-side core lands, and where the panel keeps the one it actually
 # runs (provision.REMOTE_DIR + xray.GetBinaryName()).
 CORE_REMOTE = "/usr/local/bin/xray"
-SERVER_CORE = "/root/vpn-ui/bin/xray-linux-amd64"
+SERVER_CORE = "/root/vpn-aio/bin/xray-linux-amd64"
 # Fallback only: the core shipped in test_subject/bin/. It is whatever was last copied
 # there by hand, so it can easily PREDATE the protocol under test. Using it is
 # reported loudly rather than silently.
@@ -96,7 +96,7 @@ class Spec:
     outbound: object              # fn(server_ip, port, acct, spec) -> xray outbound dict
     default_port: int             # server port when the Inbound carries none
     dns_over_proxy: bool = False  # answer UDP:53 locally via an xray `dns` outbound
-    sni: str = "e2e.vpn-ui.test"  # TLS SNI; the inbound's cert is self-signed anyway
+    sni: str = "e2e.vpn-aio.test"  # TLS SNI; the inbound's cert is self-signed anyway
     extra: dict = field(default_factory=dict)   # per-connect knobs (e.g. tuic udp mode)
 
     @property
@@ -157,7 +157,7 @@ def ensure_core(client: Client) -> tuple[bool, str]:
     """Put the SERVER's live xray core on the client VM (idempotent).
 
     Both ends MUST run the same build: these protocols are new, and the core the panel
-    actually runs is the one embedded in the vpn-ui binary (corebundle overwrites
+    actually runs is the one embedded in the vpn-aio binary (corebundle overwrites
     bin/xray-linux-amd64 on every start), which is NOT necessarily the copy sitting in
     test_subject/bin/. Pushing that stale copy would fail with "unknown protocol" in a
     log nobody reads; lifting the server's own core makes the two agree by
@@ -179,7 +179,7 @@ def ensure_core(client: Client) -> tuple[bool, str]:
         with _CORE_LOCK:
             cached = _CORE_CACHE.get(want)
             if not cached or not os.path.isfile(cached):
-                dst = os.path.join(tempfile.gettempdir(), f"vpnui-e2e-xray-{want[:12]}")
+                dst = os.path.join(tempfile.gettempdir(), f"vpnaio-e2e-xray-{want[:12]}")
                 if client.incus.pull_file(srv, SERVER_CORE, dst):
                     _CORE_CACHE[want] = dst
                     cached = dst

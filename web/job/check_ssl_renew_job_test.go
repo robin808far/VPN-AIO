@@ -28,10 +28,10 @@ func newSSLJobStoreRoot(t *testing.T) string {
 	// logger is a nil global until InitLogger runs, and the job logs on every path
 	// that matters here (see the note in check_client_ip_job_integration_test.go).
 	// Without this a test would "pass" a panic assertion by panicking in the logger.
-	t.Setenv("VPNUI_LOG_FOLDER", t.TempDir())
+	t.Setenv("VPNAIO_LOG_FOLDER", t.TempDir())
 	loggerInitOnce.Do(func() { xuilogger.InitLogger(logging.ERROR) })
 
-	t.Setenv("VPNUI_DB_FOLDER", t.TempDir())
+	t.Setenv("VPNAIO_DB_FOLDER", t.TempDir())
 	return service.DefaultSSLStoreRoot()
 }
 
