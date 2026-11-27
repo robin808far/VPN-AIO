@@ -1008,15 +1008,22 @@
             coreSelectable(protocol) {
                 // Everything the patched Xray core serves can also run under
                 // sing-box; the operator picks the engine in the Core dropdown.
+                // The picker's "Hysteria" is protocol "hysteria" (Xray's name for
+                // Hysteria2); sing-box calls the same protocol "hysteria2".
                 return ["vmess", "vless", "trojan", "shadowsocks",
-                    "hysteria2", "tuic", "anytls"].includes(protocol);
+                    "hysteria", "hysteria2", "tuic", "anytls"].includes(protocol);
             },
             onCoreChange(core) {
                 const inb = inModal.inbound;
                 if (!inb) return;
                 if (core === "singbox") {
+                    // sing-box stores the protocol as "hysteria2" (the server
+                    // validates type == protocol and keys accounts on it), so the
+                    // Xray-style "hysteria" pick is renamed before seeding.
+                    if (inb.protocol === "hysteria") inb._protocol = "hysteria2";
                     this.singboxSeed(inb);
                 } else {
+                    if (inb.protocol === "hysteria2") inb._protocol = "hysteria";
                     // Back to Xray: restore the panel's own settings shape, and
                     // reset the transport to one Xray always has — a sing-box
                     // inbound may have left a transport block (ws/grpc/...) that
@@ -1048,9 +1055,10 @@
                         block = { type: "shadowsocks", tag: "singbox-in", listen: "::", listen_port: port, method: "2022-blake3-aes-128-gcm", password: btoa(String.fromCharCode(...bytes)) };
                         break;
                     case "tuic":
+                    case "hysteria":
                     case "hysteria2":
                     case "anytls":
-                        block = { type: inb.protocol, tag: "singbox-in", listen: "::", listen_port: port,
+                        block = { type: inb.protocol === "hysteria" ? "hysteria2" : inb.protocol, tag: "singbox-in", listen: "::", listen_port: port,
                             users: [{ name: "user1", password: RandomUtil.randomSeq(16) }],
                             tls: { enabled: true, certificate_path: '', key_path: '' } };
                         if (inb.protocol === 'tuic') block.users[0].uuid = RandomUtil.randomUUID();
