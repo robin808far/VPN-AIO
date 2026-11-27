@@ -62,7 +62,7 @@
 
 ## جدول پشتیبانی پروژهٔ اصلی
 
-این جدول از پروژهٔ اصلی به ارث رسیده است؛ هدف تست نسخهٔ VPN-AIO 6.0.0، اوبونتو 24.04 است و به معنی تست مجدد همهٔ این توزیع‌ها نیست.
+این جدول از پروژهٔ اصلی به ارث رسیده است؛ هدف تست نسخهٔ VPN-AIO 7.0.x، اوبونتو 24.04 است و به معنی تست مجدد همهٔ این توزیع‌ها نیست.
 
 
 | | توزیع |نسخه |نسخه |
@@ -89,8 +89,8 @@
 ```bash
 bash <(curl -Ls https://raw.githubusercontent.com/robin808far/VPN-AIO/main/install.sh)
 
-# نصب یک نسخهٔ خاص، مثلاً v3.1.0
-bash <(curl -Ls https://raw.githubusercontent.com/robin808far/VPN-AIO/main/install.sh) v3.1.0
+# نصب یک نسخهٔ خاص، مثلاً v7.0.1
+bash <(curl -Ls https://raw.githubusercontent.com/robin808far/VPN-AIO/main/install.sh) v7.0.1
 ```
 
 **نصب جایگزین (مستقیم):**

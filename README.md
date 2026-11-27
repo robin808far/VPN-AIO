@@ -72,7 +72,7 @@ the core rather than by a daemon, and they work as **inbounds and outbounds**:
 
 ## Upstream Operating System Matrix
 
-The table below records the original project's support matrix. VPN-AIO 6.0.0 validation targets Ubuntu 24.04; it does not claim a fresh test of every upstream platform.
+The table below records the original project's support matrix. VPN-AIO 7.0.x validation targets Ubuntu 24.04; it does not claim a fresh test of every upstream platform.
 
 
 | | Distribution |Version |Version |
@@ -99,8 +99,8 @@ The table below records the original project's support matrix. VPN-AIO 6.0.0 val
 ```bash
 bash <(curl -Ls https://raw.githubusercontent.com/robin808far/VPN-AIO/main/install.sh)
 
-# a specific release, e.g. v3.1.0
-bash <(curl -Ls https://raw.githubusercontent.com/robin808far/VPN-AIO/main/install.sh) v3.1.0
+# a specific release, e.g. v7.0.1
+bash <(curl -Ls https://raw.githubusercontent.com/robin808far/VPN-AIO/main/install.sh) v7.0.1
 ```
 
 **Alternative install (direct):**
