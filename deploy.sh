@@ -508,6 +508,10 @@ if [[ "$MODE" == "install" ]]; then
         # The import brought its own admin login; randomizing now would throw it
         # away. Keep it and just install the unit (the port was preserved too).
         cred_mode="keep"
+    elif [[ -n "${PANEL_USER:-}${PANEL_PASS:-}${PANEL_PORT:-}${PANEL_PATH:-}" ]]; then
+        # Unattended custom login (cloud-init/CI): any preset PANEL_* value selects
+        # custom mode without prompting; unset fields keep their defaults.
+        cred_mode="env"
     elif deploy_have_tty; then
         {
             printf '%s::%s %sPanel login / access%s\n' "$B$BLUE" "$R" "$WHITE" "$R"
@@ -530,6 +534,9 @@ if [[ "$MODE" == "install" ]]; then
         printf '  %sweb path%s: ' "$BLUE" "$R" > /dev/tty; read -r  C_PATH < /dev/tty || C_PATH=""
         msg "Applying custom login / access + installing systemd unit"
         "$DEST" --user "$C_USER" --pass "$C_PASS" --port "$C_PORT" --path "$C_PATH" --systemd
+    elif [[ "$cred_mode" == "env" ]]; then
+        msg "Applying preset PANEL_USER/PANEL_PASS/PANEL_PORT/PANEL_PATH + installing systemd unit"
+        "$DEST" --user "${PANEL_USER:-}" --pass "${PANEL_PASS:-}" --port "${PANEL_PORT:-}" --path "${PANEL_PATH:-}" --systemd
     else
         msg "Configuring credentials + installing systemd unit"
         warn "--random sets a fresh port, username, password and web path — note them below."
