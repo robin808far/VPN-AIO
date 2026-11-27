@@ -58,6 +58,14 @@ Last updated: 2026-11-27 (v6.5.0 publication verified; release and Ubuntu CI suc
      Takes effect on the live host only after a new release/deploy.
 - Not released: deploy.sh changes are live via `main`; the Xray fix needs a
   new binary release (not done, needs user decision).
+- Release 6.5.1 (user-authorized 2026-11-27): `config/version` 6.5.1, commit
+  `4a752bc0` pushed to main; annotated tag `v6.5.1` (object `e545c8bb`)
+  pushed. Release CI 46036573081 + Ubuntu validation 46036567653 both
+  succeeded for `4a752bc0`. Public assets downloaded on sweden: amd64
+  409479888 B `052cecd0...`, arm64 403822952 B `97126a13...`, SHA256SUMS
+  `d04a9309...`; `sha256sum -c` OK for both; amd64 `-v` = 6.5.1; both
+  contain `vpn-aio-limits` marker. Temp dir removed. arm64 `-v` not executed.
+  Live host not updated by assistant (user deploys).
 - Next: 4) new feature — awaiting user specification.
 
 ## systemd/kernel install test on WSL2 (2026-11-27, fresh observation)
