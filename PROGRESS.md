@@ -132,6 +132,21 @@ Last updated: 2026-11-27 (v6.6.0 tag pushed, release CI in progress at save time
   Existing live `server-5` config passes `sing-box check` with 1.14.5.
   Not tested: arm64 build, full lifecycle matrix, browser. Work dir on sweden:
   `/home/ubuntu/sb-1145-port` (remove after release).
+- sing-box 1.12–1.14 option audit + UI (2026-11-28, pushed, NOT released):
+  `75e3acb2` base-config route form emits action rules (`reject`,
+  `hijack-dns`, `route`) instead of removed block/dns-out outbounds, and
+  geosite -> remote `rule_set` (SagerNet/sing-geosite .srs) + explicit
+  `http_clients`/`default_http_client`; `http_clients` added to
+  `baseConfigBlocks`; legacy saved rules still parse. `55c8da78` UI: TLS
+  min/max version, ALPN, curve_preferences, handshake_timeout, kTLS TX/RX,
+  mTLS client_authentication + client CA paths; Hysteria2 obfs
+  none/salamander/gecko (+min/max packet size), bbr_profile, masquerade URL;
+  ShadowTLS v3 strict_mode + wildcard_sni; DNS strategy/timeout/optimistic.
+  All taken from v1.14.5 docs. Verified: a config using all these fields
+  passes `sing-box check` (1.14.5); rule_set config passes check and .srs URL
+  returns 200; `node test_unit/export_test/singbox.test.js` PASS.
+  Not done: Go build/tests after these commits, browser check, Snell,
+  listen keep-alive fields, cloudflared, OpenVPN server, Hysteria Realm.
 - Next: 4) new feature — awaiting user specification.
 
 ## systemd/kernel install test on WSL2 (2026-11-27, fresh observation)
