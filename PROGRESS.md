@@ -25,9 +25,16 @@ Last updated: 2026-11-27 (v6.5.0 publication verified; release and Ubuntu CI suc
   assistant only verifies, does not redeploy.
 - Optional remaining qualification: full ARM64 runtime, VM/systemd/kernel, and
   physical mobile tests (not performed).
-- (Done) Status docs committed/pushed. Current queue (user order, 2026-11-27):
-  1) docs consistency commit, 2) fix non-interactive installer `/dev/tty`
-  defect, 3) verify live host runs 6.5.0, 4) new feature (to be specified).
+- (Done 2026-11-27) 1) docs consistency commit `ba870c16`.
+- (Done) 2) Installer `/dev/tty` defect fixed in `deploy.sh` (commit `3b640772`,
+  pushed): `deploy_have_tty` opens /dev/tty instead of `-r`. Verified on sweden:
+  `bash -n` OK; under `setsid` the new check reports no tty while old `-r` was
+  true. Not yet in a release (public install.sh serves raw `main` deploy.sh?
+  unverified); full unattended install rerun not performed.
+- (Done) 3) Live host (sweden) verified: `/opt/VPN-AIO/VPN-AIO-amd64` 409479064
+  bytes, SHA-256 `9a26f831...` (= v6.5.0 release), `-v` 6.5.0, service
+  active/running since 2026-11-27 16:11:50 UTC, port 12301 listening.
+- Next: 4) new feature — awaiting user specification.
 
 ## systemd/kernel install test on WSL2 (2026-11-27, fresh observation)
 
