@@ -4,8 +4,6 @@
   <img src="web/assets/img/vpn-aio.svg" alt="VPN-AIO" width="260">
 </p>
 
-**VPN-AIO 6.0.0** is based on [robin808far/VPN-AIO](https://github.com/robin808far/VPN-AIO) and **[3X-UI](https://github.com/MHSanaei/3x-ui)**. Original licenses and credits are preserved.
-
 This version targets **Ubuntu 24.04 amd64** installations. It integrates Xray **26.11.9**, native AnyTLS/TUIC/NaiveProxy and MASQUE, XDRIVE, and AmneziaWG **3.1.20261113-02** with the 3.1 controls and exports. Version 4.0.0 adds multi-panel **Nodes** management; version 3.1.0 added native Happ subscription settings; version 3.0.0 added [managed Hosts](docs/guides/HOSTS.md). Read the [4.0.0 release notes](https://github.com/robin808far/VPN-AIO/releases/tag/v4.0.0) and [validation record](docs/releases/validation/VPN-AIO-3.1.0.md) before upgrading; the cross-distribution VM/kernel matrix remains explicitly waived.
 
 Project documentation is organized under [`docs/`](docs/README.md).
