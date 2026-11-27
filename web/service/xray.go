@@ -172,6 +172,48 @@ func applySshOutboundsWith(config *xray.Config, tunnels []SshOutboundConfig) err
 	return nil
 }
 
+// stripEmptyFreedomNoises removes an empty `noises` array from freedom
+// outbounds. Xray deprecated Freedom `noises` (moved to
+// streamSettings.finalmask.udp) and logs a warning whenever the key is present,
+// even empty. An empty list has no effect, so removing it changes nothing but
+// the warning. Non-empty lists are kept: they are an explicit operator choice.
+func stripEmptyFreedomNoises(config *xray.Config) error {
+	if len(config.OutboundConfigs) == 0 {
+		return nil
+	}
+	var obs []map[string]any
+	if err := json.Unmarshal(config.OutboundConfigs, &obs); err != nil {
+		return err
+	}
+	changed := false
+	for _, ob := range obs {
+		if p, _ := ob["protocol"].(string); p != "freedom" {
+			continue
+		}
+		settings, ok := ob["settings"].(map[string]any)
+		if !ok {
+			continue
+		}
+		raw, present := settings["noises"]
+		if !present {
+			continue
+		}
+		if list, isList := raw.([]any); raw == nil || (isList && len(list) == 0) {
+			delete(settings, "noises")
+			changed = true
+		}
+	}
+	if !changed {
+		return nil
+	}
+	out, err := json.Marshal(obs)
+	if err != nil {
+		return err
+	}
+	config.OutboundConfigs = out
+	return nil
+}
+
 // GetXrayConfig retrieves and builds the Xray configuration from settings and inbounds.
 func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 	templateConfig, err := s.settingService.GetXrayConfigTemplate()
@@ -204,6 +246,15 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 	// back a different device. See vpnoutbound.go.
 	if err := applyVpnOutboundsWith(xrayConfig, (&VpnOutboundService{}).List()); err != nil {
 		logger.Warning("could not synthesize the VPN client outbounds:", err)
+	}
+
+	// Older templates (and every install seeded from them) carry an empty
+	// `"noises": []` on the freedom outbound. Xray 26.x warns on the key itself,
+	// even when empty, because Freedom `noises` is deprecated in favour of
+	// streamSettings.finalmask.udp. An empty list does nothing, so drop it at
+	// build time; a non-empty list is the operator's choice and is left as-is.
+	if err := stripEmptyFreedomNoises(xrayConfig); err != nil {
+		logger.Warning("could not normalize freedom outbounds:", err)
 	}
 
 	s.inboundService.AddTraffic(nil, nil)
