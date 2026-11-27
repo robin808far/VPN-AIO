@@ -295,6 +295,12 @@
                                     @change="e => singboxSet(['tls', 'key_path'], e.target.value)"></a-input>
                             </a-form-item>
                         </a-col>
+                        <a-col :span="24">
+                            <a-form-item label=" " :colon="false">
+                                <a-button type="primary" icon="import" @click="singboxSetDefaultCert()">
+                                    {{ i18n "pages.inbounds.setDefaultCert" }}</a-button>
+                            </a-form-item>
+                        </a-col>
                     </a-row>
                     <a-form-item v-if="singboxGet(['type']) === 'vless'" label="REALITY">
                         <a-switch :checked="singboxHas(['tls', 'reality'])"

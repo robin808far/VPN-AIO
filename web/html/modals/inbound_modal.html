@@ -1293,6 +1293,12 @@
                 inModal.inbound.stream.tls.certs[index].certFile = app.defaultCert;
                 inModal.inbound.stream.tls.certs[index].keyFile = app.defaultKey;
             },
+            // The sing-box form's equivalent of "Set Cert from Panel": copies the
+            // panel's own certificate/key paths into the native tls block.
+            singboxSetDefaultCert() {
+                this.singboxSet(['tls', 'certificate_path'], app.defaultCert || '');
+                this.singboxSet(['tls', 'key_path'], app.defaultKey || '');
+            },
             // --- The managed certificate picker ---------------------------------
             // app.sslCertificates comes from getDefaultSettings and is WITHHELD from
             // callers without PermPanelSettings, so an empty list is the normal

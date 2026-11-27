@@ -169,6 +169,12 @@
                            tooltip put directly on it never opens. The wrapping span is
                            what the tooltip actually listens on, which is the only way
                            the "this core has no config file" reason is ever readable. -->
+                      <!-- sing-box has no per-daemon file in the generic editor: its
+                           shared top-level blocks live in the base config, which is
+                           what "edit config" means for this core. -->
+                      <a-button size="small" v-else-if="core.name === 'singbox'" @click="openBaseConfig()">
+                        <a-icon type="edit"></a-icon>{{ i18n "pages.core.editConfig" }}
+                      </a-button>
                       <a-tooltip v-else-if="!coreHasConfig(core.name)"
                         title='{{ i18n "pages.core.configNoFile" }}'>
                         <span :style="{ display: 'inline-block', cursor: 'not-allowed' }">
