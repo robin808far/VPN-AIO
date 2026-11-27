@@ -71,6 +71,13 @@
                         title: '{{ i18n "menu.clients"}}'
                     },
                     {{ end }}
+                    {{ if .perms.accessNodes }}
+                    {
+                        key: '{{ .base_path }}panel/nodes',
+                        icon: 'cluster',
+                        title: '{{ i18n "menu.nodes"}}'
+                    },
+                    {{ end }}
 					{{ if .perms.accessHosts }}
 					{
 						key: '{{ .base_path }}panel/hosts',

@@ -59,6 +59,10 @@ const (
 	//
 	// APPENDED, for the reason above.
 	PermAccessOverview
+	// PermAccessNodes gates the Nodes page and its API.
+	//
+	// APPENDED, for the reason above.
+	PermAccessNodes
 )
 
 // resellerPerms is what a reseller may do, derived from the role rather than
@@ -109,6 +113,7 @@ var AllPermissions = []PermissionDef{
 	{PermManageResellers, "manageResellers"},
 	{PermAccessOverview, "accessOverview"},
 	{PermOverviewManage, "manageOverview"},
+	{PermAccessNodes, "accessNodes"},
 }
 
 // Has reports whether every bit in q is set in p.

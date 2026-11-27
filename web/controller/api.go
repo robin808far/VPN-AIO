@@ -3,6 +3,7 @@ package controller
 import (
 	"net/http"
 
+	"github.com/mhsanaei/3x-ui/v2/database"
 	"github.com/mhsanaei/3x-ui/v2/database/model"
 	"github.com/mhsanaei/3x-ui/v2/web/service"
 	"github.com/mhsanaei/3x-ui/v2/web/session"
@@ -52,6 +53,11 @@ func (a *APIController) initRouter(g *gin.RouterGroup, customGeo *service.Custom
 	clients := api.Group("/clients")
 	clients.Use(requirePerm(model.PermAccessInbounds))
 	NewClientsController(clients)
+
+	// Nodes API – manage remote panels (nodes)
+	nodes := api.Group("/nodes")
+	nodes.Use(requirePerm(model.PermAccessNodes))
+	NewNodeController(nodes, service.NewNodeService(database.GetDB()))
 
 	// Server API
 	server := api.Group("/server")
