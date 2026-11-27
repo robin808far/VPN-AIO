@@ -668,6 +668,24 @@
                 {{ i18n "pages.core.singboxAddServer" }}
               </a-button>
             </a-form-item>
+            <a-form-item label="DNS strategy">
+              <a-select v-model="baseForm.dnsStrategy" style="width: 200px">
+                <a-select-option value="">default</a-select-option>
+                <a-select-option value="prefer_ipv4">prefer_ipv4</a-select-option>
+                <a-select-option value="prefer_ipv6">prefer_ipv6</a-select-option>
+                <a-select-option value="ipv4_only">ipv4_only</a-select-option>
+                <a-select-option value="ipv6_only">ipv6_only</a-select-option>
+              </a-select>
+            </a-form-item>
+            <a-form-item label="DNS query timeout">
+              <a-input v-model="baseForm.dnsTimeout" placeholder="default 10s" style="width: 200px"></a-input>
+            </a-form-item>
+            <a-form-item label="Optimistic DNS cache">
+              <a-switch v-model="baseForm.dnsOptimistic"></a-switch>
+            </a-form-item>
+            <a-form-item v-if="baseForm.dnsOptimistic" label="Optimistic timeout">
+              <a-input v-model="baseForm.dnsOptimisticTimeout" placeholder="default 3d" style="width: 200px"></a-input>
+            </a-form-item>
 
             <a-divider orientation="left" plain>{{ i18n "pages.core.singboxExperimental" }}</a-divider>
             <a-form-item label="Cache File">
@@ -821,6 +839,10 @@
         logLevel: 'info',
         logTimestamp: true,
         dnsServers: [],
+        dnsStrategy: '',
+        dnsTimeout: '',
+        dnsOptimistic: false,
+        dnsOptimisticTimeout: '',
         cacheFile: false,
         clashApi: false,
         clashApiPort: 9090,
@@ -882,6 +904,12 @@
         this.baseForm.dnsServers = servers
           .filter((s) => s && (s.server || s.type === 'udp'))
           .map((s) => ({ server: s.server || '', tag: s.tag || '' }));
+        const dns = cfg.dns || {};
+        this.baseForm.dnsStrategy = dns.strategy || '';
+        this.baseForm.dnsTimeout = dns.timeout || '';
+        const opt = dns.optimistic;
+        this.baseForm.dnsOptimistic = opt === true || !!(opt && opt.enabled);
+        this.baseForm.dnsOptimisticTimeout = (opt && typeof opt === 'object' && opt.timeout) || '';
         const exp = cfg.experimental || {};
         this.baseForm.cacheFile = !!(exp.cache_file && exp.cache_file.enabled);
         this.baseForm.clashApi = !!(exp.clash_api && exp.clash_api.external_controller);
@@ -922,6 +950,20 @@
           .filter((s) => s && s.server && s.server.trim())
           .map((s, i) => ({ type: 'udp', tag: s.tag || `dns-udp-${i + 1}`, server: s.server.trim() }));
         if (servers.length) cfg.dns = { servers };
+        // dns keys the form does not edit (rules, final, fakeip, …) survive a save.
+        const oldDns = (old.dns && typeof old.dns === 'object') ? old.dns : {};
+        const dnsOut = Object.assign({}, oldDns);
+        delete dnsOut.servers;
+        if (servers.length) dnsOut.servers = servers;
+        if (this.baseForm.dnsStrategy) dnsOut.strategy = this.baseForm.dnsStrategy; else delete dnsOut.strategy;
+        if (this.baseForm.dnsTimeout) dnsOut.timeout = this.baseForm.dnsTimeout; else delete dnsOut.timeout;
+        if (this.baseForm.dnsOptimistic) {
+          // optimistic conflicts with disable_cache / disable_expire (sing-box docs).
+          dnsOut.optimistic = this.baseForm.dnsOptimisticTimeout
+            ? { enabled: true, timeout: this.baseForm.dnsOptimisticTimeout } : true;
+          delete dnsOut.disable_cache; delete dnsOut.disable_expire;
+        } else delete dnsOut.optimistic;
+        if (Object.keys(dnsOut).length && dnsOut.servers) cfg.dns = dnsOut;
         const exp = {};
         if (this.baseForm.cacheFile) exp.cache_file = { enabled: true };
         if (this.baseForm.clashApi) exp.clash_api = { external_controller: `127.0.0.1:${this.baseForm.clashApiPort}` };

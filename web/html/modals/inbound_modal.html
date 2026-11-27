@@ -1295,6 +1295,15 @@
             },
             // The sing-box form's equivalent of "Set Cert from Panel": copies the
             // panel's own certificate/key paths into the native tls block.
+            // Hysteria2 obfs selector: switching type keeps the secret already
+            // typed, and gecko gets the documented packet-size defaults.
+            singboxSetObfs(type) {
+                if (!type) { this.singboxSet(['obfs'], undefined); return; }
+                const o = { type: type };
+                o['password'] = this.singboxGet(['obfs', 'password'], '');
+                if (type === 'gecko') { o.min_packet_size = 512; o.max_packet_size = 1200; }
+                this.singboxSet(['obfs'], o);
+            },
             singboxSetDefaultCert() {
                 this.singboxSet(['tls', 'certificate_path'], app.defaultCert || '');
                 this.singboxSet(['tls', 'key_path'], app.defaultKey || '');
