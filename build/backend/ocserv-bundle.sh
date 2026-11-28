@@ -153,7 +153,8 @@ ls -lh /out/ocserv
 # while musl's resolver is self-contained, so looking up the remote gateway keeps
 # working on a host whose libc we know nothing about.
 cd /tmp
-wget -q "https://www.infradead.org/openconnect/download/openconnect-${OPENCONNECT_VER}.tar.gz"
+wget -q "https://www.infradead.org/openconnect/download/openconnect-${OPENCONNECT_VER}.tar.gz" \
+  || wget -q "https://ftp.infradead.org/pub/openconnect/openconnect-${OPENCONNECT_VER}.tar.gz"
 tar xf "openconnect-${OPENCONNECT_VER}.tar.gz"
 cd "openconnect-${OPENCONNECT_VER}"
 
