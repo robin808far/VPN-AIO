@@ -40,6 +40,65 @@
                 </a-col>
             </a-row>
 
+            <!-- Listen Fields (shared across every sing-box inbound type): TCP Fast
+                 Open, TCP Multi Path, keep-alive controls and UDP fragment/timeout.
+                 Advanced, so collapsed by default; only written to JSON when the
+                 operator sets a non-default value. -->
+            <a-collapse style="margin-bottom:12px">
+                <a-collapse-panel key="listen-advanced" header="Advanced listen options">
+                    <a-row :gutter="12">
+                        <a-col :xs="12" :md="6">
+                            <a-form-item label="TCP Fast Open">
+                                <a-switch :checked="singboxGet(['tcp_fast_open'], false)"
+                                    @change="v => singboxSet(['tcp_fast_open'], v || undefined)"></a-switch>
+                            </a-form-item>
+                        </a-col>
+                        <a-col :xs="12" :md="6">
+                            <a-form-item label="TCP Multi Path">
+                                <a-switch :checked="singboxGet(['tcp_multi_path'], false)"
+                                    @change="v => singboxSet(['tcp_multi_path'], v || undefined)"></a-switch>
+                            </a-form-item>
+                        </a-col>
+                        <a-col :xs="12" :md="6">
+                            <a-form-item label="Disable TCP keep-alive">
+                                <a-switch :checked="singboxGet(['disable_tcp_keep_alive'], false)"
+                                    @change="v => singboxSet(['disable_tcp_keep_alive'], v || undefined)"></a-switch>
+                            </a-form-item>
+                        </a-col>
+                        <a-col :xs="12" :md="6">
+                            <a-form-item label="UDP fragment">
+                                <a-switch :checked="singboxGet(['udp_fragment'], false)"
+                                    @change="v => singboxSet(['udp_fragment'], v || undefined)"></a-switch>
+                            </a-form-item>
+                        </a-col>
+                        <a-col :xs="12" :md="6" v-if="!singboxGet(['disable_tcp_keep_alive'], false)">
+                            <a-form-item label="TCP keep-alive period">
+                                <a-input :value="singboxGet(['tcp_keep_alive'], '')" placeholder="5m (default)"
+                                    @change="e => singboxSet(['tcp_keep_alive'], e.target.value.trim() || undefined)"></a-input>
+                            </a-form-item>
+                        </a-col>
+                        <a-col :xs="12" :md="6" v-if="!singboxGet(['disable_tcp_keep_alive'], false)">
+                            <a-form-item label="TCP keep-alive interval">
+                                <a-input :value="singboxGet(['tcp_keep_alive_interval'], '')" placeholder="75s (default)"
+                                    @change="e => singboxSet(['tcp_keep_alive_interval'], e.target.value.trim() || undefined)"></a-input>
+                            </a-form-item>
+                        </a-col>
+                        <a-col :xs="12" :md="6">
+                            <a-form-item label="UDP NAT timeout">
+                                <a-input :value="singboxGet(['udp_timeout'], '')" placeholder="5m (default)"
+                                    @change="e => singboxSet(['udp_timeout'], e.target.value.trim() || undefined)"></a-input>
+                            </a-form-item>
+                        </a-col>
+                        <a-col :xs="12" :md="6">
+                            <a-form-item label="Bind interface">
+                                <a-input :value="singboxGet(['bind_interface'], '')"
+                                    @change="e => singboxSet(['bind_interface'], e.target.value.trim() || undefined)"></a-input>
+                            </a-form-item>
+                        </a-col>
+                    </a-row>
+                </a-collapse-panel>
+            </a-collapse>
+
             <!-- ===== per-protocol settings ===== -->
             <a-row v-if="singboxGet(['type']) === 'shadowtls'" :gutter="12">
                 <a-col :xs="16" :md="16">
