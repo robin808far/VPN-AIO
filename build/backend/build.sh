@@ -270,7 +270,7 @@ build_arch() {
         git apply /vpn-aio-limits.patch &&
         grep -q 'vpn-aio-limits' experimental/v2rayapi/limiter.go &&
         CGO_ENABLED=0 GOOS=linux GOARCH=${singbox_arch} \
-          go build -trimpath -tags 'with_gvisor,with_quic,with_dhcp,with_wireguard,with_utls,with_acme,with_clash_api,with_tailscale,with_v2ray_api' \
+          go build -trimpath -tags 'with_gvisor,with_quic,with_dhcp,with_wireguard,with_utls,with_acme,with_clash_api,with_tailscale,with_v2ray_api,with_cloudflared' \
           -ldflags '-X github.com/sagernet/sing-box/constant.Version=${SINGBOX_VERSION} -s -w -buildid=' -o /out/sing-box ./cmd/sing-box &&
         chmod 755 /out/sing-box &&
         /out/sing-box version"

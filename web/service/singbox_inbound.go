@@ -38,6 +38,13 @@ func validateSingboxLimits(inbound *model.Inbound) error {
 	if _, exists := root["clients"]; exists {
 		return fmt.Errorf("sing-box settings must use the native users array, not an Xray clients array")
 	}
+	// cloudflared is an admin-configured tunnel endpoint with no per-user
+	// credentials (it carries only a token and admin-set fields) -- it has no
+	// users array to validate and validateSingboxUsers has no case for it, so
+	// requiring one here would make the protocol permanently uncreatable.
+	if inbound.Protocol == "cloudflared" {
+		return nil
+	}
 	var users []map[string]any
 	if err := json.Unmarshal(root["users"], &users); err != nil || users == nil {
 		return fmt.Errorf("sing-box managed accounts require a users array")
@@ -79,14 +86,22 @@ func (s *InboundService) saveSingboxInbound(inbound, previous *model.Inbound) (*
 		Listen string `json:"listen"`
 		Port   int    `json:"listen_port"`
 	}
-	if err := json.Unmarshal([]byte(inbound.Settings), &listener); err != nil {
-		return inbound, false, err
-	}
-	// The raw listener is authoritative. Persist its actual socket so conflict
-	// checks, the list and exported links describe what the core will bind.
-	inbound.Listen, inbound.Port = listener.Listen, listener.Port
-	if inbound.Port < 1 || inbound.Port > 65535 {
-		return inbound, false, fmt.Errorf("sing-box listen_port must be between 1 and 65535")
+	// cloudflared is a tunnel CLIENT, not a listener -- its sing-box structure
+	// has no listen/listen_port fields at all (see sing-box's Cloudflared
+	// inbound docs). Keep whatever Listen/Port the inbound already carries
+	// (set from the panel form) instead of parsing a listener out of
+	// Settings, and skip the "it must be a real socket" port-range check
+	// below -- it would reject the very absence this protocol is built on.
+	if inbound.Protocol != "cloudflared" {
+		if err := json.Unmarshal([]byte(inbound.Settings), &listener); err != nil {
+			return inbound, false, err
+		}
+		// The raw listener is authoritative. Persist its actual socket so conflict
+		// checks, the list and exported links describe what the core will bind.
+		inbound.Listen, inbound.Port = listener.Listen, listener.Port
+		if inbound.Port < 1 || inbound.Port > 65535 {
+			return inbound, false, fmt.Errorf("sing-box listen_port must be between 1 and 65535")
+		}
 	}
 	if err := s.validateInboundConfig(inbound); err != nil {
 		return inbound, false, err

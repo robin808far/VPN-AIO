@@ -133,6 +133,14 @@ func (s *SingboxService) runtimeInbound(inbound *model.Inbound) (*model.Inbound,
 		return nil, fmt.Errorf("nil sing-box inbound")
 	}
 	runtime := *inbound
+	// cloudflared is a tunnel CLIENT, not a listener with managed accounts --
+	// its sing-box settings carry only an admin-set token, so there is no
+	// users array to project quota/enable state into. Skip straight to the
+	// unmodified settings, same as the save-time exception in
+	// validateSingboxLimits (web/service/singbox_inbound.go).
+	if inbound.Protocol == "cloudflared" {
+		return &runtime, nil
+	}
 	var root map[string]any
 	if err := json.Unmarshal([]byte(inbound.Settings), &root); err != nil || root == nil {
 		return nil, fmt.Errorf("inbound %d: invalid sing-box settings", inbound.Id)
@@ -713,13 +721,26 @@ func (s *SingboxService) applyGroup(group *singboxProcessGroup, force bool) erro
 	entries := 0
 	emptyMember := 0
 	for _, runtime := range runtimeMembers {
+		// cloudflared carries no managed users at all -- it is not an empty
+		// managed-user member in the Shadowsocks/ShadowTLS sense this guard
+		// exists for, so it must not count against entries/emptyMember below.
+		if runtime.Protocol == "cloudflared" {
+			continue
+		}
 		items, _ := parseSettingsClients(runtime.Settings)
 		entries += len(items)
 		if len(items) == 0 {
 			emptyMember++
 		}
 	}
-	if entries == 0 || emptyMember > 0 {
+	allCloudflared := true
+	for _, runtime := range runtimeMembers {
+		if runtime.Protocol != "cloudflared" {
+			allCloudflared = false
+			break
+		}
+	}
+	if !allCloudflared && (entries == 0 || emptyMember > 0) {
 		// An empty Shadowsocks/ShadowTLS user list can enable shared-password
 		// authentication. A chained process must also stop when any member has
 		// no enabled managed users, or an empty ShadowTLS front could remain
