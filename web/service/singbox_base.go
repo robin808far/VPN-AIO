@@ -48,7 +48,7 @@ const DefaultSingboxBaseConfig = `{
 // baseConfigBlocks are the top-level keys an operator may set. New saves reject
 // "inbounds" because listeners are managed per inbound; legacy stored values are
 // ignored during rendering so they cannot add an unmanaged listener.
-var baseConfigBlocks = []string{"log", "dns", "ntp", "route", "experimental", "outbounds", "endpoints", "http_clients"}
+var baseConfigBlocks = []string{"log", "dns", "ntp", "route", "experimental", "outbounds", "endpoints", "services", "http_clients"}
 
 // GetBaseConfig returns the stored base-config JSON, or the default when no
 // override exists. The returned text is always valid JSON.
