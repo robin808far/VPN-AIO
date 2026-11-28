@@ -197,7 +197,79 @@
                 </a-row>
             </template>
 
-            <!-- Snell (sing-box 1.14.0+): base psk + protocol version; v5 has HTTP
+            <!-- Cloudflared (sing-box 1.14.0+): an embedded Cloudflare Tunnel client,
+                 not a per-account proxy protocol — it carries no users[] and never
+                 appears in singboxUsesUsers()/the Clients UI. token is the only
+                 required field; everything else tunes the edge connection. -->
+            <template v-if="singboxGet(['type']) === 'cloudflared'">
+                <a-row :gutter="12">
+                    <a-col :span="24">
+                        <a-form-item label="Tunnel token">
+                            <a-input :value="singboxGet(['token'])" placeholder="Base64 token from Cloudflare Zero Trust -> Networks -> Tunnels"
+                                @change="e => singboxSet(['token'], e.target.value)"></a-input>
+                        </a-form-item>
+                    </a-col>
+                </a-row>
+                <a-row :gutter="12">
+                    <a-col :xs="12" :md="6">
+                        <a-form-item label="HA connections">
+                            <a-input-number :value="singboxGet(['ha_connections'])" :min="0" style="width: 100%"
+                                @change="v => singboxSet(['ha_connections'], v || undefined)"></a-input-number>
+                        </a-form-item>
+                    </a-col>
+                    <a-col :xs="12" :md="6">
+                        <a-form-item label="Protocol">
+                            <a-select :value="singboxGet(['protocol'], '')"
+                                @change="v => singboxSet(['protocol'], v || undefined)">
+                                <a-select-option value="">auto</a-select-option>
+                                <a-select-option value="quic">quic</a-select-option>
+                                <a-select-option value="http2">http2</a-select-option>
+                            </a-select>
+                        </a-form-item>
+                    </a-col>
+                    <a-col :xs="12" :md="6" v-if="singboxGet(['protocol'], '') === 'quic'">
+                        <a-form-item label="Datagram version">
+                            <a-select :value="singboxGet(['datagram_version'], '')"
+                                @change="v => singboxSet(['datagram_version'], v || undefined)">
+                                <a-select-option value="">default</a-select-option>
+                                <a-select-option value="v2">v2</a-select-option>
+                                <a-select-option value="v3">v3</a-select-option>
+                            </a-select>
+                        </a-form-item>
+                    </a-col>
+                    <a-col :xs="12" :md="6">
+                        <a-form-item label="Edge IP version">
+                            <a-select :value="singboxGet(['edge_ip_version'], 0)"
+                                @change="v => singboxSet(['edge_ip_version'], v || undefined)">
+                                <a-select-option :value="0">automatic</a-select-option>
+                                <a-select-option :value="4">4</a-select-option>
+                                <a-select-option :value="6">6</a-select-option>
+                            </a-select>
+                        </a-form-item>
+                    </a-col>
+                </a-row>
+                <a-row :gutter="12">
+                    <a-col :xs="12" :md="6">
+                        <a-form-item label="Post-quantum key exchange">
+                            <a-switch :checked="singboxGet(['post_quantum'], false)"
+                                @change="v => singboxSet(['post_quantum'], v || undefined)"></a-switch>
+                        </a-form-item>
+                    </a-col>
+                    <a-col :xs="12" :md="6">
+                        <a-form-item label="Grace period">
+                            <a-input :value="singboxGet(['grace_period'], '')" placeholder="e.g. 30s"
+                                @change="e => singboxSet(['grace_period'], e.target.value.trim() || undefined)"></a-input>
+                        </a-form-item>
+                    </a-col>
+                    <a-col :xs="12" :md="12">
+                        <a-form-item label="Edge region (conflicts with a token-embedded endpoint)">
+                            <a-input :value="singboxGet(['region'], '')"
+                                @change="e => singboxSet(['region'], e.target.value.trim() || undefined)"></a-input>
+                        </a-form-item>
+                    </a-col>
+                </a-row>
+            </template>
+ base psk + protocol version; v5 has HTTP
                  obfuscation (obfs_mode), v6 replaces it with traffic shaping (mode) and
                  needs a psk of 12-255 bytes. Per-user credentials ("userkey") are managed
                  the same way as every other sing-box protocol's users[] — see Clients. -->

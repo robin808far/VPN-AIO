@@ -1073,6 +1073,11 @@
                             version: 5, psk: RandomUtil.randomUUID(),
                             users: [{ name: 'user1', userkey: RandomUtil.randomUUID() }] };
                         break;
+                    case "cloudflared":
+                        // Not a per-account protocol: no users[], so it stays out of
+                        // singboxUsesUsers() and the Clients UI entirely.
+                        block = { type: 'cloudflared', tag: 'singbox-in', token: '' };
+                        break;
                     default:
                         block = { type: inb.protocol, tag: "singbox-in", listen: "::", listen_port: port };
                 }
