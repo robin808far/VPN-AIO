@@ -1,8 +1,70 @@
 # HANDOFF
 
-Last updated: 2026-11-28 (tunnel repository research; no implementation)
+Last updated: 2026-11-28 (state save: v7.1.0 released, five cloudflared bugs fixed and live-tested, OpenVPN endpoint fix in progress)
 
-## Latest task — research seven tunnel repositories (2026-11-28)
+## Latest task — v7.1.0 release + live sing-box runtime testing (2026-11-28)
+
+- Released **v7.1.0** (version bump from 7.0.2): pushed `main` + tag, both
+  release/validation CI succeeded, amd64/arm64 assets + SHA256SUMS verified.
+  User updated the live host `sweden` to v7.1.0 themselves.
+- With the user's explicit, repeated authorization, ran live operational
+  tests directly on `sweden` (not just code review): created real inbounds
+  through the panel API, ran the actual bundled `sing-box check`, and
+  inspected running processes/network connections. A full backup was taken
+  first at `/home/ubuntu/assistant-test-backup-20261128/` (DB, sing-box
+  config, running binary) and has not yet been restored — see
+  [PROGRESS.md](PROGRESS.md) for exactly what state that leaves.
+- **Snell**: verified end-to-end (real inbound created, `sing-box check`
+  passed, instance running). Key semantics captured as a learned note: a
+  manual JSON `users[]` entry needs both `password` and `userkey` (the panel
+  reads `password` for validation, sing-box itself only honors `userkey`);
+  the UI form already emits this correctly. Valid `version` is `5` or `6`,
+  not `4`.
+- **Listen fields** (tcp_fast_open/tcp_multi_path/udp_fragment/keep_alive):
+  verified end-to-end the same way.
+- **Cloudflared**: found and fixed **five separate real bugs** that each
+  independently made this protocol non-functional (committed as `cfa97d22`):
+  a missing `with_cloudflared` build tag on the bundled sing-box binary, and
+  four separate code paths in the panel (`validateSingboxLimits`,
+  `saveSingboxInbound`, `runtimeInbound`, `applyGroup`) that unconditionally
+  required a managed `users[]` array / `listen_port`, which cloudflared
+  (an admin-token-only tunnel client) never has. The last one was the most
+  dangerous: it failed silently, stopping the whole sing-box process group
+  with no visible error. After all five fixes, the user supplied a real
+  Cloudflare Tunnel token from their own Zero Trust dashboard; the rebuilt
+  sing-box instance showed four live UDP connections to Cloudflare's edge
+  (198.41.192.0/24:7844) — a genuine live tunnel, not just config
+  acceptance. The test inbound was deleted after confirming; the user still
+  needs to delete the test Tunnel from their own Cloudflare dashboard.
+- **OpenVPN endpoint — bug found, fix in progress, NOT complete**: the
+  `addOpenvpnServerEndpoint()` template in `core.html` put an extra `name`
+  field in each user object that real sing-box rejects
+  (`unknown field "name"`); fixed locally (uncommitted) to emit only
+  `username`/`password`. After that fix, a *second*, same-shape bug
+  surfaced: the bundled sing-box binary is also missing the
+  `with_openvpn` build tag, so even a correctly-shaped OpenVPN endpoint is
+  rejected at the sing-box layer with "OpenVPN is not included in this
+  build". This was not fixed or re-tested before this save — next session
+  must add `with_openvpn` to `build/backend/build.sh`, rebuild sing-box on
+  `sweden`, and re-verify.
+- **Hysteria Realm**: NOT operationally tested in this session (only
+  earlier browser-shim tested in a prior session, which does not exercise
+  real sing-box).
+- New working method captured for future sessions: `sweden` has a real
+  Go+gcc toolchain reachable over SSH (a temporary Go install in
+  `/tmp/go-toolchain` plus the project's full source copied via `scp`/`tar`
+  builds the real panel binary with `CGO_ENABLED=1`, unlike cross-compiling
+  from this Windows machine, which silently produces a stub
+  `go-sqlite3` that crashes on startup — this happened once and was
+  recovered from a backup with no data loss). The bundled sing-box binary
+  itself was separately rebuilt via `docker run ... golang:1.25.5-alpine`
+  with a corrected `-tags` list, reusing the already-installed `docker` and
+  the project's pinned `vpn-aio-limits` patch.
+- Full detail, exact file list, and the precise next steps are in
+  [PROGRESS.md](PROGRESS.md) — read it first in any continuation of this
+  task before touching `sweden` again.
+
+## Previous task — research seven tunnel repositories (2026-11-28)
 
 - User requested deep research only, to retain features and implementation
   knowledge before giving integration requirements. No engine selection,

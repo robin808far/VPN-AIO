@@ -1149,6 +1149,9 @@
           listen_port: 1194,
           network: '10.' + (8 + n) + '.0.0/24',
           mode: 'tls',
+          users: [{ username: 'user1', password: RandomUtil.randomSeq(16) }],
+          tls: { certificate_path: '', key_path: '' },
+        });
           users: [{ name: 'user1', username: 'user1', password: RandomUtil.randomSeq(16) }],
           tls: { certificate_path: '', key_path: '' },
         });
