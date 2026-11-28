@@ -46,8 +46,11 @@ jobs:
           path: |
             backend/bin
             corebundle/core
-          key: vpn-aio-build-${{ runner.os }}-${{ steps.cachekey.outputs.pins }}
-          restore-keys: vpn-aio-build-${{ runner.os }}-
+          # Must equal the release workflow's key exactly, or the release run
+          # never finds this prebuilt bundle and rebuilds arm64 under qemu.
+          # No restore-keys: build.sh only re-checks sing-box, so a fallback
+          # could restore other stale daemons and re-save them under the new key.
+          key: vpn-aio-build-${{ runner.os }}-${{ steps.cachekey.outputs.pins }}-${{ hashFiles('build/backend/**', 'build.sh') }}
       - name: Install arm64 cross-compiler
         run: sudo apt-get update -qq && sudo apt-get install -y -qq gcc-aarch64-linux-gnu
       - name: Register qemu binfmt for arm64 containers
