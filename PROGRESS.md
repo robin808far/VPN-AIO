@@ -6,7 +6,7 @@ Project root: `C:\Users\mef\Documents\OpenCode Projects\VPN-AIO`
 
 ## وضعیت فعلی (Current Status)
 
-- **شاخه/نسخهٔ محلی (مشاهدهٔ تازه):** `main` روی `951ab31b`، **۳ کامیت جلوتر از `origin/main`** (`884ad937`, `6607000c`, `951ab31b`) و dirty. `git describe --tags --always --dirty` = `v7.0.2-4-g951ab31b-dirty`. `config/version` = `7.0.2`.
+- **شاخه/نسخهٔ محلی (مشاهدهٔ تازه):** `main` روی `b010e8be`، **۴ کامیت جلوتر از `origin/main`** (`884ad937`, `6607000c`, `951ab31b`, `b010e8be`)، working tree تمیز (commit شد؛ هنوز push نشده). `config/version` = `7.0.2`.
 - **تگ‌های منتشرشده (مشاهدهٔ محلی/ریموت):** `v7.0.0`, `v7.0.1`, `v7.0.2` وجود دارند؛ تگ ریموت `v7.0.2` دیده شد (`refs/tags/v7.0.2`). در این ذخیرهٔ وضعیت، CI انتشار/اعتبارسنجی v7.0.2 دوباره بررسی نشده؛ PROGRESS قبلی ثبت کرده بود که CI v7.0.2 در زمان ذخیرهٔ قبلی هنوز در حال اجرا بوده است.
 - **کار محلی بعد از v7.0.2 (کامیت‌شده، push نشده):** سه قابلیت sing-box اضافه شده‌اند: Snell inbound (`884ad937`)، فیلدهای مشترک Listen (`6607000c`)، فرم Cloudflared inbound (`951ab31b`). این‌ها منتشر/اعتبارسنجی runtime نشده‌اند.
 - **تغییرات uncommitted محلی:** `PROGRESS.md`, `HANDOFF.md`, `docs/README.md`, `web/html/core.html` تغییر کرده‌اند؛ `docs/plans/tunnel-repositories-review-20261128.md` untracked است. در `web/html/core.html` دکمهٔ قالب OpenVPN Server endpoint (sing-box 1.14.0+) اضافه شده که یک قالب شروع را در `endpoints[]` درج می‌کند؛ این endpoint-editor همچنان کامل نیست (بدون فرم گرافیکی کامل برای tls/ciphers/push options)، اما باگ پسورد placeholder رفع شد — جزئیات در بخش «کارهای انجام‌شده».
@@ -38,6 +38,14 @@ Project root: `C:\Users\mef\Documents\OpenCode Projects\VPN-AIO`
 - `docs/plans/tunnel-repositories-review-20261128.md`: گزارش تحقیق هفت مخزن تانل (untracked).
 - `docs/README.md`, `HANDOFF.md`, `PROGRESS.md`: به‌روزرسانی اسناد وضعیت/مرجع.
 
+### Hysteria Realm — اضافه شد (این نشست، کامل، تستشده)
+
+- سرویس رندهووی NAT traversal برای Hysteria2 (sing-box 1.14+، `services[]` -> `hysteria-realm`) با فرم گرافیکی کامل (نه فقط قالب+JSON، چون فیلدها کم و پایدارند).
+- `core.html`: `baseForm` فیلدهای `hysteriaRealm*` گرفت؛ `jsonToForm` اولین سرویس `hysteria-realm` را از `cfg.services` میخواند؛ `formToJson` سرویس را از فرم بازمیسازد و بقیهٔ `services[]` دستنخورده حفظ میشود (کلید `services` کنار `outbounds/endpoints/ntp` به لیست کلیدهای حفظشده اضافه شد). UI جدید بعد از بخش Endpoints: سوییچ فعال/غیرفعال، tag، listen port، TLS اختیاری، لیست users (name/token/maxRealms) با v-for مثل routeRules.
+- `web/html/form/protocol/singbox.html`: روی inbound Hysteria2 (طرف سرور پشت NAT)، بعد از Masquerade، سوییچ «Behind NAT (use Realm)» و فیلدهای `realm.server_url/token/realm_id/stun_servers` اضافه شد.
+- تست: سینتکس هر دو تابع با استخراج برنامهنویسیشده و `require` (node) تأیید شد. تگهای HTML بخش realm در singbox.html با شمارش باز/بسته متوازن تأیید شدند. رفتار runtime با shim مرورگری (Vue 2.7.16 + توابع واقعی استخراجشده) تست شد: بارگذاری فیکسچر با سرویس realm موجود پر شدن درست فرم را نشان داد؛ افزودن کاربر دوم و ذخیره، JSON خروجی معتبر با هر دو کاربر و توکنهای غیرخالی تولید کرد؛ بدون خطای کنسول. فایلهای تست موقت حذف شدند.
+- فیلد realm روی inbound Hysteria2 فقط از نظر ساختار HTML بررسی شد؛ رفتار runtime آن در این نشست تست نشد.
+
 ### تحقیق مخازن تانل (2026-11-28، فقط تحقیق — کامل شده)
 
 - گزارش پایدار: `docs/plans/tunnel-repositories-review-20261128.md`؛ لینک در `docs/README.md`.
@@ -48,7 +56,7 @@ Project root: `C:\Users\mef\Documents\OpenCode Projects\VPN-AIO`
 ## قدم‌های بعدی (Next Steps)
 
 - [ ] **تعیین تکلیف انتشار کامیت‌های محلی sing-box:** ۳ کامیت جلوتر از `origin/main` (`884ad937`, `6607000c`, `951ab31b`) و تغییر uncommitted `web/html/core.html` هنوز push/release نشده‌اند؛ قبل از ادعای انتشار، تصمیم کاربر دربارهٔ commit/push/release لازم است.
-- [ ] **بررسی/تکمیل OpenVPN Server endpoint:** رفتار placeholder پسورد رفع و با تست runtime جداگانه (shim HTML در مرورگر) تأیید شد. باقیمانده: ویرایشگر گرافیکی کامل endpoint (users/tls/ciphers/push options همچنان فقط در تب JSON قابل ویرایشاند)، و تست با سرویس واقعی گو روی build منتشرشده (این محیط ویندوزی gcc/cgo ندارد؛ تست روی لینوکس/WSL یا بعد از نصب toolchain لازم است).
+- [x] **بررسی/تکمیل OpenVPN Server endpoint — بسته شد (تصمیم کاربر):** رفتار placeholder پسورد رفع و با تست runtime جداگانه (shim HTML در مرورگر) تأیید شد. دربارهٔ ساخت فرم گرافیکی کامل (tls/ciphers/push options) از کاربر پرسیده شد؛ شواهد نشان داد پنل از قبل یک پروتکل OpenVPN **native و کامل** دارد (`form/openvpn`, `form/openvpn/security`, `form/openvpn/network` در `inbound.html` — مستقل از sing-box). تصمیم کاربر: فرم گرافیکی کامل برای OpenVPN endpoint در sing-box **ساخته نشود**؛ همان دکمهٔ «قالب + ویرایش دستی در JSON» فعلی کافی است، چون این endpoint فقط برای سناریوهای پیشرفتهٔ chaining در sing-box کاربرد دارد، نه مسیر اصلی OpenVPN. باقیمانده فقط: تست با سرویس واقعی گو روی build منتشرشده (این محیط ویندوزی gcc/cgo ندارد؛ تست روی لینوکس/WSL یا بعد از نصب toolchain لازم است) — این یک آیتم عمومی است، نه مانع این مورد خاص.
 - [ ] **تست کامل runtime sing-box روی build منتشرشده:** پس از انتشار/دیپلوی نسخهٔ مربوط توسط کاربر، تست تولید کانفیگ، ترافیک واقعی، آمار/سهمیه، محدودیت‌ها و chaining را در namespace خصوصی اجرا کن (بدون دست زدن به پورت 12301 میزبان زنده).
 - [ ] **گزینه‌های باقی‌ماندهٔ بخش ۳:** Snell/Listen/cloudflared تا حدی اضافه شده‌اند اما نیاز به بررسی کامل UI/مدل/تست دارند؛ Hysteria2 Realm و sing-box OpenVPN server (فراتر از قالب endpoint) همچنان باز هستند.
 - [ ] **تصمیم کاربر برای میزبان زنده:** ارتقا به 7.0.2 یا نسخهٔ بعد، و بررسی وضعیت کانتینرهای pre-existing audit/review روی `sweden` فقط با درخواست صریح کاربر.

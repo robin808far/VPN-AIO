@@ -385,6 +385,57 @@
                         </a-form-item>
                     </a-col>
                 </a-row>
+
+                <!-- Realm registers this server with a Hysteria Realm rendezvous
+                     service (sing-box 1.14+) for NAT traversal, instead of
+                     listening on a public port itself. It conflicts with
+                     listen/listen_port -- see the hint below. -->
+                <a-row :gutter="12">
+                    <a-col :xs="24" :md="6">
+                        <a-form-item label="Behind NAT (use Realm)">
+                            <a-switch :checked="!!singboxGet(['realm'])"
+                                @change="v => singboxSet(['realm'], v ? { server_url: '', token: '', realm_id: '' } : undefined)"></a-switch>
+                        </a-form-item>
+                    </a-col>
+                </a-row>
+                <template v-if="singboxGet(['realm'])">
+                    <a-row :gutter="12">
+                        <a-col :xs="24" :md="12">
+                            <a-form-item label="Realm server URL">
+                                <a-input :value="singboxGet(['realm', 'server_url'])"
+                                    placeholder="https://realm.example.com:8443"
+                                    @change="e => singboxSet(['realm', 'server_url'], e.target.value.trim())"></a-input>
+                            </a-form-item>
+                        </a-col>
+                        <a-col :xs="24" :md="12">
+                            <a-form-item label="Realm token">
+                                <a-input :value="singboxGet(['realm', 'token'])"
+                                    @change="e => singboxSet(['realm', 'token'], e.target.value.trim())"></a-input>
+                            </a-form-item>
+                        </a-col>
+                        <a-col :xs="24" :md="12">
+                            <a-form-item label="Realm ID">
+                                <a-input :value="singboxGet(['realm', 'realm_id'])"
+                                    placeholder="optional -- random if empty"
+                                    @change="e => singboxSet(['realm', 'realm_id'], e.target.value.trim() || undefined)"></a-input>
+                            </a-form-item>
+                        </a-col>
+                        <a-col :xs="24" :md="12">
+                            <a-form-item label="STUN servers">
+                                <a-input :value="(singboxGet(['realm', 'stun_servers'], []) || []).join(',')"
+                                    placeholder="stun.l.google.com:19302, ..."
+                                    @change="e => { const v = e.target.value.split(',').map(s => s.trim()).filter(Boolean); singboxSet(['realm', 'stun_servers'], v.length ? v : undefined); }"></a-input>
+                            </a-form-item>
+                        </a-col>
+                    </a-row>
+                    <div class="cfg-field-label">
+                        While Realm is on, this server registers with the rendezvous
+                        service above instead of listening on Listen/Listen port --
+                        those fields are ignored by sing-box when realm is set.
+                        Configure the matching Hysteria Realm service in the
+                        sing-box base config (Core &gt; sing-box settings &gt; Hysteria Realm).
+                    </div>
+                </template>
             </template>
 
             <template v-if="singboxGet(['type']) === 'tuic'">

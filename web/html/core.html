@@ -742,6 +742,60 @@
                 Edit it there for ciphers, push options and every other OpenVPN field.
               </div>
             </a-form-item>
+
+            <!-- Hysteria Realm (sing-box 1.14+) is a top-level services[] entry,
+                 a rendezvous point Hysteria2 servers behind NAT register on so
+                 clients can reach them without a public port on the server
+                 itself. Unlike the OpenVPN endpoint above, this has a small,
+                 stable field set, so it gets a full graphic form instead of a
+                 JSON-only template. See jsonToForm()/formToJson() for the
+                 services[] <-> form mapping. -->
+            <a-divider orientation="left" plain>Hysteria Realm</a-divider>
+            <a-form-item label="Enable Realm service">
+              <a-switch v-model="baseForm.hysteriaRealmEnabled"></a-switch>
+            </a-form-item>
+            <template v-if="baseForm.hysteriaRealmEnabled">
+              <a-form-item label="Tag">
+                <a-input v-model.trim="baseForm.hysteriaRealmTag" style="width: 240px"></a-input>
+              </a-form-item>
+              <a-form-item label="Listen port">
+                <a-input-number v-model="baseForm.hysteriaRealmListenPort" :min="1" :max="65535"
+                  style="width: 160px"></a-input-number>
+              </a-form-item>
+              <a-form-item label="TLS">
+                <a-switch v-model="baseForm.hysteriaRealmTls"></a-switch>
+              </a-form-item>
+              <template v-if="baseForm.hysteriaRealmTls">
+                <a-form-item label="Certificate path">
+                  <a-input v-model.trim="baseForm.hysteriaRealmCertPath"
+                    placeholder="/etc/ssl/fullchain.pem"></a-input>
+                </a-form-item>
+                <a-form-item label="Key path">
+                  <a-input v-model.trim="baseForm.hysteriaRealmKeyPath"
+                    placeholder="/etc/ssl/privkey.pem"></a-input>
+                </a-form-item>
+              </template>
+              <a-form-item label="Realm users">
+                <div v-for="(u, idx) in baseForm.hysteriaRealmUsers" :key="'realm-user-' + idx"
+                  :style="{ display: 'flex', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }">
+                  <a-input v-model.trim="u.name" placeholder="name" style="width: 160px"></a-input>
+                  <a-input v-model.trim="u.token" placeholder="token" style="flex: 1 1 200px; min-width: 160px"></a-input>
+                  <a-input-number v-model="u.maxRealms" placeholder="max realms" :min="1"
+                    style="width: 140px"></a-input-number>
+                  <a-button icon="delete" size="small"
+                    @click="baseForm.hysteriaRealmUsers.splice(idx, 1)"></a-button>
+                </div>
+                <a-button size="small" type="dashed" icon="plus"
+                  @click="baseForm.hysteriaRealmUsers.push({ name: '', token: RandomUtil.randomSeq(16), maxRealms: '' })">
+                  Add realm user
+                </a-button>
+                <div class="cfg-field-label" style="margin-top:6px">
+                  Each Hysteria2 server behind NAT authenticates to this realm with one
+                  of these name/token pairs. "Max realms" caps how many servers can
+                  register under the same user at once (sing-box default: 1).
+                </div>
+              </a-form-item>
+            </template>
           </a-form>
         </a-tab-pane>
         <!-- Raw JSON: power users, kept as before. -->
@@ -865,6 +919,16 @@
         clashApi: false,
         clashApiPort: 9090,
         routeRules: [],
+        // Hysteria Realm: a rendezvous service (services[], sing-box 1.14+)
+        // for Hysteria2 NAT traversal. See formToJson()/jsonToForm() for the
+        // services[] <-> form mapping and the button in the Endpoints section.
+        hysteriaRealmEnabled: false,
+        hysteriaRealmTag: 'hysteria-realm',
+        hysteriaRealmListenPort: 8443,
+        hysteriaRealmTls: false,
+        hysteriaRealmCertPath: '',
+        hysteriaRealmKeyPath: '',
+        hysteriaRealmUsers: [],
       },
     },
     methods: {
@@ -956,6 +1020,22 @@
           if (r.ip_cidr) return { kind: 'ip_cidr', value: list(r.ip_cidr).join(','), outbound: target(r) };
           return null;
         }).filter(Boolean);
+        // Hysteria Realm: read the first services[] entry of type
+        // "hysteria-realm" back into the form. Any further realm services the
+        // operator hand-edited beyond the first are left in the JSON tab only.
+        const services = Array.isArray(cfg.services) ? cfg.services : [];
+        const realm = services.find((s) => s && s.type === 'hysteria-realm');
+        this.baseForm.hysteriaRealmEnabled = !!realm;
+        this.baseForm.hysteriaRealmTag = (realm && realm.tag) || 'hysteria-realm';
+        this.baseForm.hysteriaRealmListenPort = (realm && realm.listen_port) || 8443;
+        this.baseForm.hysteriaRealmTls = !!(realm && realm.tls && realm.tls.enabled);
+        this.baseForm.hysteriaRealmCertPath = (realm && realm.tls && realm.tls.certificate_path) || '';
+        this.baseForm.hysteriaRealmKeyPath = (realm && realm.tls && realm.tls.key_path) || '';
+        this.baseForm.hysteriaRealmUsers = ((realm && realm.users) || []).map((u) => ({
+          name: u.name || '',
+          token: u.token || '',
+          maxRealms: u.max_realms || '',
+        }));
       },
       // formToJson renders the graphic form back to the base-config text,
       // preserving blocks the form does not touch from the current JSON.
@@ -1021,6 +1101,35 @@
         for (const key of ['outbounds', 'endpoints', 'ntp']) {
           if (old[key] !== undefined) cfg[key] = old[key];
         }
+        // Hysteria Realm: services[] the operator set before are preserved,
+        // minus any previous hysteria-realm entry which this form now owns.
+        const oldServices = Array.isArray(old.services) ? old.services : [];
+        const keptServices = oldServices.filter((s) => !(s && s.type === 'hysteria-realm'));
+        if (this.baseForm.hysteriaRealmEnabled) {
+          const users = this.baseForm.hysteriaRealmUsers
+            .filter((u) => u && u.name && u.name.trim() && u.token && u.token.trim())
+            .map((u) => {
+              const out = { name: u.name.trim(), token: u.token.trim() };
+              if (u.maxRealms) out.max_realms = parseInt(u.maxRealms, 10) || undefined;
+              return out;
+            });
+          const realm = {
+            type: 'hysteria-realm',
+            tag: this.baseForm.hysteriaRealmTag || 'hysteria-realm',
+            listen: '::',
+            listen_port: this.baseForm.hysteriaRealmListenPort || 8443,
+            users,
+          };
+          if (this.baseForm.hysteriaRealmTls) {
+            realm.tls = {
+              enabled: true,
+              certificate_path: this.baseForm.hysteriaRealmCertPath || '',
+              key_path: this.baseForm.hysteriaRealmKeyPath || '',
+            };
+          }
+          keptServices.push(realm);
+        }
+        if (keptServices.length) cfg.services = keptServices;
         return JSON.stringify(cfg, null, 2);
       },
       // Drops a minimal TLS-mode OpenVPN server endpoint into endpoints[] and
