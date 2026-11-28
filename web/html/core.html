@@ -724,6 +724,24 @@
                 {{ i18n "pages.core.singboxAddRule" }}
               </a-button>
             </a-form-item>
+
+            <!-- OpenVPN Server is a sing-box ENDPOINT (1.14.0+), not an inbound, and
+                 the panel has no per-endpoint graphical form (endpoints[] is an
+                 operator-edited JSON block, like outbounds[]). This button only drops
+                 a starter template into endpoints[] -- users[], tls paths, ciphers,
+                 push options etc. are then edited on the JSON tab. Existing
+                 endpoints are preserved; nothing here is auto-regenerated on save. -->
+            <a-divider orientation="left" plain>Endpoints</a-divider>
+            <a-form-item label="OpenVPN Server">
+              <a-button size="small" type="dashed" icon="plus" @click="addOpenvpnServerEndpoint()">
+                Add OpenVPN Server template
+              </a-button>
+              <div class="cfg-field-label" style="margin-top:6px">
+                Adds a minimal TLS-mode OpenVPN server endpoint to the JSON tab:
+                network, listen port, one placeholder user and TLS certificate paths.
+                Edit it there for ciphers, push options and every other OpenVPN field.
+              </div>
+            </a-form-item>
           </a-form>
         </a-tab-pane>
         <!-- Raw JSON: power users, kept as before. -->
@@ -1004,6 +1022,30 @@
           if (old[key] !== undefined) cfg[key] = old[key];
         }
         return JSON.stringify(cfg, null, 2);
+      },
+      // Drops a minimal TLS-mode OpenVPN server endpoint into endpoints[] and
+      // switches to the JSON tab so the operator edits it there (no graphical
+      // form for this one -- see the comment on the button). Existing
+      // endpoints are kept; this only appends.
+      addOpenvpnServerEndpoint() {
+        this.baseCfgText = this.formToJson();
+        let cfg = {};
+        try { cfg = JSON.parse(this.baseCfgText) || {}; } catch (e) { cfg = {}; }
+        if (!Array.isArray(cfg.endpoints)) cfg.endpoints = [];
+        const n = cfg.endpoints.filter((e) => e && e.type === 'openvpn-server').length + 1;
+        cfg.endpoints.push({
+          type: 'openvpn-server',
+          tag: 'openvpn-server-' + n,
+          listen: '::',
+          listen_port: 1194,
+          network: '10.' + (8 + n) + '.0.0/24',
+          mode: 'tls',
+          users: [{ name: 'user1', username: 'user1', password: RandomUtil.randomSeq(16) }],
+          tls: { certificate_path: '', key_path: '' },
+        });
+        this.baseCfgText = JSON.stringify(cfg, null, 2);
+        this.baseCfgTab = 'json';
+        this.$nextTick(() => this.mountBaseCfgEditor());
       },
       mountBaseCfgEditor() {
         const el = document.getElementById('base-cfg-editor');

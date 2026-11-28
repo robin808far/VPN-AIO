@@ -12,5 +12,7 @@ The repository root keeps the main README, its translations, and the local
 
 Feature guide: [Happ subscription management](guides/HAPP.md).
 
+Tunnel research: [بررسی هفت پروژهٔ تانل برای VPN-AIO](plans/tunnel-repositories-review-20261128.md).
+
 Release notes are in `releases/`; their corresponding validation and provenance
 records are in `releases/validation/`.

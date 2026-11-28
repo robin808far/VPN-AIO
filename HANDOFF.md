@@ -1,8 +1,36 @@
 # HANDOFF
 
-Last updated: 2026-11-28 (v7.0.0 published and verified; status docs re-saved)
+Last updated: 2026-11-28 (tunnel repository research; no implementation)
 
-## Current status — v7.0.0 released and verified (2026-11-28)
+## Latest task — research seven tunnel repositories (2026-11-28)
+
+- User requested deep research only, to retain features and implementation
+  knowledge before giving integration requirements. No engine selection,
+  implementation, installation, deployment, commit/push or release in this task.
+- Persistent report:
+  [بررسی هفت پروژهٔ تانل](docs/plans/tunnel-repositories-review-20261128.md).
+  It pins all seven main SHAs and records source maps, topology/transports,
+  config, management, metrics/limits, packaging, licensing and VPN-AIO seams.
+- Important findings: Kariz's present license forbids management from another
+  panel; TunTunnel lacks a license, and Overal has only an MIT badge without a
+  grant found. WatTunnel is MIT; BackPack/C-Tunnel/Arange have AGPL/notices.
+  C-Tunnel has 28 active and 23 legacy methods; some protocol names are shaped
+  framing. Arange's frp is not official FRP. Overal uses official FRP and has an
+  optional fake speed/ping display, off on a fresh install. Details are in report.
+- Actual local observation: HEAD `7d688912ecc807d13f1023a0e272d5636bc1c486`,
+  version `7.0.1`, initially clean. Prior release/live-host paragraphs below are
+  historical checkpoints; this task did not verify releases or access the host.
+- Verification is source/documentation research and read-only GitHub metadata;
+  TunTunnel's Python/embedded benchmark and Overal's embedded panel were
+  AST-parsed without execution; C-Tunnel's method catalog was counted. Pinned
+  source/local references and whitespace passed checks; `git diff --check`
+  passed with environment LF/CRLF warnings only. No runtime, throughput, kernel or ARM64
+  claim. Product source and dependencies remain untouched.
+- Changed documents: report, `docs/README.md`, `PROGRESS.md`, `HANDOFF.md`.
+  Source/architecture research and documentation are complete. Next: await the
+  user's desired design; practical runtime qualification remains unperformed.
+
+## Prior checkpoint — v7.0.0 released and verified (2026-11-28)
 
 - Remote `main`, local HEAD and peeled tag `v7.0.0` all resolve to
   `6f2ef77deee873f6f2551c14c0fd17e103ef0ce1`; `config/version` is `7.0.0`.
