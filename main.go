@@ -175,6 +175,10 @@ func runWebServer() {
 	fmt.Println(ansiVpnAIO())
 	log.Printf("Starting %v %v", config.GetName(), config.GetVersion())
 
+	// The logger creates vpn-aio.log on init, so the pre-rename log must be moved
+	// first or the main migration below finds both names and keeps the old one.
+	service.MigrateLegacyLogFile()
+
 	initLogger()
 
 	// Move a pre-rename install onto the VPN-AIO paths before anything below

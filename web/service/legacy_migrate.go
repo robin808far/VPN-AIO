@@ -43,6 +43,52 @@ func MigrateLegacyLayout() {
 	}
 }
 
+// MigrateLegacyLogFile moves the pre-rename panel log onto the current name. It
+// must run BEFORE the logger is initialised, because the logger creates the new
+// log file and the generic migration then refuses to overwrite it. When both
+// names already exist (an earlier 7.0.1 start), the old log's content is
+// prepended to the new one so no history is lost and the old file is removed.
+// It cannot use the logger, so it reports nothing; the result is visible in the
+// log file itself. Idempotent.
+func MigrateLegacyLogFile() {
+	if os.Geteuid() != 0 {
+		return
+	}
+	dir := config.GetLogFolder()
+	cur := filepath.Join(dir, "vpn-aio.log")
+	old := filepath.Join(dir, config.LegacyName("vpn-aio.log"))
+	_ = mergeLegacyFile(old, cur)
+}
+
+// mergeLegacyFile renames old to cur, or, when cur already exists, writes
+// old+cur into cur and removes old. A missing old file is not an error.
+func mergeLegacyFile(old, cur string) error {
+	if _, err := os.Lstat(old); err != nil {
+		return nil
+	}
+	if _, err := os.Lstat(cur); err != nil {
+		return movePath(old, cur)
+	}
+	oldData, err := os.ReadFile(old)
+	if err != nil {
+		return err
+	}
+	curData, err := os.ReadFile(cur)
+	if err != nil {
+		return err
+	}
+	tmp := cur + ".merge"
+	if err := os.WriteFile(tmp, append(oldData, curData...), 0644); err != nil {
+		_ = os.Remove(tmp)
+		return err
+	}
+	if err := os.Rename(tmp, cur); err != nil {
+		_ = os.Remove(tmp)
+		return err
+	}
+	return os.Remove(old)
+}
+
 // extraLegacyFiles lists the panel-owned files that sit next to the binary or
 // in the DB/log folders and were named after the old product.
 func extraLegacyFiles() []string {
@@ -94,7 +140,18 @@ func migrateLegacyIn(root string, scanDirs, extra []string) legacyMigrateResult 
 			continue
 		}
 		if _, err := os.Lstat(dst); err == nil {
-			res.warnings = append(res.warnings, fmt.Sprintf("%s and %s both exist; keeping both, using the new one", old, dst))
+			// The new name already exists (e.g. an earlier panel run already
+			// created it fresh). The legacy copy is not needed for the panel to
+			// work, but it is set aside rather than deleted — it may still hold
+			// an old log tail or a config an operator wants to inspect — and
+			// renamed off the legacy token so a plain "*vpn-ui*" scan of the
+			// host comes up empty once this has run.
+			backup := uniqueLegacyBackupPath(dst + ".legacy-backup")
+			if err := movePath(old, backup); err != nil {
+				res.warnings = append(res.warnings, fmt.Sprintf("%s and %s both exist; could not set aside %s: %v", old, dst, old, err))
+				continue
+			}
+			res.warnings = append(res.warnings, fmt.Sprintf("%s and %s both exist; kept the new one, set the old one aside as %s", old, dst, backup))
 			continue
 		}
 		if err := movePath(old, dst); err != nil {
@@ -116,6 +173,21 @@ func movePath(src, dst string) error {
 		return err
 	}
 	return os.RemoveAll(src)
+}
+
+// uniqueLegacyBackupPath returns base, or base suffixed with -2, -3, ... if it
+// already exists, so re-running the migration never overwrites a backup set
+// aside by an earlier run.
+func uniqueLegacyBackupPath(base string) string {
+	if _, err := os.Lstat(base); err != nil {
+		return base
+	}
+	for i := 2; ; i++ {
+		candidate := fmt.Sprintf("%s-%d", base, i)
+		if _, err := os.Lstat(candidate); err != nil {
+			return candidate
+		}
+	}
 }
 
 func copyTree(src, dst string) error {
