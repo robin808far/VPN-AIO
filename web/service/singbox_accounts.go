@@ -58,6 +58,8 @@ func singboxUsersFromRoot(root map[string]any) ([]map[string]any, bool) {
 			entry["auth"] = stringValue(raw["password"])
 		case "shadowtls":
 			entry["password"] = stringValue(raw["password"])
+		case model.Snell:
+			entry["password"] = stringValue(raw["userkey"])
 		}
 		out = append(out, entry)
 	}
@@ -81,7 +83,7 @@ func validateSingboxUsers(protocol model.Protocol, users []map[string]any) error
 			if stringValue(user["uuid"]) == "" {
 				return fmt.Errorf("sing-box user %q requires a UUID", name)
 			}
-		case model.Trojan, model.ANYTLS, model.Shadowsocks, model.TUIC, model.Hysteria2, "shadowtls":
+		case model.Trojan, model.ANYTLS, model.Shadowsocks, model.TUIC, model.Hysteria2, model.Snell, "shadowtls":
 			if stringValue(user["password"]) == "" && protocol != model.TUIC {
 				return fmt.Errorf("sing-box user %q requires a password", name)
 			}
@@ -234,6 +236,8 @@ func renderSingboxUser(account *model.Account, membership *model.AccountInbound,
 		raw["password"] = account.Auth
 	case "shadowtls":
 		raw["password"] = account.Password
+	case model.Snell:
+		raw["userkey"] = account.Password
 	default:
 		return nil, fmt.Errorf("sing-box protocol %q does not support managed users", inbound.Protocol)
 	}

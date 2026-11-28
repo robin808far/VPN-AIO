@@ -138,6 +138,54 @@
                 </a-row>
             </template>
 
+            <!-- Snell (sing-box 1.14.0+): base psk + protocol version; v5 has HTTP
+                 obfuscation (obfs_mode), v6 replaces it with traffic shaping (mode) and
+                 needs a psk of 12-255 bytes. Per-user credentials ("userkey") are managed
+                 the same way as every other sing-box protocol's users[] — see Clients. -->
+            <template v-if="singboxGet(['type']) === 'snell'">
+                <a-row :gutter="12">
+                    <a-col :xs="12" :md="6">
+                        <a-form-item label="Version">
+                            <a-select :value="singboxGet(['version'], 5)"
+                                @change="v => singboxSet(['version'], v)">
+                                <a-select-option :value="5">5</a-select-option>
+                                <a-select-option :value="6">6</a-select-option>
+                            </a-select>
+                        </a-form-item>
+                    </a-col>
+                    <a-col :xs="12" :md="18">
+                        <a-form-item :label="singboxGet(['version'], 5) === 6 ? 'PSK (12-255 bytes)' : 'PSK'">
+                            <a-input :value="singboxGet(['psk'])"
+                                @change="e => singboxSet(['psk'], e.target.value)"></a-input>
+                        </a-form-item>
+                    </a-col>
+                </a-row>
+                <a-row :gutter="12" v-if="singboxGet(['version'], 5) === 5">
+                    <a-col :xs="12" :md="8">
+                        <a-form-item label="Obfs mode">
+                            <a-select :value="singboxGet(['obfs_mode'], 'none')"
+                                @change="v => singboxSet(['obfs_mode'], v === 'none' ? undefined : v)">
+                                <a-select-option value="none">none</a-select-option>
+                                <a-select-option value="http">http</a-select-option>
+                            </a-select>
+                        </a-form-item>
+                    </a-col>
+                </a-row>
+                <a-row :gutter="12" v-if="singboxGet(['version'], 5) === 6">
+                    <a-col :xs="12" :md="8">
+                        <a-form-item label="Traffic shaping mode">
+                            <a-select :value="singboxGet(['mode'], 'default')"
+                                @change="v => singboxSet(['mode'], v === 'default' ? undefined : v)">
+                                <a-select-option value="default">default</a-select-option>
+                                <a-select-option value="unshaped">unshaped</a-select-option>
+                                <a-select-option value="unsafe-raw">unsafe-raw</a-select-option>
+                            </a-select>
+                        </a-form-item>
+                    </a-col>
+                </a-row>
+            </template>
+
+
             <template v-if="singboxGet(['type']) === 'hysteria2'">
                 <a-row :gutter="12">
                     <a-col :xs="12" :md="6">

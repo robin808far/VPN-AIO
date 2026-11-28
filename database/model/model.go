@@ -46,6 +46,11 @@ const (
 	// accepts both.
 	Hysteria  Protocol = "hysteria"
 	Hysteria2 Protocol = "hysteria2"
+	// Snell is a sing-box-only managed protocol (since sing-box 1.14.0). Its
+	// one secret per user is called "userkey" in the wire format; the panel
+	// stores it in Account.Password like Trojan/AnyTLS, since it plays the
+	// same role (one credential, no UUID).
+	Snell Protocol = "snell"
 )
 
 // IsHysteria returns true for both "hysteria" and "hysteria2".
